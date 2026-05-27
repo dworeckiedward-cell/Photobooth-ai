@@ -1,21 +1,10 @@
-//
-//  ContentView.swift
-//  Photobooth-ai
-//
-//  Created by Mr E. Dworecki on 10/05/2026.
-//
-
 import SwiftUI
 
+// Kept as a back-compat entry. RootView is the real composition root.
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        RootView()
+            .environment(AppState())
     }
 }
 

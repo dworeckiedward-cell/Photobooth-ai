@@ -1,0 +1,708 @@
+import SwiftUI
+import CoreImage
+import CoreImage.CIFilterBuiltins
+import UIKit
+
+struct ResultView: View {
+    @Environment(AppState.self) private var app
+
+    let eventId: UUID
+    let photoId: UUID
+
+    /// Latest known state of the photo. Populated by polling.
+    @State private var photo: Photo?
+    @State private var pollAttempts = 0
+    @State private var pollTask: Task<Void, Never>?
+    @State private var loadedImage: UIImage?
+    @State private var messageIndex: Int = 0
+    @State private var revealOpacity: Double = 0
+    @State private var glow: Double = 0
+    @State private var sharePresented: Bool = false
+    @State private var qrPresented: Bool = false
+    @State private var emailPresented: Bool = false
+    @State private var smsPresented: Bool = false
+    @State private var surveyPresented: Bool = false
+    @State private var surveyDone: Bool = false
+
+    private var publicURL: URL {
+        BoothifyAPI.shared.publicResultURL(photoId: photoId)
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            if let photo {
+                switch photo.status {
+                case .pending, .uploaded, .generating:
+                    generatingState
+                case .completed:
+                    completedView(photo: photo)
+                case .failed:
+                    failedView(photo: photo)
+                }
+            } else {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+            }
+        }
+        .navigationTitle(photo?.style.label ?? "Result")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .task(id: photoId) {
+            await startPolling()
+        }
+        .onDisappear { pollTask?.cancel() }
+        .sheet(isPresented: $qrPresented) {
+            QRSheet(url: publicURL.absoluteString)
+                .presentationDetents([.medium, .large])
+                .presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(isPresented: $sharePresented) {
+            ShareSheet(items: shareItems)
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $emailPresented) {
+            EmailSheet(photoId: photoId)
+                .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $smsPresented) {
+            SMSSheet(photoId: photoId)
+                .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $surveyPresented) {
+            PostResultSurveySheet(
+                settings: app.settings(for: eventId).survey,
+                onSubmit: { response in
+                    var stamped = response
+                    stamped.photoId = photoId
+                    app.appendSurveyResponse(stamped, for: eventId)
+                    surveyDone = true
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .onChange(of: photo?.status) { _, newStatus in
+            // Trigger the post-result survey once we land on `.completed`.
+            guard newStatus == .completed, !surveyDone else { return }
+            let s = app.settings(for: eventId).survey
+            if s.enabled {
+                // Brief delay so the reveal animation gets a beat first.
+                Task {
+                    try? await Task.sleep(for: .seconds(0.8))
+                    surveyPresented = true
+                }
+            }
+        }
+    }
+
+    // MARK: - States
+
+    private var generatingState: some View {
+        VStack(spacing: 30) {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [BoothifyTheme.violet.opacity(0.5), .clear],
+                        center: .center, startRadius: 10, endRadius: 100
+                    ))
+                    .frame(width: 160, height: 160)
+                    .blur(radius: 16)
+                Circle()
+                    .stroke(BoothifyTheme.violet.opacity(0.4), lineWidth: 1)
+                    .frame(width: 130, height: 130)
+                Image(systemName: "sparkles")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .symbolEffect(.pulse, options: .repeating)
+                    .accessibilityHidden(true)
+            }
+
+            VStack(spacing: 8) {
+                Text("Working some magic")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Text(funnyMessage(index: messageIndex))
+                    .font(.subheadline)
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .id(messageIndex)
+                    .transition(.opacity)
+            }
+
+            ProgressView().progressViewStyle(.linear).tint(BoothifyTheme.violet).frame(maxWidth: 220)
+
+            Text("Average time: ~10 seconds")
+                .font(.caption2)
+                .foregroundStyle(BoothifyTheme.textMuted)
+        }
+        .padding(40)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Generating your photo")
+    }
+
+    @ViewBuilder
+    private func completedView(photo: Photo) -> some View {
+        ZStack(alignment: .bottom) {
+            photoCard(photo: photo).ignoresSafeArea(edges: .bottom)
+            actionsBar(photo: photo)
+        }
+    }
+
+    @ViewBuilder
+    private func failedView(photo: Photo) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.orange)
+                .accessibilityHidden(true)
+            Text("Generation failed")
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+            Text(photo.errorMessage ?? "Something went wrong. Try a different style or retake.")
+                .font(.subheadline)
+                .foregroundStyle(BoothifyTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            HStack(spacing: 12) {
+                Button {
+                    Haptics.tap()
+                    app.pop() // back to style picker
+                } label: {
+                    Label("Try another style", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(SecondaryButtonStyle())
+                .frame(maxWidth: 220)
+            }
+            .padding(.top, 12)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    // MARK: - Subviews
+
+    private func photoCard(photo: Photo) -> some View {
+        ZStack {
+            if let url = photo.generatedURL {
+                AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.4))) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView().tint(.white)
+                    case .success(let img):
+                        img.resizable().scaledToFill().frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                            .onAppear {
+                                if loadedImage == nil { renderToUIImage(url: url) }
+                            }
+                    case .failure:
+                        Rectangle().fill(photo.style.accentGradient)
+                    @unknown default:
+                        Rectangle().fill(photo.style.accentGradient)
+                    }
+                }
+            } else {
+                Rectangle().fill(photo.style.accentGradient)
+            }
+
+            // Brand overlay (client logo / event watermark) on top of the AI result.
+            let brand = app.settings(for: eventId).brandOverlay
+            if brand.rendersOnResults {
+                BrandOverlayLayer(settings: brand)
+            }
+        }
+        .shadow(color: BoothifyTheme.violet.opacity(glow), radius: 40)
+        .opacity(revealOpacity)
+        .scaleEffect(0.98 + 0.02 * revealOpacity)
+        .onAppear { playRevealAnimation() }
+    }
+
+    private func actionsBar(photo: Photo) -> some View {
+        VStack(spacing: 10) {
+            metadataStrip(photo: photo)
+
+            Button {
+                saveToPhotos()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.down").font(.body.weight(.semibold))
+                    Text("Save to Photos")
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(loadedImage == nil)
+            .accessibilityHint("Saves the generated image to your Photos library")
+
+            HStack(spacing: 8) {
+                ShareActionButton(symbol: "message.fill", label: "SMS") {
+                    Haptics.tap()
+                    smsPresented = true
+                }
+                ShareActionButton(symbol: "phone.bubble.fill", label: "WhatsApp") {
+                    Haptics.tap()
+                    let text = "Your photo is ready: \(publicURL.absoluteString)"
+                    if let url = URL(string: "https://wa.me/?text=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                ShareActionButton(symbol: "envelope.fill", label: "Email") {
+                    Haptics.tap()
+                    emailPresented = true
+                }
+                ShareActionButton(symbol: "qrcode", label: "QR Code") {
+                    Haptics.tap()
+                    qrPresented = true
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    Haptics.tap()
+                    app.pop() // back to style picker
+                } label: {
+                    Label("Another style", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(SecondaryButtonStyle())
+
+                Button {
+                    Haptics.tap()
+                    app.popUntil { route in
+                        if case .camera = route { return true }
+                        return false
+                    }
+                } label: {
+                    Label("Retake", systemImage: "camera.fill")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(SecondaryButtonStyle())
+
+                Button {
+                    Haptics.tap()
+                    app.popUntil { route in
+                        if case .eventHub = route { return true }
+                        return false
+                    }
+                } label: {
+                    Label("Done", systemImage: "checkmark")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(SecondaryButtonStyle())
+            }
+        }
+        .padding(14)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 0.5)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.bottom, 12)
+    }
+
+    // MARK: - Metadata strip (background removal, stickers, etc.)
+
+    @ViewBuilder
+    private func metadataStrip(photo: Photo) -> some View {
+        let bg = app.settings(for: eventId).backgroundRemoval
+        let chips = activeChips(photo: photo, bg: bg)
+        if !chips.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(chips) { chip in
+                        HStack(spacing: 5) {
+                            Image(systemName: chip.symbol).font(.caption2.weight(.bold))
+                            Text(chip.label).font(.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(chip.tint)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(chip.tint.opacity(0.16), in: Capsule())
+                        .overlay(Capsule().stroke(chip.tint.opacity(0.45), lineWidth: 0.5))
+                    }
+                }
+            }
+            .padding(.bottom, 2)
+        }
+    }
+
+    private func activeChips(
+        photo: Photo,
+        bg: BackgroundRemovalSettings
+    ) -> [MetadataChip] {
+        var out: [MetadataChip] = []
+        out.append(MetadataChip(id: "style", symbol: "wand.and.stars", label: photo.style.label, tint: BoothifyTheme.violet))
+        if bg.enabled {
+            let label: String = switch bg.mode {
+            case .off: "Background: off"
+            case .remove: "Background removed"
+            case .replaceColor: "BG color \(bg.backgroundHex)"
+            case .replaceImage: "BG: \(bg.backgroundImageName ?? "image")"
+            }
+            out.append(MetadataChip(id: "bg", symbol: "person.crop.rectangle.badge.xmark", label: label, tint: BoothifyTheme.fuchsia))
+        }
+        let brand = app.settings(for: eventId).brandOverlay
+        if brand.rendersOnResults {
+            out.append(MetadataChip(id: "brand", symbol: "rosette", label: "Brand overlay", tint: BoothifyTheme.amber))
+        }
+        return out
+    }
+
+    private struct MetadataChip: Identifiable {
+        let id: String
+        let symbol: String
+        let label: String
+        let tint: Color
+    }
+
+    // MARK: - Polling
+
+    private func startPolling() async {
+        pollTask?.cancel()
+        pollAttempts = 0
+
+        // Funny message rotation while waiting.
+        let messageTask = Task { @MainActor in
+            while !Task.isCancelled, photo == nil || (photo?.status.isTerminal == false) {
+                try? await Task.sleep(for: .seconds(2))
+                withAnimation(.easeInOut(duration: 0.4)) { messageIndex += 1 }
+            }
+        }
+        defer { messageTask.cancel() }
+
+        // Polling loop — short interval (1s), terminal status ends.
+        for _ in 0..<60 {
+            if Task.isCancelled { return }
+            do {
+                let next = try await BoothifyAPI.shared.getPhoto(id: photoId)
+                photo = next
+                if next.status == .completed {
+                    Haptics.notify(.success)
+                    return
+                } else if next.status == .failed {
+                    Haptics.notify(.error)
+                    return
+                }
+            } catch {
+                // Transient — swallow and retry. After enough failures, give up.
+                pollAttempts += 1
+                if pollAttempts > 5 {
+                    photo = Photo(
+                        id: photoId,
+                        style: photo?.style ?? .astronauta,
+                        status: .failed,
+                        generatedUrl: nil,
+                        errorMessage: (error as? APIError)?.errorDescription ?? error.localizedDescription,
+                        generationTimeMs: nil,
+                        createdAt: nil,
+                    )
+                    return
+                }
+            }
+            try? await Task.sleep(for: .seconds(1))
+        }
+        // Timed out
+        if photo?.status.isTerminal != true {
+            photo = Photo(
+                id: photoId,
+                style: photo?.style ?? .astronauta,
+                status: .failed,
+                generatedUrl: photo?.generatedUrl,
+                errorMessage: "Timed out waiting for generation. Try again.",
+                generationTimeMs: nil,
+                createdAt: nil,
+            )
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func renderToUIImage(url: URL) {
+        Task.detached(priority: .userInitiated) {
+            guard let (data, _) = try? await URLSession.shared.data(from: url),
+                  let image = UIImage(data: data) else { return }
+            await MainActor.run { loadedImage = image }
+        }
+    }
+
+    private func playRevealAnimation() {
+        guard revealOpacity == 0 else { return }
+        withAnimation(.easeOut(duration: 0.7)) { revealOpacity = 1 }
+        withAnimation(.easeOut(duration: 0.75)) { glow = 0.55 }
+        withAnimation(.easeIn(duration: 0.75).delay(0.75)) { glow = 0 }
+    }
+
+    private var shareItems: [Any] {
+        var items: [Any] = [publicURL]
+        if let img = loadedImage { items.insert(img, at: 0) }
+        return items
+    }
+
+    private func saveToPhotos() {
+        guard let img = loadedImage else { Haptics.notify(.error); return }
+        UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil)
+        Haptics.notify(.success)
+    }
+
+    private func funnyMessage(index: Int) -> String {
+        let messages = [
+            "Mixing pixels with stardust…",
+            "Asking the AI nicely…",
+            "Adding the special sauce…",
+            "Polishing the highlights…",
+            "Convincing the photons…",
+            "Calibrating the magic…",
+        ]
+        return messages[index % messages.count]
+    }
+}
+
+// MARK: - Share buttons & sheets
+
+private struct ShareActionButton: View {
+    let symbol: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .padding(.vertical, 8)
+            .background(BoothifyTheme.surface1)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Share via \(label)")
+    }
+}
+
+private struct EmailSheet: View {
+    let photoId: UUID
+    @Environment(\.dismiss) private var dismiss
+    @State private var email: String = ""
+    @State private var sending: Bool = false
+    @State private var sent: Bool = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(sent ? "Email sent" : "Send to email")
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+                .padding(.top, 24)
+
+            if sent {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(BoothifyTheme.emerald)
+                Spacer()
+            } else {
+                TextField("you@example.com", text: $email)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 52)
+                    .background(BoothifyTheme.surface1)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 24)
+                    .foregroundStyle(.white)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red.opacity(0.9))
+                        .padding(.horizontal, 24)
+                }
+
+                Button {
+                    send()
+                } label: {
+                    Text(sending ? "Sending…" : "Send")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(sending || !email.contains("@"))
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func send() {
+        sending = true
+        errorMessage = nil
+        Task {
+            do {
+                try await BoothifyAPI.shared.sendEmail(photoId: photoId, email: email)
+                Haptics.notify(.success)
+                sent = true
+                try? await Task.sleep(for: .seconds(1.2))
+                dismiss()
+            } catch {
+                Haptics.notify(.error)
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+            sending = false
+        }
+    }
+}
+
+private struct SMSSheet: View {
+    let photoId: UUID
+    @Environment(\.dismiss) private var dismiss
+    @State private var phone: String = ""
+    @State private var sending: Bool = false
+    @State private var sent: Bool = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(sent ? "SMS sent" : "Send via SMS")
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+                .padding(.top, 24)
+
+            if sent {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(BoothifyTheme.emerald)
+                Spacer()
+            } else {
+                TextField("+48 500 111 222", text: $phone)
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 52)
+                    .background(BoothifyTheme.surface1)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 24)
+                    .foregroundStyle(.white)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red.opacity(0.9))
+                        .padding(.horizontal, 24)
+                }
+
+                Button {
+                    send()
+                } label: {
+                    Text(sending ? "Sending…" : "Send")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(sending || phone.filter(\.isNumber).count < 7)
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func send() {
+        sending = true
+        errorMessage = nil
+        Task {
+            do {
+                try await BoothifyAPI.shared.sendSMS(photoId: photoId, phone: phone)
+                Haptics.notify(.success)
+                sent = true
+                try? await Task.sleep(for: .seconds(1.2))
+                dismiss()
+            } catch {
+                Haptics.notify(.error)
+                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+            sending = false
+        }
+    }
+}
+
+// MARK: - QR sheet
+
+struct QRSheet: View {
+    let url: String
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Scan with your phone")
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+                .padding(.top, 24)
+
+            Text("Opens your photo on the device's browser")
+                .font(.footnote)
+                .foregroundStyle(BoothifyTheme.textSecondary)
+
+            qrCode
+                .frame(width: 240, height: 240)
+                .background(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding(.top, 6)
+                .accessibilityLabel("QR code for \(url)")
+
+            Text(url)
+                .font(.caption2.monospaced())
+                .foregroundStyle(BoothifyTheme.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .textSelection(.enabled)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var qrCode: some View {
+        if let img = qrUIImage(from: url) {
+            Image(uiImage: img)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .padding(12)
+        } else {
+            Color.black
+        }
+    }
+
+    private func qrUIImage(from string: String) -> UIImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(string.utf8)
+        filter.correctionLevel = "H"
+        guard let output = filter.outputImage else { return nil }
+        let transform = CGAffineTransform(scaleX: 12, y: 12)
+        let scaled = output.transformed(by: transform)
+        let ctx = CIContext()
+        guard let cg = ctx.createCGImage(scaled, from: scaled.extent) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+}
+
+// MARK: - Share sheet bridge
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}

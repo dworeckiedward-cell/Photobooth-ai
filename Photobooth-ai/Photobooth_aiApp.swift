@@ -1,17 +1,16 @@
-//
-//  Photobooth_aiApp.swift
-//  Photobooth-ai
-//
-//  Created by Mr E. Dworecki on 10/05/2026.
-//
-
 import SwiftUI
 
 @main
 struct Photobooth_aiApp: App {
+    @State private var appState = AppState()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(appState)
+                .preferredColorScheme(.dark)
+                .tint(BoothifyTheme.violet)
+                .task { await appState.bootstrapAuth() }
         }
     }
 }

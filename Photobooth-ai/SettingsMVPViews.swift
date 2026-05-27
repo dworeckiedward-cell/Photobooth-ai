@@ -1,0 +1,1565 @@
+import SwiftUI
+import AVFoundation
+import UIKit
+
+// MVP add-on settings — hardened demo-ready pass. Each section saves persistently
+// via `app.updateSettings(_:for:)` and shows realistic placeholders so the app feels
+// like a finished operator tool during client demos.
+
+// MARK: - Binding helper
+
+private extension AppState {
+    func mvpBinding<Value>(
+        eventId: UUID,
+        keyPath: WritableKeyPath<EventSettings, Value>
+    ) -> Binding<Value> {
+        Binding(
+            get: { self.settings(for: eventId)[keyPath: keyPath] },
+            set: { newValue in
+                var all = self.settings(for: eventId)
+                all[keyPath: keyPath] = newValue
+                self.updateSettings(all, for: eventId)
+            }
+        )
+    }
+}
+
+private extension View {
+    func mvpFormBackground() -> some View {
+        self
+            .scrollContentBackground(.hidden)
+            .background(BoothifyTheme.bg.ignoresSafeArea())
+    }
+}
+
+// MARK: - Print Setup
+
+struct PrintSetupSettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+    @State private var previewing = false
+    @State private var savedToast = false
+
+    private var s: PrintSetupSettings { app.settings(for: eventId).print }
+    private var eventName: String { app.event(id: eventId)?.name ?? "Event" }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable print", isOn: app.mvpBinding(eventId: eventId, keyPath: \.print.enabled))
+                Toggle("Auto-print after capture", isOn: app.mvpBinding(eventId: eventId, keyPath: \.print.autoPrintAfterCapture))
+                    .disabled(!s.enabled)
+            } footer: {
+                Text("Sends each completed photo to the connected printer. Demo — settings save and the preview reflects them; real printer driver ships later.")
+                    .font(.caption2)
+            }
+
+            Section("Layout") {
+                Picker("Paper size", selection: app.mvpBinding(eventId: eventId, keyPath: \.print.paperSize)) {
+                    ForEach(PrintPaperSize.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                Picker("Layout", selection: app.mvpBinding(eventId: eventId, keyPath: \.print.layout)) {
+                    ForEach(PrintLayout.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                Stepper(value: app.mvpBinding(eventId: eventId, keyPath: \.print.copiesPerSession), in: 1...10) {
+                    HStack {
+                        Text("Copies per session")
+                        Spacer()
+                        Text("\(s.copiesPerSession)").foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                }
+            }
+            .disabled(!s.enabled)
+
+            Section("Branding on print") {
+                Toggle("Include QR code", isOn: app.mvpBinding(eventId: eventId, keyPath: \.print.includeQRCode))
+                Toggle("Include event name", isOn: app.mvpBinding(eventId: eventId, keyPath: \.print.includeEventName))
+            }
+            .disabled(!s.enabled)
+
+            Section {
+                Button {
+                    Haptics.tap()
+                    previewing = true
+                } label: {
+                    Label("Test print preview", systemImage: "printer")
+                }
+                Button {
+                    Haptics.notify(.success)
+                    withAnimation(.spring) { savedToast = true }
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.4))
+                        withAnimation { savedToast = false }
+                    }
+                } label: {
+                    Label("Save print layout", systemImage: "checkmark.circle")
+                }
+            } footer: {
+                if savedToast {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(BoothifyTheme.emerald)
+                        Text("Layout saved").foregroundStyle(BoothifyTheme.emerald)
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .transition(.opacity)
+                }
+            }
+        }
+        .mvpFormBackground()
+        .navigationTitle("Print Setup")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $previewing) {
+            PrintPreviewSheet(settings: s, eventName: eventName)
+                .presentationDetents([.large])
+        }
+    }
+}
+
+private struct PrintPreviewSheet: View {
+    let settings: PrintSetupSettings
+    let eventName: String
+    @Environment(\.dismiss) private var dismiss
+
+    private var nowFormatted: String {
+        Date().formatted(date: .abbreviated, time: .shortened)
+    }
+
+    var body: some View {
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(spacing: 16) {
+                Text("Print preview")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.top, 28)
+                Text("\(settings.paperSize.label) · \(settings.layout.label) · ×\(settings.copiesPerSession) cop\(settings.copiesPerSession == 1 ? "y" : "ies")")
+                    .font(.footnote)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+
+                printPaper
+                    .shadow(color: .black.opacity(0.55), radius: 18, y: 10)
+
+                Spacer()
+
+                Button("Done") { dismiss() }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 24)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var printPaper: some View {
+        let dims = paperDimensions
+        VStack(spacing: 8) {
+            if settings.includeEventName {
+                Text(eventName)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.black)
+                    .padding(.top, 10)
+            }
+            photoStack
+                .frame(width: dims.width - 32, height: dims.height - (settings.includeEventName ? 80 : 60))
+
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(nowFormatted)
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundStyle(.black.opacity(0.7))
+                    Text("Boothify · Servify Labs")
+                        .font(.system(size: 6, weight: .semibold))
+                        .foregroundStyle(.black.opacity(0.55))
+                }
+                Spacer()
+                if settings.includeQRCode {
+                    Image(systemName: "qrcode")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.black)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 10)
+        }
+        .frame(width: dims.width, height: dims.height)
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private var paperDimensions: (width: CGFloat, height: CGFloat) {
+        // Mock paper aspect per the chosen size — kept compact for the sheet.
+        switch settings.paperSize {
+        case .fourBySix:   (220, 330)
+        case .fiveBySeven: (220, 308)
+        case .square:      (260, 260)
+        case .postcard:    (240, 340)
+        }
+    }
+
+    @ViewBuilder
+    private var photoStack: some View {
+        switch settings.layout {
+        case .single:
+            Image("Style_astronauta")
+                .resizable()
+                .scaledToFill()
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        case .doubleSingle:
+            VStack(spacing: 8) {
+                Image("Style_astronauta")
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                Image("Style_astronauta")
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            }
+        case .twoStrip:
+            VStack(spacing: 6) {
+                Image("Style_astronauta").resizable().scaledToFill().clipped()
+                Image("Style_cyberpunk").resizable().scaledToFill().clipped()
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        case .fourStrip:
+            VStack(spacing: 4) {
+                Image("Style_astronauta").resizable().scaledToFill().clipped()
+                Image("Style_cyberpunk").resizable().scaledToFill().clipped()
+                Image("Style_superbohater").resizable().scaledToFill().clipped()
+                Image("Style_pirat").resizable().scaledToFill().clipped()
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        }
+    }
+}
+
+// MARK: - Background Removal
+
+struct BackgroundRemovalSettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+    @State private var previewing = false
+
+    private var s: BackgroundRemovalSettings { app.settings(for: eventId).backgroundRemoval }
+
+    private let presetHexes = ["#0A0A0B", "#FFFFFF", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B"]
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable background removal", isOn: app.mvpBinding(eventId: eventId, keyPath: \.backgroundRemoval.enabled))
+            } footer: {
+                Text("Demo — settings save and surface on the result screen. Real masking pipeline ships alongside AI 360.")
+                    .font(.caption2)
+            }
+
+            Section("Mode") {
+                Picker("Mode", selection: app.mvpBinding(eventId: eventId, keyPath: \.backgroundRemoval.mode)) {
+                    ForEach(BackgroundMode.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            }
+            .disabled(!s.enabled)
+
+            if s.mode == .replaceColor {
+                Section("Replacement color") {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 6), spacing: 12) {
+                        ForEach(presetHexes, id: \.self) { hex in
+                            let isSelected = s.backgroundHex.lowercased() == hex.lowercased()
+                            Button {
+                                Haptics.selection()
+                                var all = app.settings(for: eventId)
+                                all.backgroundRemoval.backgroundHex = hex
+                                app.updateSettings(all, for: eventId)
+                            } label: {
+                                Circle()
+                                    .fill(Color(hex: hex))
+                                    .overlay(Circle().stroke(isSelected ? Color.white : Color.white.opacity(0.15), lineWidth: isSelected ? 3 : 1))
+                                    .frame(height: 40)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Background color \(hex)")
+                        }
+                    }
+                    TextField("Hex (e.g. #FF6600)", text: app.mvpBinding(eventId: eventId, keyPath: \.backgroundRemoval.backgroundHex))
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .font(.system(.body, design: .monospaced))
+                }
+                .disabled(!s.enabled)
+            }
+
+            if s.mode == .replaceImage {
+                Section("Replacement image") {
+                    Picker("Asset", selection: Binding(
+                        get: { s.backgroundImageName ?? "" },
+                        set: { newValue in
+                            var all = app.settings(for: eventId)
+                            all.backgroundRemoval.backgroundImageName = newValue.isEmpty ? nil : newValue
+                            app.updateSettings(all, for: eventId)
+                        }
+                    )) {
+                        Text("None").tag("")
+                        Text("Style_astronauta").tag("Style_astronauta")
+                        Text("Style_cyberpunk").tag("Style_cyberpunk")
+                        Text("Mode_360").tag("Mode_360")
+                    }
+                    Text("Asset picker is a placeholder — per-event background uploads via Supabase Storage come in Sprint 4.")
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                .disabled(!s.enabled)
+            }
+
+            Section("AI portraits") {
+                Toggle("Apply to AI portraits", isOn: app.mvpBinding(eventId: eventId, keyPath: \.backgroundRemoval.applyToAIPortraits))
+            }
+            .disabled(!s.enabled)
+
+            Section {
+                Button {
+                    Haptics.tap()
+                    previewing = true
+                } label: {
+                    Label("Before / after preview", systemImage: "rectangle.split.2x1")
+                }
+                .disabled(!s.enabled)
+            }
+        }
+        .mvpFormBackground()
+        .navigationTitle("Background Removal")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $previewing) {
+            BackgroundRemovalPreviewSheet(settings: s)
+                .presentationDetents([.large])
+        }
+    }
+}
+
+private struct BackgroundRemovalPreviewSheet: View {
+    let settings: BackgroundRemovalSettings
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(spacing: 16) {
+                Text("Before / After (mock)")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.top, 28)
+                Text(settings.mode.label)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+
+                HStack(spacing: 10) {
+                    pane(title: "Before") {
+                        Image("Style_superbohater")
+                            .resizable()
+                            .scaledToFill()
+                    }
+                    pane(title: "After") {
+                        ZStack {
+                            backgroundLayer
+                            // Mocked cutout: dimmed center photo on top of new bg.
+                            Image("Style_superbohater")
+                                .resizable()
+                                .scaledToFill()
+                                .mask(
+                                    Ellipse()
+                                        .frame(width: 180, height: 220)
+                                )
+                        }
+                    }
+                }
+                .frame(height: 320)
+                .padding(.horizontal, 16)
+
+                Text("Cutout shape is a placeholder. Real mask comes from on-device or RemoveBG inference.")
+                    .font(.caption2)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                Spacer()
+
+                Button("Done") { dismiss() }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 24)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var backgroundLayer: some View {
+        switch settings.mode {
+        case .off, .remove:
+            // "Transparent" — show checkerboard
+            CheckerboardPattern()
+        case .replaceColor:
+            Color(hex: settings.backgroundHex)
+        case .replaceImage:
+            if let asset = settings.backgroundImageName {
+                Image(asset).resizable().scaledToFill()
+            } else {
+                Color.gray
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pane<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.textSecondary)
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                )
+        }
+    }
+}
+
+private struct CheckerboardPattern: View {
+    var body: some View {
+        Canvas { ctx, size in
+            let tile: CGFloat = 12
+            let cols = Int(size.width / tile) + 1
+            let rows = Int(size.height / tile) + 1
+            for r in 0..<rows {
+                for c in 0..<cols {
+                    let isLight = (r + c) % 2 == 0
+                    let rect = CGRect(x: CGFloat(c) * tile, y: CGFloat(r) * tile, width: tile, height: tile)
+                    ctx.fill(Path(rect), with: .color(isLight ? .white.opacity(0.15) : .black.opacity(0.6)))
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Brand Overlay
+//
+// Premium client-logo / event-watermark layer that lives on top of every shared
+// result. Replaces the old toy-style "Stickers" feature. Old `StickerSettings`
+// data is kept on `EventSettings` for backward-compat decoding but no longer
+// surfaced in the UI.
+
+struct BrandOverlaySettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+
+    private var s: BrandOverlaySettings { app.settings(for: eventId).brandOverlay }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable Brand Overlay", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.enabled))
+            } footer: {
+                Text("Add your client logo or event watermark to every shared result.")
+                    .font(.caption2)
+            }
+
+            Section("Where it appears") {
+                Toggle("Apply to AI results", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.applyToResults))
+                Toggle("Show on AI-generated images", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.showOnAIResults))
+                Toggle("Show on original captures", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.showOnOriginalCaptures))
+            }
+            .disabled(!s.enabled)
+
+            Section("Logo source") {
+                Picker("Source", selection: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.logoSource)) {
+                    ForEach(BrandLogoSource.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+
+                if s.logoSource == .boothifySample {
+                    Button {
+                        Haptics.tap()
+                        var all = app.settings(for: eventId)
+                        all.brandOverlay.logoAssetName = "BoothifyLogo"
+                        app.updateSettings(all, for: eventId)
+                    } label: {
+                        Label("Use Boothify sample logo", systemImage: "checkmark.seal.fill")
+                    }
+                } else if s.logoSource == .uploaded {
+                    Button {
+                        Haptics.tap()
+                    } label: {
+                        Label("Upload logo (coming soon)", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(true)
+                    Text("Real logo upload via Supabase Storage ships in Sprint 4. For now the Boothify sample is used.")
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                } else if s.logoSource == .textFallback {
+                    TextField("Watermark text", text: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.overlayText))
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                }
+            }
+            .disabled(!s.enabled)
+
+            Section("Position") {
+                Picker("Position", selection: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.position)) {
+                    ForEach(BrandOverlayPosition.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+            }
+            .disabled(!s.enabled)
+
+            Section("Size & opacity") {
+                HStack {
+                    Text("Size")
+                    Spacer()
+                    Text("\(Int(s.size * 100))%")
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Slider(value: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.size), in: 0.05...0.40)
+                HStack {
+                    Text("Opacity")
+                    Spacer()
+                    Text("\(Int(s.opacity * 100))%")
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Slider(value: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.opacity), in: 0.10...1.0)
+                HStack {
+                    Text("Padding")
+                    Spacer()
+                    Text("\(Int(s.padding * 100))%")
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Slider(value: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.padding), in: 0.0...0.10)
+            }
+            .disabled(!s.enabled)
+
+            Section("Live preview") {
+                BrandOverlayPreviewCard(settings: s)
+                    .frame(height: 280)
+                    .listRowInsets(EdgeInsets())
+            }
+        }
+        .mvpFormBackground()
+        .navigationTitle("Brand Overlay")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// Reusable composition: sample background + brand overlay rendered on top.
+/// Used by Settings preview AND ResultView.
+struct BrandOverlayLayer: View {
+    let settings: BrandOverlaySettings
+
+    var body: some View {
+        GeometryReader { proxy in
+            let shorterEdge = min(proxy.size.width, proxy.size.height)
+            let logoSide = shorterEdge * CGFloat(settings.size)
+            let pad = shorterEdge * CGFloat(settings.padding)
+
+            Group {
+                switch settings.logoSource {
+                case .boothifySample, .uploaded:
+                    Image(settings.logoAssetName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: logoSide, height: logoSide)
+                        .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
+                case .textFallback:
+                    Text(settings.overlayText)
+                        .font(.system(size: max(11, logoSide * 0.30), weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .kerning(1.2)
+                        .padding(.horizontal, max(8, logoSide * 0.18))
+                        .padding(.vertical, max(4, logoSide * 0.08))
+                        .background(.black.opacity(0.42), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
+                }
+            }
+            .opacity(settings.opacity)
+            .padding(pad)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: settings.position.alignment)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct BrandOverlayPreviewCard: View {
+    let settings: BrandOverlaySettings
+
+    var body: some View {
+        ZStack {
+            Image("Style_superbohater")
+                .resizable()
+                .scaledToFill()
+
+            if settings.enabled {
+                BrandOverlayLayer(settings: settings)
+            }
+        }
+        .clipped()
+        .overlay(alignment: .bottomLeading) {
+            HStack(spacing: 6) {
+                Image(systemName: "rosette")
+                    .font(.caption2)
+                Text(settings.enabled ? "Brand overlay live" : "Overlay disabled")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(8)
+        }
+    }
+}
+
+// MARK: - Virtual Attendant
+
+struct VirtualAttendantSettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+    @State private var helpPresented = false
+
+    private var s: VirtualAttendantSettings { app.settings(for: eventId).virtualAttendant }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable On-screen Assistant", isOn: app.mvpBinding(eventId: eventId, keyPath: \.virtualAttendant.enabled))
+            } footer: {
+                Text("Greeting + voice prompt on the capture screen. Voice playback uses on-device TTS — no audio leaves the phone.")
+                    .font(.caption2)
+            }
+
+            Section("Messages") {
+                TextField("Greeting message", text: app.mvpBinding(eventId: eventId, keyPath: \.virtualAttendant.greetingMessage), axis: .vertical)
+                    .lineLimit(2...4)
+                TextField("Voice prompt text", text: app.mvpBinding(eventId: eventId, keyPath: \.virtualAttendant.voicePromptText), axis: .vertical)
+                    .lineLimit(2...4)
+                Button {
+                    AttendantSpeech.shared.play(s.voicePromptText)
+                } label: {
+                    Label("Play voice prompt", systemImage: "speaker.wave.2.fill")
+                }
+                .disabled(!s.enabled || s.voicePromptText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .disabled(!s.enabled)
+
+            Section("Help & idle") {
+                Toggle("Show help button on kiosk", isOn: app.mvpBinding(eventId: eventId, keyPath: \.virtualAttendant.helpButtonEnabled))
+                Toggle("Idle reminder", isOn: app.mvpBinding(eventId: eventId, keyPath: \.virtualAttendant.idleReminderEnabled))
+                if s.idleReminderEnabled {
+                    Stepper(value: app.mvpBinding(eventId: eventId, keyPath: \.virtualAttendant.idleReminderSeconds), in: 5...300, step: 5) {
+                        HStack {
+                            Text("Reminder after")
+                            Spacer()
+                            Text("\(s.idleReminderSeconds)s").foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                    }
+                }
+                Button {
+                    Haptics.tap()
+                    helpPresented = true
+                } label: {
+                    Label("Preview help screen", systemImage: "questionmark.circle")
+                }
+            }
+            .disabled(!s.enabled)
+
+            Section("Preview") {
+                VirtualAttendantPreview(greeting: s.greetingMessage, prompt: s.voicePromptText)
+                    .listRowInsets(EdgeInsets())
+            }
+        }
+        .mvpFormBackground()
+        .navigationTitle("On-screen Assistant")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $helpPresented) {
+            VirtualAttendantHelpSheet(settings: s)
+                .presentationDetents([.large])
+        }
+    }
+}
+
+/// Reusable on-screen attendant prompt — drop into the capture flow when enabled.
+struct VirtualAttendantPreview: View {
+    let greeting: String
+    let prompt: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(BoothifyTheme.primaryGradient)
+                    .frame(width: 44, height: 44)
+                Image(systemName: "person.wave.2.fill")
+                    .foregroundStyle(.white)
+                    .font(.title3.weight(.semibold))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(greeting)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(prompt)
+                    .font(.footnote)
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(BoothifyTheme.surface2, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+        )
+        .padding(12)
+    }
+}
+
+struct VirtualAttendantHelpSheet: View {
+    let settings: VirtualAttendantSettings
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "questionmark.circle.fill")
+                            .font(.system(size: 36))
+                            .foregroundStyle(BoothifyTheme.violet)
+                        Text("Need a hand?")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.top, 24)
+
+                    helpRow(
+                        symbol: "1.circle.fill",
+                        title: "Step into the frame",
+                        body: "Stand 3–6 feet from the camera so your face fits comfortably."
+                    )
+                    helpRow(
+                        symbol: "2.circle.fill",
+                        title: "Tap the shutter",
+                        body: "A 3-second countdown will start. Hold your pose."
+                    )
+                    helpRow(
+                        symbol: "3.circle.fill",
+                        title: "Pick a style",
+                        body: "Choose any of the cinematic AI styles — the rest is automatic."
+                    )
+                    helpRow(
+                        symbol: "4.circle.fill",
+                        title: "Share your photo",
+                        body: "Save to camera roll, scan the QR code, or send to email/SMS — whatever the operator enabled."
+                    )
+
+                    if !settings.voicePromptText.trimmingCharacters(in: .whitespaces).isEmpty {
+                        Divider().background(BoothifyTheme.surfaceLine).padding(.top, 6)
+                        Button {
+                            AttendantSpeech.shared.play(settings.voicePromptText)
+                        } label: {
+                            Label("Hear the voice prompt", systemImage: "speaker.wave.2.fill")
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
+                    }
+
+                    Spacer(minLength: 12)
+
+                    Button("Got it") {
+                        Haptics.tap()
+                        dismiss()
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func helpRow(symbol: String, title: String, body: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: symbol)
+                .font(.title2)
+                .foregroundStyle(BoothifyTheme.violet)
+                .frame(width: 36)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline).foregroundStyle(.white)
+                Text(body).font(.subheadline).foregroundStyle(BoothifyTheme.textSecondary)
+            }
+        }
+    }
+}
+
+/// On-device TTS singleton. Auto-stops in-flight utterances when a new one starts.
+@MainActor
+final class AttendantSpeech {
+    static let shared = AttendantSpeech()
+    private let synth = AVSpeechSynthesizer()
+
+    private init() {}
+
+    func play(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+        let utt = AVSpeechUtterance(string: trimmed)
+        utt.rate = AVSpeechUtteranceDefaultSpeechRate * 0.95
+        utt.voice = AVSpeechSynthesisVoice(language: Locale.current.identifier)
+            ?? AVSpeechSynthesisVoice(language: "en-US")
+        synth.speak(utt)
+    }
+
+    func stop() {
+        if synth.isSpeaking { synth.stopSpeaking(at: .immediate) }
+    }
+}
+
+// MARK: - Disclaimer
+
+struct DisclaimerSettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+    @State private var confirmReset = false
+
+    private var s: DisclaimerSettings { app.settings(for: eventId).disclaimer }
+    private var consents: [ConsentRecord] { app.consentLog(for: eventId) }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Show disclaimer", isOn: app.mvpBinding(eventId: eventId, keyPath: \.disclaimer.enabled))
+                Toggle("Require consent before capture", isOn: app.mvpBinding(eventId: eventId, keyPath: \.disclaimer.requireConsentBeforeCapture))
+                    .disabled(!s.enabled)
+            } footer: {
+                Text("A consent gate appears before the camera when both toggles are on. Each acceptance is logged locally for this event.")
+                    .font(.caption2)
+            }
+
+            Section("Text") {
+                TextField("Disclaimer body", text: app.mvpBinding(eventId: eventId, keyPath: \.disclaimer.disclaimerText), axis: .vertical)
+                    .lineLimit(4...12)
+                TextField("Consent checkbox label", text: app.mvpBinding(eventId: eventId, keyPath: \.disclaimer.consentCheckboxLabel))
+            }
+            .disabled(!s.enabled)
+
+            Section {
+                if let latest = consents.last {
+                    LabeledRowInline(
+                        title: "Last consent",
+                        value: latest.acceptedAt.formatted(date: .abbreviated, time: .shortened)
+                    )
+                    LabeledRowInline(title: "Device", value: latest.deviceName)
+                    LabeledRowInline(title: "Total recorded", value: "\(consents.count)")
+                } else {
+                    Text("No consent recorded yet.")
+                        .font(.footnote)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Button(role: .destructive) {
+                    Haptics.tap()
+                    confirmReset = true
+                } label: {
+                    Label("Reset consent for this event", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(consents.isEmpty)
+            } header: {
+                Text("Consent log")
+            }
+        }
+        .mvpFormBackground()
+        .navigationTitle("Disclaimer")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Reset consent log?", isPresented: $confirmReset) {
+            Button("Reset", role: .destructive) {
+                app.resetConsent(for: eventId)
+                Haptics.notify(.success)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All locally-recorded acceptances for this event will be removed. Guests will see the consent screen again.")
+        }
+    }
+}
+
+/// Consent screen shown before camera when disclaimer requires it.
+struct DisclaimerConsentSheet: View {
+    let settings: DisclaimerSettings
+    let onAccept: () -> Void
+    let onDecline: () -> Void
+    @State private var checked: Bool = false
+
+    var body: some View {
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Before we start")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.top, 32)
+                ScrollView {
+                    Text(settings.disclaimerText)
+                        .font(.body)
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                }
+                .frame(maxHeight: 320)
+
+                Toggle(isOn: $checked) {
+                    Text(settings.consentCheckboxLabel)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                }
+
+                Spacer(minLength: 4)
+
+                Button {
+                    Haptics.notify(.success)
+                    onAccept()
+                } label: {
+                    Text("Continue")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!checked)
+                .opacity(checked ? 1 : 0.55)
+
+                Button("Cancel") {
+                    Haptics.tap()
+                    onDecline()
+                }
+                .buttonStyle(SecondaryButtonStyle())
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+    }
+}
+
+// MARK: - Survey
+
+struct SurveySettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+
+    private var s: SurveySettings { app.settings(for: eventId).survey }
+    private var responses: [SurveyResponse] { app.surveyResponses(for: eventId) }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Show post-photo survey", isOn: app.mvpBinding(eventId: eventId, keyPath: \.survey.enabled))
+                Toggle("Required", isOn: app.mvpBinding(eventId: eventId, keyPath: \.survey.required))
+                    .disabled(!s.enabled)
+            } footer: {
+                Text("One question shown after the result screen. Responses save locally per event; backend table comes later.")
+                    .font(.caption2)
+            }
+
+            Section("Question") {
+                TextField("Question", text: app.mvpBinding(eventId: eventId, keyPath: \.survey.questionText), axis: .vertical)
+                    .lineLimit(2...4)
+                Picker("Answer type", selection: app.mvpBinding(eventId: eventId, keyPath: \.survey.answerType)) {
+                    ForEach(SurveyAnswerType.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+            }
+            .disabled(!s.enabled)
+
+            Section {
+                HStack(spacing: 12) {
+                    StatChip(label: "Total", value: "\(responses.count)")
+                    StatChip(label: "Today", value: "\(responses.filter { Calendar.current.isDateInToday($0.submittedAt) }.count)")
+                    StatChip(label: "Avg ★", value: averageRatingLabel)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            } header: {
+                Text("Stats")
+            }
+
+            Section {
+                if responses.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "tray")
+                            .font(.title)
+                            .foregroundStyle(BoothifyTheme.textMuted)
+                        Text("No responses yet.")
+                            .font(.subheadline)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                        Text("Responses appear here after guests complete the post-result survey.")
+                            .font(.caption2)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                } else {
+                    ForEach(responses.reversed().prefix(10)) { r in
+                        SurveyResponseRow(response: r)
+                    }
+                }
+            } header: {
+                Text(responses.isEmpty ? "Latest responses" : "Latest \(min(10, responses.count)) responses")
+            }
+        }
+        .mvpFormBackground()
+        .navigationTitle("Survey")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var averageRatingLabel: String {
+        let ratings = responses.compactMap(\.rating).compactMap { $0 }
+        guard !ratings.isEmpty else { return "—" }
+        let avg = Double(ratings.reduce(0, +)) / Double(ratings.count)
+        return String(format: "%.1f", avg)
+    }
+}
+
+private struct StatChip: View {
+    let label: String
+    let value: String
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+            Text(label.uppercased())
+                .font(.caption2.weight(.semibold))
+                .kerning(0.8)
+                .foregroundStyle(BoothifyTheme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+    }
+}
+
+private struct SurveyResponseRow: View {
+    let response: SurveyResponse
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(BoothifyTheme.surface2).frame(width: 32, height: 32)
+                Image(systemName: iconForType)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(answerString)
+                    .font(.body)
+                    .foregroundStyle(.white)
+                Text(response.submittedAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+            }
+            Spacer()
+        }
+    }
+
+    private var iconForType: String {
+        switch response.answerType {
+        case .rating: "star.fill"
+        case .text:   "text.bubble.fill"
+        case .yesNo:  "checkmark.circle.fill"
+        }
+    }
+
+    private var answerString: String {
+        switch response.answerType {
+        case .rating: response.rating.map { "★ \($0)/5" } ?? "—"
+        case .text:   response.text ?? "—"
+        case .yesNo:  response.yesNo == true ? "Yes" : "No"
+        }
+    }
+}
+
+/// Post-result survey sheet. Pushed by ResultView when the photo finishes.
+struct PostResultSurveySheet: View {
+    let settings: SurveySettings
+    let onSubmit: (SurveyResponse) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var rating: Int = 0
+    @State private var text: String = ""
+    @State private var yes: Bool? = nil
+
+    var body: some View {
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(spacing: 24) {
+                VStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.title)
+                        .foregroundStyle(BoothifyTheme.violet)
+                    Text(settings.questionText)
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+                .padding(.top, 32)
+
+                switch settings.answerType {
+                case .rating:
+                    HStack(spacing: 12) {
+                        ForEach(1...5, id: \.self) { i in
+                            Button {
+                                Haptics.selection()
+                                rating = i
+                            } label: {
+                                Image(systemName: i <= rating ? "star.fill" : "star")
+                                    .font(.system(size: 36).bold())
+                                    .foregroundStyle(i <= rating ? BoothifyTheme.amber : BoothifyTheme.textTertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Rate \(i) stars")
+                        }
+                    }
+                    if rating > 0 {
+                        Text(ratingLabel(rating))
+                            .font(.subheadline)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                            .transition(.opacity)
+                    }
+                case .text:
+                    TextField("Type here…", text: $text, axis: .vertical)
+                        .lineLimit(3...6)
+                        .padding(12)
+                        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.horizontal, 24)
+                case .yesNo:
+                    HStack(spacing: 12) {
+                        Button("Yes") { Haptics.selection(); yes = true }
+                            .buttonStyle(yes == true ? AnyButtonStyle(PrimaryButtonStyle()) : AnyButtonStyle(SecondaryButtonStyle()))
+                        Button("No") { Haptics.selection(); yes = false }
+                            .buttonStyle(yes == false ? AnyButtonStyle(PrimaryButtonStyle()) : AnyButtonStyle(SecondaryButtonStyle()))
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer()
+
+                Button("Submit") {
+                    submit()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!canSubmit)
+                .opacity(canSubmit ? 1 : 0.55)
+                .padding(.horizontal, 24)
+
+                if !settings.required {
+                    Button("Skip") { dismiss() }
+                        .font(.footnote)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .padding(.bottom, 16)
+                }
+            }
+        }
+    }
+
+    private func ratingLabel(_ r: Int) -> String {
+        switch r {
+        case 1: "Sorry to hear — we'll do better."
+        case 2: "Thanks for the feedback."
+        case 3: "Good to know."
+        case 4: "Great!"
+        case 5: "Amazing — thank you!"
+        default: ""
+        }
+    }
+
+    private var canSubmit: Bool {
+        switch settings.answerType {
+        case .rating: rating > 0
+        case .text:   !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .yesNo:  yes != nil
+        }
+    }
+
+    private func submit() {
+        let r = SurveyResponse(
+            photoId: nil,
+            answerType: settings.answerType,
+            rating: settings.answerType == .rating ? rating : nil,
+            text: settings.answerType == .text ? text : nil,
+            yesNo: settings.answerType == .yesNo ? yes : nil
+        )
+        Haptics.notify(.success)
+        onSubmit(r)
+        dismiss()
+    }
+}
+
+private struct AnyButtonStyle: ButtonStyle {
+    private let _make: @MainActor (Configuration) -> AnyView
+    init<S: ButtonStyle>(_ style: S) {
+        self._make = { config in AnyView(style.makeBody(configuration: config)) }
+    }
+    func makeBody(configuration: Configuration) -> some View { _make(configuration) }
+}
+
+// MARK: - Sharing Status
+
+struct SharingStatusView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+
+    private var s: SharingSettings { app.settings(for: eventId).sharing }
+    @State private var latestPhotoId: UUID?
+    @State private var testStatus: [SharingChannel: ChannelStatus] = [:]
+
+    enum ChannelStatus: Equatable {
+        case sending, sent, failed(String)
+
+        var label: String {
+            switch self {
+            case .sending: "Sending…"
+            case .sent: "Sent ✓"
+            case .failed(let m): m
+            }
+        }
+        var color: Color {
+            switch self {
+            case .sending: BoothifyTheme.amber
+            case .sent: BoothifyTheme.emerald
+            case .failed: .red
+            }
+        }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(SharingChannel.allCases, id: \.self) { channel in
+                    SharingChannelRow(
+                        channel: channel,
+                        status: status(for: channel),
+                        canTest: latestPhotoId != nil && s.enabledChannels.contains(channel) && channelHasTest(channel) && isRecipientValid(channel),
+                        live: testStatus[channel]
+                    ) {
+                        sendTest(channel: channel)
+                    }
+                }
+            } header: {
+                Text("Delivery channels")
+            } footer: {
+                Text("Status reflects local config. Test sends use the latest completed photo for this event and hit the real backend endpoints.")
+                    .font(.caption2)
+            }
+            .listRowBackground(BoothifyTheme.surface1)
+
+            Section {
+                TextField("test@example.com", text: app.mvpBinding(eventId: eventId, keyPath: \.sharing.testEmail))
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .textContentType(.emailAddress)
+                if !s.testEmail.isEmpty && !isValidEmail(s.testEmail) {
+                    Text("Invalid email format").font(.caption2).foregroundStyle(.red.opacity(0.85))
+                }
+                TextField("+48 500 111 222", text: app.mvpBinding(eventId: eventId, keyPath: \.sharing.testPhone))
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+                if !s.testPhone.isEmpty && !isValidPhone(s.testPhone) {
+                    Text("Phone must be at least 7 digits").font(.caption2).foregroundStyle(.red.opacity(0.85))
+                }
+            } header: {
+                Text("Test recipients")
+            } footer: {
+                Text("Used by the Send test buttons above. Saved per event.")
+                    .font(.caption2)
+            }
+            .listRowBackground(BoothifyTheme.surface1)
+
+            if latestPhotoId == nil {
+                Section {
+                    Text("No completed photo yet — take one to enable test sends.")
+                        .font(.footnote)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .navigationTitle("Delivery Status")
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: eventId) {
+            await loadLatestPhoto()
+        }
+    }
+
+    private func status(for channel: SharingChannel) -> String {
+        s.enabledChannels.contains(channel) ? "Ready" : "Not configured"
+    }
+
+    private func channelHasTest(_ channel: SharingChannel) -> Bool {
+        switch channel {
+        case .email, .sms: true
+        default: false
+        }
+    }
+
+    private func isRecipientValid(_ channel: SharingChannel) -> Bool {
+        switch channel {
+        case .email: isValidEmail(s.testEmail)
+        case .sms:   isValidPhone(s.testPhone)
+        default: true
+        }
+    }
+
+    private func isValidEmail(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        guard let at = trimmed.firstIndex(of: "@"), at != trimmed.startIndex else { return false }
+        let domain = trimmed[trimmed.index(after: at)...]
+        return domain.contains(".") && !domain.hasPrefix(".") && !domain.hasSuffix(".")
+    }
+
+    private func isValidPhone(_ value: String) -> Bool {
+        value.filter(\.isNumber).count >= 7
+    }
+
+    private func loadLatestPhoto() async {
+        guard let slug = app.event(id: eventId)?.slug else { return }
+        do {
+            let list = try await BoothifyAPI.shared.listEventPhotos(slug: slug, status: .completed, limit: 1)
+            latestPhotoId = list.photos.first?.id
+        } catch { /* ignore */ }
+    }
+
+    private func sendTest(channel: SharingChannel) {
+        guard let photoId = latestPhotoId else { return }
+        Haptics.tap()
+        testStatus[channel] = .sending
+        Task {
+            do {
+                switch channel {
+                case .email:
+                    try await BoothifyAPI.shared.sendEmail(photoId: photoId, email: s.testEmail)
+                case .sms:
+                    try await BoothifyAPI.shared.sendSMS(photoId: photoId, phone: s.testPhone)
+                default:
+                    return
+                }
+                testStatus[channel] = .sent
+                Haptics.notify(.success)
+            } catch {
+                let msg = (error as? APIError)?.errorDescription ?? "Failed"
+                testStatus[channel] = .failed(msg)
+                Haptics.notify(.error)
+            }
+        }
+    }
+}
+
+private struct SharingChannelRow: View {
+    let channel: SharingChannel
+    let status: String
+    let canTest: Bool
+    let live: SharingStatusView.ChannelStatus?
+    let test: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(BoothifyTheme.surface2)
+                    .frame(width: 32, height: 32)
+                Image(systemName: channel.symbol)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+            }
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(channel.label)
+                    .font(.body)
+                    .foregroundStyle(.white)
+                Text(live?.label ?? status)
+                    .font(.footnote)
+                    .foregroundStyle(live?.color ?? BoothifyTheme.textTertiary)
+                    .lineLimit(2)
+            }
+            Spacer()
+            if canTest {
+                Button("Send test") { test() }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .buttonStyle(.plain)
+                    .disabled(live == .sending)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Account
+
+struct AccountSettingsView: View {
+    @Environment(AppState.self) private var app
+    let eventId: UUID
+
+    @State private var confirmReset = false
+    @State private var copiedLabel: String?
+
+    private var event: Event? { app.event(id: eventId) }
+    private var apiBaseURL: String { BoothifyAPI.shared.baseURL.absoluteString }
+    private var appVersion: String {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+        let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        return "\(v) (\(b))"
+    }
+    private var environmentLabel: String {
+        let host = BoothifyAPI.shared.baseURL.host ?? ""
+        if host.contains("localhost") || host.hasPrefix("127.") { return "Development" }
+        if host.contains("vercel.app") { return "Staging" }
+        return "Production"
+    }
+
+    var body: some View {
+        List {
+            Section("Event") {
+                LabeledRowInline(title: "Name", value: event?.name ?? "—")
+                HStack {
+                    Text("Slug").foregroundStyle(.white)
+                    Spacer()
+                    Text(event?.slug ?? "—")
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .font(.system(.footnote, design: .monospaced))
+                    if event?.slug != nil {
+                        Button {
+                            copy(event!.slug, label: "Slug")
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .foregroundStyle(BoothifyTheme.violet)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Copy slug")
+                    }
+                }
+                if let createdAt = event?.createdAt {
+                    LabeledRowInline(title: "Created", value: createdAt.formatted(date: .abbreviated, time: .shortened))
+                }
+            }
+            .listRowBackground(BoothifyTheme.surface1)
+
+            Section("App") {
+                LabeledRowInline(title: "Version", value: appVersion)
+                LabeledRowInline(title: "Environment", value: environmentLabel)
+                HStack {
+                    Text("API base URL").foregroundStyle(.white)
+                    Spacer()
+                    Text(apiBaseURL)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .font(.system(.footnote, design: .monospaced))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Button {
+                        copy(apiBaseURL, label: "API URL")
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .foregroundStyle(BoothifyTheme.violet)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Copy API base URL")
+                }
+                if let copiedLabel {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(BoothifyTheme.emerald)
+                        Text("\(copiedLabel) copied to clipboard")
+                            .foregroundStyle(BoothifyTheme.emerald)
+                    }
+                    .font(.footnote.weight(.medium))
+                    .transition(.opacity)
+                }
+            }
+            .listRowBackground(BoothifyTheme.surface1)
+
+            Section {
+                Button(role: .destructive) {
+                    Haptics.tap()
+                    confirmReset = true
+                } label: {
+                    Label("Reset local settings for this event", systemImage: "arrow.counterclockwise")
+                }
+            }
+            .listRowBackground(BoothifyTheme.surface1)
+        }
+        .scrollContentBackground(.hidden)
+        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .navigationTitle("Account")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Reset settings?", isPresented: $confirmReset) {
+            Button("Reset", role: .destructive) {
+                app.resetSettings(for: eventId)
+                Haptics.notify(.success)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All local settings for this event will be restored to defaults. Photos and event data on the backend are not affected.")
+        }
+    }
+
+    private func copy(_ value: String, label: String) {
+        UIPasteboard.general.string = value
+        Haptics.notify(.success)
+        withAnimation(.spring) { copiedLabel = label }
+        Task {
+            try? await Task.sleep(for: .seconds(1.6))
+            withAnimation { copiedLabel = nil }
+        }
+    }
+}
+
+private struct LabeledRowInline: View {
+    let title: String
+    let value: String
+    var monospaced: Bool = false
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.white)
+            Spacer()
+            Text(value)
+                .foregroundStyle(BoothifyTheme.textTertiary)
+                .font(monospaced ? .system(.footnote, design: .monospaced) : .footnote)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+// MARK: - Color hex helper
+
+extension Color {
+    init(hex: String) {
+        let trimmed = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: trimmed).scanHexInt64(&int)
+        let r, g, b: Double
+        switch trimmed.count {
+        case 6:
+            r = Double((int >> 16) & 0xFF) / 255
+            g = Double((int >> 8) & 0xFF) / 255
+            b = Double(int & 0xFF) / 255
+        default:
+            r = 0; g = 0; b = 0
+        }
+        self.init(red: r, green: g, blue: b)
+    }
+}
