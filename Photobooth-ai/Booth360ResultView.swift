@@ -92,7 +92,6 @@ struct Booth360ResultView: View {
     private func metadataChips(job: Booth360Job) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                chip("Demo preview", symbol: "sparkles", tint: BoothifyTheme.amber)
                 chip(job.settingsSnapshot.videoQuality.label, symbol: "rectangle.compress.vertical", tint: BoothifyTheme.violet)
                 chip(job.settingsSnapshot.clipDirection.label, symbol: "arrow.left.arrow.right", tint: BoothifyTheme.fuchsia)
                 if job.brandOverlay.rendersOnResults {
@@ -267,7 +266,7 @@ private struct AnimatedDemoPreviewCard: View {
                     .shadow(color: .black.opacity(0.5), radius: 4)
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles").font(.caption2)
-                    Text("DEMO PREVIEW · \(qualityLabel)")
+                    Text(qualityLabel)
                         .font(.caption2.weight(.bold))
                         .kerning(1.0)
                 }
