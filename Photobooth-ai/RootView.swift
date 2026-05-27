@@ -18,11 +18,6 @@ struct RootView: View {
                             destination(for: route)
                         }
                 }
-                .overlay(alignment: .top) {
-                    if app.isDemoMode {
-                        DemoModeBanner()
-                    }
-                }
             }
         }
     }
@@ -119,26 +114,6 @@ private struct AuthSplashView: View {
             ProgressView()
                 .tint(BoothifyTheme.violet)
         }
-    }
-}
-
-/// Visible reminder that the LoginView gate is bypassed. Surfaces while
-/// `AppConfig.authGateEnabled == false`. Backend-touching calls outside the
-/// AppState short-circuits will still 401 — this pill makes that visible.
-///
-/// TODO: Re-enable Sign in with Apple before production multi-user launch.
-private struct DemoModeBanner: View {
-    var body: some View {
-        Text("DEMO MODE · sign-in disabled")
-            .font(.caption2.weight(.bold))
-            .kerning(0.8)
-            .foregroundStyle(BoothifyTheme.amber)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(BoothifyTheme.amber.opacity(0.16), in: Capsule())
-            .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.45), lineWidth: 0.5))
-            .padding(.top, 4)
-            .accessibilityLabel("Demo mode. Sign-in temporarily disabled.")
     }
 }
 
