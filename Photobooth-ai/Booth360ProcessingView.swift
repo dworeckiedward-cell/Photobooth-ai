@@ -42,12 +42,17 @@ struct Booth360ProcessingView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task(id: jobId) {
             // Kick off the render pipeline once; subsequent appears (e.g. swipe-back
-            // during nav animation) shouldn't restart it. Prefers the cloud API
-            // client (M3); that client falls back to the passthrough (M0) on any
-            // failure so the user is never stuck on a spinner.
+            // during nav animation) shouldn't restart it.
+            //
+            // IM0: local FFmpeg client is the primary renderer (real montage via
+            // h264_videotoolbox). On non-zero return code it falls back to the
+            // passthrough renderer internally so the operator never sits on a
+            // spinner. The cloud client (M3) still uploads, but only AFTER the
+            // local render — kicked off as a side effect once finalVideoURL is
+            // available (handled by ResultView / its caller in a future sprint).
             if pipelineTask == nil, let j = job, !j.status.isTerminal {
                 pipelineTask = Task {
-                    await Booth360APIRenderClient.shared.runPipeline(jobId: jobId, app: app)
+                    await Booth360FFmpegRenderClient.shared.runPipeline(jobId: jobId, app: app)
                 }
             }
         }

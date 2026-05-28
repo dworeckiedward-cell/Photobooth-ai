@@ -5,7 +5,40 @@ place; these unblock the corresponding features end-to-end.
 
 ---
 
-## M6 — FFmpeg binary
+## IM0 — Real-device FFmpeg test (replaces "M6 — FFmpeg binary")
+
+The FFmpeg pipeline (M6 + IM0) is now **live in code**: SPM package added,
+`Booth360FFmpegRenderClient` calls `FFmpegKit.executeAsync` with the real
+filter_complex chain, `h264_videotoolbox` is the encoder, fallback to
+passthrough on non-success return code.
+
+Things only confirmable on real hardware (iPhone 12/13 minimum — see
+the feasibility report's performance flag):
+
+1. **Encode speed**: `h264_videotoolbox` on a 9-second 1080p input with
+   the default template (3 segments + reverse). Target: under 5s total
+   wall clock on iPhone 13. If much slower, investigate the bitrate /
+   pixel-format combo.
+2. **Memory footprint** during render: keep an eye on Xcode Memory gauge,
+   `libavfilter` + `libavcodec` together can spike. If we see jetsam
+   kills on older devices, downgrade default `videoQuality` from `.hd1080p`
+   to `.sd720p` in `AI360Settings`.
+3. **Overlay positioning**: confirm corner/center anchors render where
+   the SwiftUI preview shows them. The filter expressions use
+   `main_w-overlay_w-pad` form — sometimes FFmpeg needs `overlay=W-w-pad`
+   shorthand instead. Adjust per device if positions look off.
+4. **Soundtrack mux**: if operator picked a song in M4, verify the
+   `-shortest` actually clamps audio to the (potentially shorter)
+   rendered video. If audio outruns or undercuts, switch to
+   `-t <duration>` with the explicit length computed in code.
+5. **App size after install**: Debug Simulator builds at ~72 MB. Release
+   on real device strips x86_64 + symbols + dynamic linking, expect
+   ~30-40 MB total. If App Store rejects on size, ffmpeg-kit's modular
+   build lets you drop unused codecs.
+
+---
+
+## M6 — FFmpeg binary (DONE in IM0, kept for history)
 
 The render-time speed-ramp / concat / reverse / overlay pipeline is fully
 wired on the data side (timeline editor saves segments → `Booth360FFmpegRenderClient`

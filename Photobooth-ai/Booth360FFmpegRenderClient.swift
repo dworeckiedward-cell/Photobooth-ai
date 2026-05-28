@@ -1,23 +1,27 @@
 import Foundation
 import os.log
+import ffmpegkit
 
-/// M6 scaffold for the FFmpeg-backed 360 render client.
+/// IM0: live FFmpeg-backed 360 render client.
 ///
-/// **Current state: STUB.** The official `ffmpeg-kit-ios` binary distribution
-/// was retired by the maintainer; iOS doesn't ship FFmpeg natively. Until a
-/// vetted community fork is added to the project (see `TODO-HUMAN.md` →
-/// "M6 — FFmpeg binary"), this client:
-///
-///   1. Builds the actual `filter_complex` string from the active template
-///      (`buildFilterComplex`) — same string FFmpegKit would execute.
-///   2. Logs the exact command for debugging.
-///   3. Hands the job off to `Booth360PassthroughRenderClient` so the
-///      Processing UI completes and the operator sees their raw take as the
-///      final video.
-///
-/// When binaries land, replacing the body of `runPipeline` with a real
-/// `FFmpegKit.executeAsync(_:)` call is a ~10-line change. The filter chain
-/// builder is the entire interesting part — it's already covered.
+/// Pipeline (per `runPipeline`):
+///   1. Build the `filter_complex` string from the active template
+///      (`buildFilterComplex`). Composes trim → setpts → reverse → concat
+///      per segment, plus optional brand-overlay layer.
+///   2. Build the full `ffmpeg` command — encoder is `h264_videotoolbox`
+///      (hardware-accelerated, no GPL contamination, friendly to older
+///      iPhones), pixel format yuv420p, faststart enabled for smooth
+///      playback.
+///   3. Optionally mux the soundtrack the operator picked in M4 via
+///      `-i <music>` + `-c:a aac_at -shortest`. Skipped silently if no
+///      track is set or the file went missing.
+///   4. Execute asynchronously via `FFmpegKit.executeAsync(_:)`.
+///   5. Stream progress: `FFmpegKitConfig.enableStatisticsCallback`
+///      reports the current output time in ms; we map that onto
+///      `Booth360Job.progress` (0…1).
+///   6. On non-zero return code, fall back to the passthrough client so
+///      the user still ends with the raw take + a "montage failed"
+///      surface — never crash mid-event.
 @MainActor
 final class Booth360FFmpegRenderClient: Booth360RenderClient {
     static let shared = Booth360FFmpegRenderClient()
@@ -27,7 +31,7 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
     private init() {}
 
     func runPipeline(jobId: UUID, app: AppState) async {
-        guard let job = app.job(id: jobId),
+        guard var job = app.job(id: jobId),
               let rawURL = job.rawVideoLocalURL,
               FileManager.default.fileExists(atPath: rawURL.path) else {
             await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
@@ -39,13 +43,17 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
             .deletingLastPathComponent()
             .appendingPathComponent("final_\(jobId.uuidString.prefix(8)).mp4")
 
-        // M7: if the operator uploaded a custom logo we'll bake it into the
-        // final via FFmpeg's overlay filter (added in buildFilterComplex when
+        // M7: if the operator uploaded a custom logo we bake it into the final
+        // via FFmpeg's overlay filter (added in buildFilterComplex when
         // overlayLogoURL != nil).
         let overlayURL = BrandOverlayLayer.uploadedLogoURL(
             eventId: job.eventId,
             settings: job.brandOverlay
         )
+
+        // M4 soundtrack — silently optional. If file is missing we just drop
+        // the audio input; never block the render on it.
+        let soundtrackURL = Self.resolveSoundtrackURL(eventId: job.eventId, settings: job.settingsSnapshot)
 
         let chain = Self.buildFilterComplex(
             segments: segments,
@@ -59,16 +67,101 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
         let cmd = Self.buildCommand(
             inputURL: rawURL,
             overlayURL: overlayURL,
+            soundtrackURL: soundtrackURL,
             outputURL: outputURL,
             filterComplex: chain,
-            bitrateMbps: job.settingsSnapshot.bitrateMbps,
-            includeAudio: false  // Speed-ramp + reverse + atempo audio is fiddly; v1 ships video only.
+            bitrateMbps: job.settingsSnapshot.bitrateMbps
         )
 
-        // For now we log what we would have run, then fall through to passthrough.
-        log.debug("ffmpeg-kit scaffold — would execute: \(cmd, privacy: .public)")
+        log.debug("ffmpeg cmd: \(cmd, privacy: .public)")
 
+        // Move job to processing immediately so the UI doesn't sit at 0%.
+        job.status = .processing
+        job.currentStep = .stabilizing
+        job.progress = 0.05
+        app.upsertJob(job)
+
+        // Total expected output duration in ms — used to translate per-frame
+        // ffmpeg `time` statistics into a 0…1 progress value. Falls back to
+        // raw recording duration if the template doesn't declare its own.
+        let renderedDurationMs = max(1.0, expectedRenderedSeconds(for: job) * 1000.0)
+
+        // Install statistics callback BEFORE executeAsync so the very first
+        // tick is captured. The callback runs on FFmpegKit's worker — hop to
+        // the main actor to mutate AppState safely.
+        FFmpegKitConfig.enableStatisticsCallback { [weak app] stats in
+            guard let app, let stats else { return }
+            let timeMs = Double(stats.getTime())
+            let pct = max(0.0, min(0.95, timeMs / renderedDurationMs))
+            Task { @MainActor in
+                guard var live = app.job(id: jobId) else { return }
+                live.progress = pct
+                live.currentStep = .cinematicEffects
+                app.upsertJob(live)
+            }
+        }
+
+        // Run the command. executeAsync's completion callback fires once per
+        // session — we bridge it onto an async continuation so we can await it.
+        let returnCode: ReturnCode? = await withCheckedContinuation { (cont: CheckedContinuation<ReturnCode?, Never>) in
+            FFmpegKit.executeAsync(cmd) { session in
+                let rc = session?.getReturnCode()
+                cont.resume(returning: rc)
+            }
+        }
+
+        FFmpegKitConfig.enableStatisticsCallback(nil)
+
+        // Outcome → job state.
+        if let rc = returnCode, ReturnCode.isSuccess(rc),
+           FileManager.default.fileExists(atPath: outputURL.path) {
+            guard var live = app.job(id: jobId) else { return }
+            live.status = .completed
+            live.currentStep = nil
+            live.progress = 1.0
+            live.completedAt = .now
+            live.finalVideoURL = outputURL
+            // Best-effort mock share URL until M3 backend mints real ones.
+            if live.publicShareURL == nil {
+                live.publicShareURL = URL(string: "https://boothify.app/v/\(jobId.uuidString.prefix(8).lowercased())")
+            }
+            app.upsertJob(live)
+            return
+        }
+
+        // Anything other than success → log + passthrough fallback so the
+        // operator still gets the raw take + a non-nil finalVideoURL.
+        if let rc = returnCode {
+            log.error("ffmpeg returned \(rc.getValue(), privacy: .public) — falling back to passthrough")
+        } else {
+            log.error("ffmpeg session returned nil — falling back to passthrough")
+        }
+        var failed = job
+        failed.errorMessage = "Montage failed — saved the raw recording instead."
+        app.upsertJob(failed)
         await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
+    }
+
+    /// Total seconds we expect the final output to span — used for progress
+    /// scaling. Falls back to raw recording duration when no template is set.
+    private func expectedRenderedSeconds(for job: Booth360Job) -> Double {
+        let segs = job.settingsSnapshot.effectiveSegments
+        let total = segs.reduce(0.0) { $0 + $1.renderedDuration }
+        if total > 0 { return total }
+        return max(1.0, job.settingsSnapshot.recordingDurationSeconds)
+    }
+
+    /// Resolve the absolute on-disk path of the operator's chosen soundtrack
+    /// (M4). Stored relative under `Documents/events/<id>/audio/<file>`.
+    private static func resolveSoundtrackURL(eventId: UUID, settings: AI360Settings) -> URL? {
+        guard let relative = settings.soundtrackRelativePath, !relative.isEmpty else { return nil }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let url = docs
+            .appendingPathComponent("events", isDirectory: true)
+            .appendingPathComponent(eventId.uuidString, isDirectory: true)
+            .appendingPathComponent(relative)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     /// Overlay positioning spec passed into the filter chain builder.
@@ -177,40 +270,61 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
         return parts.joined(separator: ";")
     }
 
-    /// Compose the full `ffmpeg` argv equivalent. We don't shell-escape because
-    /// FFmpegKit takes the command as a parsed string anyway — when the binary
-    /// lands, swap this for `FFmpegKit.executeAsync(_:)` with the same string.
+    /// Compose the full `ffmpeg` argv string passed straight to
+    /// `FFmpegKit.executeAsync`. Encoder is `h264_videotoolbox` (hardware,
+    /// not GPL libx264). Soundtrack (when present) is muxed in unmodified
+    /// — `-shortest` clamps duration to the video stream so audio doesn't
+    /// outrun the montage.
+    ///
+    /// Input ordering matters because the filter chain references streams
+    /// positionally: `[0:v]` = video, `[1:v]` = overlay (if present),
+    /// `[2:a]` = soundtrack (if present and overlay is also present),
+    /// otherwise `[1:a]`. Audio input is appended last so the index math
+    /// stays stable when overlay is absent.
     static func buildCommand(
         inputURL: URL,
         overlayURL: URL? = nil,
+        soundtrackURL: URL? = nil,
         outputURL: URL,
         filterComplex: String,
-        bitrateMbps: Double,
-        includeAudio: Bool
+        bitrateMbps: Double
     ) -> String {
         let bitrate = max(1, bitrateMbps)
         var argv: [String] = [
             "-y",
-            "-i", inputURL.path,
+            "-i", quoted(inputURL.path),
         ]
         if let overlayURL {
             // Second input — referenced as [1:v] in filter_complex.
-            argv += ["-i", overlayURL.path]
+            argv += ["-i", quoted(overlayURL.path)]
+        }
+        var audioIndex: Int? = nil
+        if let soundtrackURL {
+            audioIndex = (overlayURL == nil) ? 1 : 2
+            argv += ["-i", quoted(soundtrackURL.path)]
         }
         argv += ["-filter_complex", "\"\(filterComplex)\""]
         argv += ["-map", "[outv]"]
-        if !includeAudio {
+        if let audioIndex {
+            argv += ["-map", "\(audioIndex):a:0"]
+            argv += ["-c:a", "aac_at", "-b:a", "128k", "-shortest"]
+        } else {
             argv += ["-an"]
         }
         argv += [
-            "-c:v", "libx264",
-            "-profile:v", "baseline",
+            "-c:v", "h264_videotoolbox",
             "-pix_fmt", "yuv420p",
             "-b:v", String(format: "%.1fM", bitrate),
             "-movflags", "+faststart",
-            outputURL.path,
+            quoted(outputURL.path),
         ]
         return argv.joined(separator: " ")
+    }
+
+    /// FFmpegKit splits the command string on whitespace. Wrap paths in
+    /// quotes so spaces (e.g. an event id with a space) don't break parsing.
+    private static func quoted(_ path: String) -> String {
+        "\"\(path)\""
     }
 
     // MARK: - Validators

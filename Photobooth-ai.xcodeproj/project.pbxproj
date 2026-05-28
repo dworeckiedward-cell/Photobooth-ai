@@ -18,11 +18,16 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXBuildFile section */
+		0EFF000110000000000000A1 /* FFmpeg-Kit in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000130000000000000C1 /* FFmpeg-Kit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		0EE36FE82FB0A0D400F745CF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0EFF000110000000000000A1 /* FFmpeg-Kit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = "Photobooth-ai";
 			packageProductDependencies = (
+				0EFF000130000000000000C1 /* FFmpeg-Kit */,
 			);
 			productName = "Photobooth-ai";
 			productReference = 0EE36FEB2FB0A0D400F745CF /* Photobooth-ai.app */;
@@ -100,6 +106,9 @@
 			projectRoot = "";
 			targets = (
 				0EE36FEA2FB0A0D400F745CF /* Photobooth-ai */,
+			);
+			packageReferences = (
+				0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */,
 			);
 		};
 /* End PBXProject section */
@@ -344,6 +353,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tylerjonesio/ffmpeg-kit-spm";
+			requirement = {
+				kind = revision;
+				revision = 6053b0e4f8607314ff5e14e0b18fc250c0f87c9b;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0EFF000130000000000000C1 /* FFmpeg-Kit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */;
+			productName = "FFmpeg-Kit";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0EE36FE32FB0A0D400F745CF /* Project object */;
 }

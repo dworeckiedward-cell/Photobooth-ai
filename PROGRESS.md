@@ -197,6 +197,45 @@ Status: ⚠️ partial — data layer + filter chain builder + UI editor done; b
 
 Build: ✅ green.
 
+---
+
+# Second run (2026-05-28) — domknięcie z calla
+
+## IM0 — Ożywienie FFmpeg
+Status: ✅ done
+
+- SPM dep `tylerjonesio/ffmpeg-kit-spm` dodany przez edycję `project.pbxproj`.
+  Pin na commit `6053b0e4f8607314ff5e14e0b18fc250c0f87c9b` (HEAD `main`,
+  tagi tego forku są nie-semverowe — `min.v5.1.2.6`). Wybór commit-pin
+  zamiast tag-range opisany w `DECISIONS.md`.
+- Produkt `FFmpeg-Kit` (wrapper re-exportujący `ffmpegkit` module).
+- `Booth360FFmpegRenderClient.runPipeline` przepisany ze stubu na realny
+  `FFmpegKit.executeAsync(cmd) { session in … }` z `ReturnCode.isSuccess`
+  walidacją.
+- Enkoder: `h264_videotoolbox` (hardware, brak GPL contamination, szybszy
+  na iPhone 12/13 niż `libx264`). Pixel format `yuv420p`, `+faststart`.
+- Audio: opcjonalny soundtrack z M4 (`-i music.m4a -shortest -c:a aac_at
+  -b:a 128k`). Brak audio z segmentów (speed-ramp `atempo` fiddly —
+  decyzja z 1. runu utrzymana).
+- Progress: `FFmpegKitConfig.enableStatisticsCallback` mapuje
+  `Statistics.getTime()` (ms) na `Booth360Job.progress` (0…0.95).
+  Callback hoppa do MainActor przed upsertem.
+- Fallback: jak `ReturnCode` non-success lub plik nie powstał →
+  `errorMessage = "Montage failed — saved the raw recording instead."`
+  + delegacja do `Booth360PassthroughRenderClient`. **Nigdy nie crashuje
+  podczas eventu.**
+- `Booth360ProcessingView.task` re-wired na `Booth360FFmpegRenderClient.shared`.
+- Logo overlay (M7) ożywa automatycznie — gdy `BrandOverlaySettings.enabled`
+  jest true i operator wgrał logo, filter chain dorzuca `-i logo.png` +
+  `overlay=...`. Photo flow bake niezmieniony (M7).
+
+**Rozmiar appki:** Debug Simulator build = 72 MB (universal arm64+x86_64,
+nie-stripped). FFmpeg frameworks ~29 MB total: libavcodec 14MB,
+libavformat 7MB, libavfilter 5MB, libavutil 932K, ffmpegkit 1.2MB.
+Release build na realnym device będzie znacznie mniejszy po strip + arm64-only.
+
+Build: ✅ green (zero warnings).
+
 ## M7 — Logo overlay picker + bake
 Status: ✅ done (photo bake live, video bake hooked into M6 chain)
 
