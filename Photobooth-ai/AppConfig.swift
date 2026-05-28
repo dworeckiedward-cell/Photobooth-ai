@@ -8,10 +8,17 @@ enum AppConfig {
     /// `/api/auth/apple`, the entitlement) is intentionally left intact and is
     /// re-activated by flipping this back to `true`.
     ///
-    /// TODO: Re-enable Sign in with Apple before production multi-user launch.
-    /// To restore:
-    ///   1. Set `authGateEnabled = true` here.
-    ///   2. Verify Apple provider is enabled in Supabase Auth (see audit doc).
-    ///   3. Build & ship — the existing AppState/RootView wiring takes over.
-    static let authGateEnabled: Bool = true
+    /// Default: ON (App Store requirement). IM4: in DEBUG builds this can be
+    /// overridden by setting the environment variable `BOOTHIFY_BYPASS_AUTH=1`
+    /// in the Xcode scheme — useful for on-device testing of camera / montage
+    /// before the backend auth + Supabase Apple provider are wired.
+    static var authGateEnabled: Bool {
+        let baseline = true
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["BOOTHIFY_BYPASS_AUTH"] == "1" {
+            return false
+        }
+        #endif
+        return baseline
+    }
 }

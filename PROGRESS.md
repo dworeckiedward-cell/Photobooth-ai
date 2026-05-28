@@ -201,6 +201,24 @@ Build: ✅ green.
 
 # Second run (2026-05-28) — domknięcie z calla
 
+## IM4 — Debug auth bypass + sanity
+Status: ✅ done
+
+- `AppConfig.authGateEnabled` converted from `static let true` to a
+  computed property. **Release builds: always true** (App Store
+  requirement). **Debug builds: returns false when the environment
+  variable `BOOTHIFY_BYPASS_AUTH=1` is set in the Xcode scheme** —
+  surface for testing camera / montage on device before backend Apple
+  provider is configured.
+- Sanity build clean across the run: no compile errors after IM0-IM3,
+  zero non-AppIntents warnings.
+- App size after FFmpeg: Debug Simulator universal = 72 MB (~29 MB
+  FFmpeg frameworks). Release on real-device strip + arm64-only will be
+  significantly lower — confirmed-on-device measurement is a real-device
+  task (see TODO-HUMAN.md IM0).
+
+Build: ✅ green.
+
 ## IM3 — Onboarding quiz
 Status: ✅ done (local persistence; backend sync optional later)
 

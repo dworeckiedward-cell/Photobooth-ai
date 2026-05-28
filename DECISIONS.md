@@ -7,6 +7,24 @@ addition to* those, not a contradiction.
 
 ---
 
+## IM4 — Debug auth bypass implementation
+
+`AppConfig.authGateEnabled` is now a computed property that returns:
+- Always `true` in Release builds (compile-time guarantee).
+- `false` in Debug builds **only** when the environment variable
+  `BOOTHIFY_BYPASS_AUTH=1` is set on the scheme.
+
+Chose env-var over a hard `#if DEBUG` flip because:
+- A blanket DEBUG=false would silently disable auth for every developer
+  every time they Cmd+R. Easy to accidentally ship a build that thinks
+  auth is off because someone forgot to flip back.
+- An opt-in env var keeps Debug behavior identical to Release by default,
+  and the bypass is visible in the scheme editor — discoverable and
+  trivially togglable.
+
+To enable: Xcode → Edit Scheme → Run → Arguments → Environment Variables
+→ add `BOOTHIFY_BYPASS_AUTH = 1`.
+
 ## IM0 — FFmpeg package pin
 
 Picked `tylerjonesio/ffmpeg-kit-spm` per the prompt. Their tag scheme is
