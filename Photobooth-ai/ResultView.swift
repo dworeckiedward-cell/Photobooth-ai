@@ -252,6 +252,27 @@ struct ResultView: View {
                     Haptics.tap()
                     qrPresented = true
                 }
+                // IM1: native AirDrop / system share — covers everything we
+                // don't bake a dedicated button for (Messages, Notes, Files…).
+                ShareLink(item: publicURL,
+                          subject: Text("Your photo from Boothify"),
+                          message: Text("Tap to open →")) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "airplayaudio").font(.title3)
+                        Text("AirDrop").font(.caption2.weight(.medium))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(BoothifyTheme.surface1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
+                .accessibilityLabel("Open native share sheet — AirDrop, Messages, Mail")
             }
 
             HStack(spacing: 8) {

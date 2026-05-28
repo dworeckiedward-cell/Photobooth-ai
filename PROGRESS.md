@@ -201,6 +201,29 @@ Build: ✅ green.
 
 # Second run (2026-05-28) — domknięcie z calla
 
+## IM1 — QR + AirDrop
+Status: ✅ done
+
+- New `QRGenerator.swift` — CoreImage QR generator (`CIFilter.qrCodeGenerator`),
+  correctionLevel `H` (30% damage tolerance), nearest-neighbour scaling.
+  Reusable SwiftUI `QRCodeView` with white background and graceful "raw
+  URL" fallback when encoding refuses.
+- `Booth360ResultView` action grid expanded from 3 → 5 tiles:
+  **Share (native ShareLink)** · **QR** · **Copy** · **Save** · **New**.
+  Share uses SwiftUI `ShareLink(item:)` so AirDrop, Messages, Mail,
+  WhatsApp etc. all appear without us re-implementing each one.
+- New `Booth360QRSheet` (medium + large detents, ultraThin material) —
+  big code, URL printed below, "Copy link" fallback.
+- **Save-to-Photos re-enabled** for 360 — now that IM0 produces a real
+  `finalVideoURL` we hook `UISaveVideoAtPathToSavedPhotosAlbum`. Toast on
+  top of the fixed layout reports success.
+- Photo `ResultView` action row gets a 5th button: native ShareLink
+  ("AirDrop") sitting alongside SMS / WhatsApp / Email / QR Code. The
+  existing in-app `QRSheet` already covered QR; this just adds the system
+  share sheet.
+
+Build: ✅ green.
+
 ## IM0 — Ożywienie FFmpeg
 Status: ✅ done
 

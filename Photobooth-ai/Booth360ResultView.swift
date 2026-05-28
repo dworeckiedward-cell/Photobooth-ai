@@ -11,7 +11,9 @@ struct Booth360ResultView: View {
     let jobId: UUID
 
     @State private var sharePresented: Bool = false
+    @State private var qrPresented: Bool = false
     @State private var copiedLink: Bool = false
+    @State private var saveToast: String? = nil
 
     private var job: Booth360Job? { app.job(id: jobId) }
 
@@ -71,6 +73,30 @@ struct Booth360ResultView: View {
                     .presentationDetents([.medium, .large])
             }
         }
+        // IM1: QR sheet — operator points guest's phone at the screen, they
+        // get the public_share_url. Detents give them a comfortable size to
+        // hold up at the booth.
+        .sheet(isPresented: $qrPresented) {
+            if let url = job?.publicShareURL {
+                Booth360QRSheet(url: url)
+                    .presentationDetents([.medium, .large])
+                    .presentationBackground(.ultraThinMaterial)
+            }
+        }
+        // IM1: lightweight "Saved to Photos" toast over the fixed layout.
+        .overlay(alignment: .top) {
+            if let saveToast {
+                Text(saveToast)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.black.opacity(0.75), in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring, value: saveToast)
     }
 
     // MARK: - Preview card (animated placeholder)
@@ -140,20 +166,38 @@ struct Booth360ResultView: View {
         .overlay(Capsule().stroke(tint.opacity(0.45), lineWidth: 0.5))
     }
 
-    // MARK: - Action grid (share / copy / new)
+    // MARK: - Action grid (share / QR / copy / save / new)
     //
-    // Save-to-camera-roll is intentionally NOT shown until the real render
-    // client populates `finalVideoURL`. Showing a disabled tile reads as
-    // "broken feature" in a demo. It comes back when the backend lands.
+    // IM1: Share is now a native `ShareLink` so AirDrop, Messages, WhatsApp,
+    // Mail, etc. all show up without us re-implementing each one.
+    // QR is a dedicated tile that brings up the on-device generated code.
+    // Save-to-Photos re-enabled because IM0 produces a real `finalVideoURL`.
 
     @ViewBuilder
     private func actionGrid(job: Booth360Job) -> some View {
         let hasShareURL = job.publicShareURL != nil
+        let hasVideo = job.finalVideoURL != nil
+
         HStack(spacing: 8) {
-            actionTile(symbol: "square.and.arrow.up", label: "Share", enabled: hasShareURL) {
-                Haptics.tap()
-                if job.publicShareURL != nil { sharePresented = true }
+            // Native ShareLink covers AirDrop + Messages + Mail + WhatsApp +
+            // copy-to-clipboard in one sheet. Disabled when there's no URL yet.
+            if let url = job.publicShareURL {
+                ShareLink(item: url,
+                          subject: Text("Your 360 video from Boothify"),
+                          message: Text("Check out the 360 take →")) {
+                    actionTileLabel(symbol: "square.and.arrow.up", label: "Share", enabled: true)
+                }
+                .buttonStyle(.plain)
+                .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
+            } else {
+                actionTile(symbol: "square.and.arrow.up", label: "Share", enabled: false) {}
             }
+
+            actionTile(symbol: "qrcode", label: "QR", enabled: hasShareURL) {
+                Haptics.tap()
+                qrPresented = true
+            }
+
             actionTile(
                 symbol: copiedLink ? "checkmark" : "doc.on.doc",
                 label: copiedLink ? "Copied" : "Copy link",
@@ -169,6 +213,12 @@ struct Booth360ResultView: View {
                     }
                 }
             }
+
+            actionTile(symbol: "arrow.down.to.line", label: "Save", enabled: hasVideo) {
+                Haptics.tap()
+                if let url = job.finalVideoURL { saveVideoToLibrary(url) }
+            }
+
             actionTile(symbol: "video.badge.plus", label: "New", enabled: true) {
                 Haptics.tap()
                 // Pop back to the 360 EventHub regardless of how many screens
@@ -178,6 +228,47 @@ struct Booth360ResultView: View {
                     return false
                 }
             }
+        }
+    }
+
+    /// Pull the label out so the ShareLink branch can render it identically
+    /// to the rest of the row.
+    @ViewBuilder
+    private func actionTileLabel(symbol: String, label: String, enabled: Bool) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: symbol)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(enabled ? BoothifyTheme.amber : BoothifyTheme.textMuted)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(enabled ? .white : BoothifyTheme.textTertiary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .padding(.vertical, 8)
+        .background(BoothifyTheme.surface1)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .opacity(enabled ? 1.0 : 0.55)
+    }
+
+    /// Save the rendered .mp4 (M0 raw / IM0 montage) to Photos. Uses
+    /// UISaveVideoAtPathToSavedPhotosAlbum which requires NSPhotoLibraryAdd
+    /// (already declared) and the file to be local.
+    private func saveVideoToLibrary(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            saveToast = "File not found"
+            return
+        }
+        UISaveVideoAtPathToSavedPhotosAlbum(url.path, nil, nil, nil)
+        saveToast = "Saved to Photos"
+        Haptics.notify(.success)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            saveToast = nil
         }
     }
 
@@ -372,6 +463,66 @@ private struct AnimatedDemoPreviewCard: View {
             withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) {
                 anim = 1
             }
+        }
+    }
+}
+
+/// IM1: QR sheet for guests to scan straight off the iPad. Big code, the
+/// URL printed underneath for accessibility / fallback, plus a "Copy link"
+/// button for the operator in case the guest can't scan.
+private struct Booth360QRSheet: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied: Bool = false
+
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Scan to get the video")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+
+            QRCodeView(url: url)
+                .frame(maxWidth: 320, maxHeight: 320)
+                .padding(.horizontal, 24)
+
+            Text(url.absoluteString)
+                .font(.caption.monospaced())
+                .foregroundStyle(BoothifyTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .truncationMode(.middle)
+                .padding(.horizontal, 24)
+
+            Button {
+                UIPasteboard.general.string = url.absoluteString
+                Haptics.notify(.success)
+                withAnimation(.spring) { copied = true }
+                Task {
+                    try? await Task.sleep(for: .seconds(1.4))
+                    withAnimation { copied = false }
+                }
+            } label: {
+                Label(copied ? "Copied" : "Copy link",
+                      systemImage: copied ? "checkmark" : "doc.on.doc")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(SecondaryButtonStyle())
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+
+            Spacer(minLength: 0)
         }
     }
 }
