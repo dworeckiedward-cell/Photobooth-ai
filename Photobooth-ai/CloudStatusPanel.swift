@@ -71,14 +71,18 @@ struct CloudStatusPanel: View {
         VStack(spacing: 4) {
             HStack(spacing: 4) {
                 Image(systemName: symbol)
-                    .font(.system(size: 10, weight: .bold))
+                    // QW8 — semantic font so Dynamic Type scales the icon
+                    // alongside the count. Hardcoded size: 10 broke at the
+                    // largest accessibility text sizes.
+                    .font(.caption2.weight(.bold))
                 Text("\(count)")
                     .font(.title3.weight(.bold).monospacedDigit())
                     .contentTransition(.numericText())
             }
             .foregroundStyle(tint)
             Text(label)
-                .font(.system(size: 10, weight: .medium))
+                // QW8 — same fix: semantic .caption2 instead of .system(size: 10).
+                .font(.caption2.weight(.medium))
                 .kerning(0.4)
                 .foregroundStyle(BoothifyTheme.textTertiary)
                 .textCase(.uppercase)
