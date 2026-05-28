@@ -95,7 +95,41 @@ Status: ✅ done
 Build: ✅ green.
 
 ## BM3 — Sanity + size
-Status: _pending_
+Status: ✅ done
+
+- Full build pass — zero non-AppIntents warnings, BUILD SUCCEEDED for
+  arm64 + x86_64 Simulator universal.
+- **App size:** 76 MB Debug Simulator universal (was 72 MB post-IM0).
+  +4 MB this run = `Booth360CloudUploader.swift` + `Booth360UploadQueue.swift`
+  + grown `Booth360ResultView` + larger `BoothifyAPI`. Release on real
+  device strips x86_64 + symbols, expect ~35-45 MB.
+- Auth gate (M2): unchanged — `AppConfig.authGateEnabled = true` in
+  Release, `BOOTHIFY_BYPASS_AUTH=1` env still bypasses in Debug.
+- Photo flow (M0-M5/M7): inventoried for regressions, none. `ResultView.SMSSheet`
+  + `BoothifyAPI.sendSMS` (photo path) untouched. `AuthUser` decoder
+  change is additive (`fullName` optional default-nil).
+- iOS-side known limitations updated:
+  - **Mock share URL window:** right after render the optimistic
+    `boothify.app/v/<short>` link is the one the operator sees on the
+    Result screen. Real backend URL swaps in after ~3-30s when upload
+    completes. A guest who scans during that window gets a 404 — UI
+    doesn't flag this. Acceptable for now (operator typically waits
+    a beat anyway); future tweak: gate Share/Copy buttons behind
+    `cloudUploadStatus == .uploaded` if event tests show guests
+    scanning instantly.
+  - **No upload progress on actionGrid for queued/failed jobs viewed
+    elsewhere** — only the Result screen for the active job shows
+    upload status. A pending failed upload from a previous take has no
+    surface outside that one screen. BM1's `uploadStatusBar` shows it
+    when re-entering Result for that job; full-event "X uploads pending"
+    badge is a future ask (cloud-status panel hook).
+  - **Background uploads** still foreground-only (per prompt: no
+    enterprise queue). If operator backgrounds the app mid-upload,
+    iOS gives the Task ~30s before suspending — usually enough for
+    a 10 MB PUT. On suspension the job goes to `.failed` and the
+    next launch's `replayPending` retries.
+
+Build: ✅ green.
 
 ---
 
