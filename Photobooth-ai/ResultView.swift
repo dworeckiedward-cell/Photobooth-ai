@@ -123,7 +123,7 @@ struct ResultView: View {
             }
 
             VStack(spacing: 8) {
-                Text("Working some magic")
+                Text("Generating photo")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
                 Text(funnyMessage(index: messageIndex))
@@ -565,14 +565,16 @@ struct ResultView: View {
         }
     }
 
+    /// Rotating status copy displayed below the headline while we poll
+    /// for the generated photo. Kept brief + professional — operator may
+    /// be holding the iPad in front of a paying client.
     private func funnyMessage(index: Int) -> String {
         let messages = [
-            "Mixing pixels with stardust…",
-            "Asking the AI nicely…",
-            "Adding the special sauce…",
-            "Polishing the highlights…",
-            "Convincing the photons…",
-            "Calibrating the magic…",
+            "Reading the scene…",
+            "Composing your portrait…",
+            "Applying the style…",
+            "Refining the details…",
+            "Almost there…",
         ]
         return messages[index % messages.count]
     }
