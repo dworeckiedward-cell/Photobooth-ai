@@ -156,6 +156,94 @@ final class MockBooth360RenderClient: Booth360RenderClient {
     }
 }
 
+// MARK: - API render client (M3)
+//
+// Uploads the raw recording to the backend and polls the cloud job until
+// completion. Caller (Booth360ProcessingView) selects this in preference to
+// passthrough when authenticated AND the backend endpoints are reachable;
+// any failure (404 not deployed, network, 401 after refresh) falls back to
+// `Booth360PassthroughRenderClient` so the operator never gets stuck.
+@MainActor
+final class Booth360APIRenderClient: Booth360RenderClient {
+    static let shared = Booth360APIRenderClient()
+    private init() {}
+
+    /// Try cloud first; on any failure, hand off to passthrough so the
+    /// processing screen still completes. Caller doesn't need to know which
+    /// path actually ran.
+    func runPipeline(jobId: UUID, app: AppState) async {
+        guard let initial = app.job(id: jobId),
+              let rawURL = initial.rawVideoLocalURL,
+              FileManager.default.fileExists(atPath: rawURL.path) else {
+            await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
+            return
+        }
+
+        // Step 1 — uploading
+        if Task.isCancelled { return }
+        var job = initial
+        job.status = .uploading
+        job.currentStep = .uploading
+        job.progress = 0.05
+        app.upsertJob(job)
+
+        let dto: Booth360JobDTO
+        do {
+            dto = try await BoothifyAPI.shared.uploadBooth360Job(
+                rawVideoURL: rawURL,
+                eventId: job.eventId,
+                settings: job.settingsSnapshot
+            )
+        } catch {
+            // Backend isn't deployed yet or transient — local pipeline keeps
+            // the user moving instead of stalling on a spinner.
+            await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
+            return
+        }
+
+        // Successful upload — store the backend job id mapping locally on the
+        // existing job so we can correlate on poll.
+        if Task.isCancelled { return }
+        job.uploadedRawVideoURL = dto.rawVideoUrl.flatMap(URL.init(string:))
+        job.progress = 0.15
+        job.status = .queued
+        job.currentStep = .stabilizing
+        app.upsertJob(job)
+
+        // Step 2 — poll until terminal. We translate the DTO status/step back
+        // onto the local job so the existing ProcessingView UI just works.
+        do {
+            let finalDTO = try await BoothifyAPI.shared.pollBooth360JobUntilTerminal(
+                id: dto.id,
+                onUpdate: { [weak app] update in
+                    guard let app else { return }
+                    Task { @MainActor in
+                        guard var live = app.job(id: jobId) else { return }
+                        live.status = Booth360RenderStatus(rawValue: update.status) ?? .processing
+                        live.currentStep = update.currentStep.flatMap(Booth360ProcessingStep.init(rawValue:))
+                        live.progress = update.progress
+                        app.upsertJob(live)
+                    }
+                }
+            )
+            if Task.isCancelled { return }
+            job.status = Booth360RenderStatus(rawValue: finalDTO.status) ?? .completed
+            job.currentStep = nil
+            job.progress = 1.0
+            job.completedAt = finalDTO.completedAt ?? .now
+            job.finalVideoURL = finalDTO.finalVideoUrl.flatMap(URL.init(string:)) ?? rawURL
+            job.publicShareURL = finalDTO.publicShareUrl.flatMap(URL.init(string:))
+            job.errorMessage = finalDTO.errorMessage
+            app.upsertJob(job)
+        } catch {
+            // Lost connection mid-poll — fall back to passthrough so the user
+            // at least gets the local recording as the final, plus a mock
+            // share URL. They can re-share once backend recovers.
+            await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
+        }
+    }
+}
+
 // MARK: - Passthrough render client (M0)
 //
 // Bridges the gap between the M0 fundament (real video file written by

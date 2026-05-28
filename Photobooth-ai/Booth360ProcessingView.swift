@@ -42,11 +42,12 @@ struct Booth360ProcessingView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task(id: jobId) {
             // Kick off the render pipeline once; subsequent appears (e.g. swipe-back
-            // during nav animation) shouldn't restart it. Wired to the M0 passthrough
-            // client (which uses the real on-disk recording) — M6 swaps to FFmpeg.
+            // during nav animation) shouldn't restart it. Prefers the cloud API
+            // client (M3); that client falls back to the passthrough (M0) on any
+            // failure so the user is never stuck on a spinner.
             if pipelineTask == nil, let j = job, !j.status.isTerminal {
                 pipelineTask = Task {
-                    await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
+                    await Booth360APIRenderClient.shared.runPipeline(jobId: jobId, app: app)
                 }
             }
         }

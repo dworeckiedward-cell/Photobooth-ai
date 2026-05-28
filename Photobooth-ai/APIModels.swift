@@ -13,6 +13,23 @@ enum PhotoStatusQuery: String, Sendable {
 
 // MARK: - Event
 
+/// How an event's media (photos + 360 videos) gets shared.
+///
+/// `.private` (default, safest): every guest gets a unique link to ONLY their
+/// own media. `.public`: a single album link shows the entire event to anyone
+/// with the URL. Operator picks per event in Settings.
+enum ShareMode: String, Codable, Hashable, Sendable, CaseIterable {
+    case `private`
+    case `public`
+
+    var label: String {
+        switch self {
+        case .private: "Private (per-guest links)"
+        case .public:  "Public (single album link)"
+        }
+    }
+}
+
 struct Event: Codable, Identifiable, Hashable, Sendable {
     let id: UUID
     var name: String
@@ -27,6 +44,10 @@ struct Event: Codable, Identifiable, Hashable, Sendable {
     var createdAt: Date
     /// Only populated by `/api/events/[slug]` and `/api/events/recent`.
     var thumbnailUrl: String?
+    /// M3: share mode for the entire event (private = per-guest links,
+    /// public = single album link). Optional in the wire format so older
+    /// backend payloads still decode — iOS defaults to `.private` when nil.
+    var shareMode: ShareMode?
 
     enum CodingKeys: String, CodingKey {
         case id, name, slug
@@ -39,7 +60,12 @@ struct Event: Codable, Identifiable, Hashable, Sendable {
         case expiresAt = "expires_at"
         case createdAt = "created_at"
         case thumbnailUrl = "thumbnail_url"
+        case shareMode = "share_mode"
     }
+
+    /// Effective share mode — falls back to `.private` if the backend hasn't
+    /// shipped the column yet.
+    var effectiveShareMode: ShareMode { shareMode ?? .private }
 
     /// Demo-mode-only constructor — builds an in-memory `Event` without hitting
     /// the backend. Used while the LoginView gate is temporarily bypassed
@@ -66,6 +92,7 @@ struct Event: Codable, Identifiable, Hashable, Sendable {
             expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: .now),
             createdAt: .now,
             thumbnailUrl: nil,
+            shareMode: .private,
         )
     }
 }
@@ -109,6 +136,39 @@ struct GenerateResult: Codable, Sendable {
     let success: Bool
     let generatedUrl: String?
     let generationTimeMs: Int?
+}
+
+// MARK: - 360 jobs (M3)
+
+/// Wire response for `POST /api/booth360/jobs` and `GET /api/booth360/jobs/{id}`.
+/// Mirrors a subset of the in-memory `Booth360Job` — backend owns canonical
+/// state; iOS reconciles into the local job after each fetch.
+struct Booth360JobDTO: Codable, Sendable {
+    let id: UUID
+    let eventId: UUID
+    let status: String          // raw value of Booth360RenderStatus
+    let currentStep: String?    // raw value of Booth360ProcessingStep
+    let progress: Double
+    let rawVideoUrl: String?
+    let finalVideoUrl: String?
+    let publicShareUrl: String?
+    let createdAt: Date?
+    let completedAt: Date?
+    let errorMessage: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case eventId = "event_id"
+        case status
+        case currentStep = "current_step"
+        case progress
+        case rawVideoUrl = "raw_video_url"
+        case finalVideoUrl = "final_video_url"
+        case publicShareUrl = "public_share_url"
+        case createdAt = "created_at"
+        case completedAt = "completed_at"
+        case errorMessage = "error_message"
+    }
 }
 
 // MARK: - Quota

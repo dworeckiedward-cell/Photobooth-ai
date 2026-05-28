@@ -185,6 +185,94 @@ final class BoothifyAPI {
         )
     }
 
+    // MARK: - 360 jobs (M3)
+
+    /// `POST /api/booth360/jobs` — multipart upload of the raw recording.
+    /// Returns a backend-issued job DTO that the caller polls until completion.
+    func uploadBooth360Job(
+        rawVideoURL: URL,
+        eventId: UUID,
+        settings: AI360Settings
+    ) async throws -> Booth360JobDTO {
+        // Read the file off the main actor — even 10s @ 1080p is tens of MB.
+        let data = try Data(contentsOf: rawVideoURL)
+
+        let boundary = "boothify-360-\(UUID().uuidString)"
+        var req = try makeRequest(path: "/api/booth360/jobs", method: "POST")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        // JSON-encode the settings snapshot so backend stores it verbatim.
+        let settingsData = (try? jsonEncoder.encode(settings)) ?? Data()
+        let settingsJSON = String(data: settingsData, encoding: .utf8) ?? "{}"
+
+        req.httpBody = buildMultipartBody(
+            boundary: boundary,
+            fields: [
+                "eventId": eventId.uuidString,
+                "settings": settingsJSON,
+            ],
+            files: [
+                .init(name: "file",
+                      filename: rawVideoURL.lastPathComponent,
+                      mimeType: "video/quicktime",
+                      data: data)
+            ]
+        )
+        struct Wrapper: Decodable { let job: Booth360JobDTO }
+        let wrapper: Wrapper = try await performDecoding(req)
+        return wrapper.job
+    }
+
+    /// `GET /api/booth360/jobs/{id}` — poll one job.
+    func getBooth360Job(id: UUID) async throws -> Booth360JobDTO {
+        struct Wrapper: Decodable { let job: Booth360JobDTO }
+        let wrapper: Wrapper = try await request("/api/booth360/jobs/\(id.uuidString)")
+        return wrapper.job
+    }
+
+    /// Polls `getBooth360Job` until terminal (completed / failed) or timeout.
+    func pollBooth360JobUntilTerminal(
+        id: UUID,
+        intervalSeconds: Double = 2.0,
+        maxAttempts: Int = 120,
+        onUpdate: ((Booth360JobDTO) -> Void)? = nil
+    ) async throws -> Booth360JobDTO {
+        for _ in 0..<maxAttempts {
+            let dto = try await getBooth360Job(id: id)
+            onUpdate?(dto)
+            let status = Booth360RenderStatus(rawValue: dto.status)
+            if status?.isTerminal == true {
+                return dto
+            }
+            try await Task.sleep(for: .seconds(intervalSeconds))
+        }
+        throw APIError.pollingTimedOut
+    }
+
+    /// `GET /api/events/{slug}/booth360-jobs` — list jobs for an event.
+    func listEventBooth360Jobs(slug: String) async throws -> [Booth360JobDTO] {
+        struct Wrapper: Decodable { let jobs: [Booth360JobDTO] }
+        let wrapper: Wrapper = try await request("/api/events/\(slug)/booth360-jobs")
+        return wrapper.jobs
+    }
+
+    /// `PATCH /api/events/{slug}` — currently only used for share mode toggle.
+    /// Returns the updated event.
+    @discardableResult
+    func updateEventShareMode(slug: String, shareMode: ShareMode) async throws -> Event {
+        struct Body: Encodable {
+            let shareMode: String
+            enum CodingKeys: String, CodingKey { case shareMode = "share_mode" }
+        }
+        struct Wrapper: Decodable { let event: Event }
+        let wrapper: Wrapper = try await request(
+            "/api/events/\(slug)",
+            method: "PATCH",
+            body: Body(shareMode: shareMode.rawValue)
+        )
+        return wrapper.event
+    }
+
     // MARK: - Quota
 
     /// `GET /api/quota/gemini` — usage + budget snapshot.

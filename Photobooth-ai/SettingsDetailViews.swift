@@ -335,8 +335,51 @@ struct SharingSettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
 
+    @State private var saveShareModeError: String? = nil
+    @State private var savingShareMode: Bool = false
+
+    private var currentShareMode: ShareMode {
+        app.event(id: eventId)?.effectiveShareMode ?? .private
+    }
+
     var body: some View {
         Form {
+            // M3: per-event share mode toggle. Drives whether guests receive
+            // unique links (private — default) or whether everyone tapping the
+            // event QR sees the whole album (public).
+            Section {
+                Picker("Share mode", selection: Binding<ShareMode>(
+                    get: { currentShareMode },
+                    set: { newMode in
+                        applyShareMode(newMode)
+                    }
+                )) {
+                    ForEach(ShareMode.allCases, id: \.self) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                if savingShareMode {
+                    HStack(spacing: 6) {
+                        ProgressView().scaleEffect(0.7)
+                        Text("Saving…")
+                            .font(.footnote)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                }
+                if let saveShareModeError {
+                    Text(saveShareModeError)
+                        .font(.footnote)
+                        .foregroundStyle(.red.opacity(0.9))
+                }
+            } header: {
+                Text("Album privacy")
+            } footer: {
+                Text(currentShareMode == .private
+                     ? "Each guest receives a link to only their own photo or 360 video."
+                     : "All photos and 360 videos from this event are visible via a single album link.")
+                    .font(.caption2)
+            }
+
             Section("Channels") {
                 ForEach(SharingChannel.allCases, id: \.self) { ch in
                     let isOn = Binding(
@@ -378,6 +421,42 @@ struct SharingSettingsView: View {
         .styledFormBackground()
         .navigationTitle("Sharing")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Optimistically apply the new share mode locally, then PATCH the backend.
+    /// On failure: keep the local value (so the user can keep configuring) but
+    /// surface the error so they know server didn't accept it.
+    private func applyShareMode(_ mode: ShareMode) {
+        guard let event = app.event(id: eventId), event.effectiveShareMode != mode else { return }
+
+        // Optimistic local update so the picker reflects the choice immediately.
+        var optimistic = event
+        optimistic.shareMode = mode
+        if let idx = app.events.firstIndex(where: { $0.id == event.id }) {
+            app.events[idx] = optimistic
+        }
+
+        // Backend round-trip — silently no-op in demo mode (no session).
+        guard app.isAuthenticated else {
+            saveShareModeError = nil
+            return
+        }
+        savingShareMode = true
+        saveShareModeError = nil
+        Task {
+            do {
+                let updated = try await BoothifyAPI.shared.updateEventShareMode(slug: event.slug, shareMode: mode)
+                if let idx = app.events.firstIndex(where: { $0.id == updated.id }) {
+                    app.events[idx] = updated
+                }
+            } catch {
+                // Backend likely hasn't shipped the share_mode column yet.
+                // We don't roll back: the local pref is still a valid signal
+                // until cloud catches up.
+                saveShareModeError = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            }
+            savingShareMode = false
+        }
     }
 }
 

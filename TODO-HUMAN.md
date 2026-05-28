@@ -5,6 +5,60 @@ place; these unblock the corresponding features end-to-end.
 
 ---
 
+## M3 — 360 cloud sync backend
+
+iOS uploads raw .mov files + polls cloud job status. Currently the API
+client tries the cloud first and silently falls back to the local
+passthrough renderer on 404, so iOS works without these — operators just
+won't get real share URLs until backend ships.
+
+1. **Supabase: new table `booth360_jobs`** (rough shape — adapt to your
+   migration conventions):
+   ```
+   id              uuid pk default gen_random_uuid()
+   event_id        uuid references events(id) on delete cascade
+   user_id         uuid references auth.users(id)
+   status          text check (status in ('idle','uploading','queued',
+                       'processing','completed','failed'))
+   current_step    text  -- 'uploading'|'stabilizing'|'slowMotion'|...
+   progress        numeric default 0
+   raw_video_url   text
+   final_video_url text
+   public_share_url text
+   settings_snapshot jsonb
+   error_message   text
+   created_at      timestamptz default now()
+   completed_at    timestamptz
+   ```
+
+2. **Supabase Storage bucket**: `booth360-renders/` (public read for
+   `final_video_url`, signed-url upload for `raw_video_url`).
+
+3. **Backend (Next.js, `ai-photobooth/`) endpoints — wire shape matches
+   `Booth360JobDTO` in iOS `APIModels.swift`:**
+   - `POST /api/booth360/jobs` — multipart form with `eventId`, `settings`
+     (JSON string), `file` (the .mov). Stores raw upload, enqueues render
+     job, returns `{ job: Booth360JobDTO }` with status=`queued`.
+   - `GET /api/booth360/jobs/{id}` — returns current job DTO. iOS polls
+     this every 2s.
+   - `GET /api/events/{slug}/booth360-jobs` — list jobs for an event.
+   - `PATCH /api/events/{slug}` — accepts `{ share_mode: "public" | "private" }`,
+     returns updated event.
+
+4. **`share_mode` column on existing `events` table**:
+   ```sql
+   alter table events
+     add column share_mode text default 'private'
+     check (share_mode in ('private','public'));
+   ```
+
+5. **Render worker** (separate from iOS scope) — pulls queued jobs from
+   `booth360_jobs`, runs whatever you chose (Cloud FFmpeg, Mux, RunPod,
+   etc.), updates `progress`, sets `status=completed` + `final_video_url`
+   + `public_share_url`.
+
+---
+
 ## M2 — Apple Sign In activation
 
 Required for the auth flow to actually exchange tokens once the user taps

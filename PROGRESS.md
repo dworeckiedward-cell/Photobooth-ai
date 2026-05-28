@@ -72,7 +72,26 @@ Status: ✅ done
 Build: ✅ green.
 
 ## M3 — Cloud sync for 360 jobs (iOS side)
-Status: _pending_
+Status: ✅ done (iOS), ⚠️ blocked on backend
+
+- New `ShareMode` enum (`.private` default, `.public`) on `Event` +
+  `Event.effectiveShareMode` convenience falling back to `.private` when
+  the column isn't shipped yet. Backward-compat — older payloads decode.
+- New `Booth360JobDTO` wire model in `APIModels.swift`.
+- `BoothifyAPI` gains four endpoints (wire format matches photo flow):
+  `uploadBooth360Job(rawVideoURL:eventId:settings:)`,
+  `getBooth360Job(id:)`, `pollBooth360JobUntilTerminal(id:onUpdate:)`,
+  `listEventBooth360Jobs(slug:)`, `updateEventShareMode(slug:shareMode:)`.
+- New `Booth360APIRenderClient` (in `Booth360.swift`) — uploads raw .mov,
+  polls backend job, streams updates to the local job via `app.upsertJob`.
+  Falls back to `Booth360PassthroughRenderClient` on ANY failure (404,
+  401, network, simulator-no-camera) so the user never sees a stuck spinner.
+- `Booth360ProcessingView` rewired to the API client (single-line change).
+- `SharingSettingsView` gains a Share Mode picker at the top of the form
+  with optimistic local update + backend PATCH + error display + auto
+  no-op in demo mode.
+
+Build: ✅ green. Functional path waits on backend (see TODO-HUMAN.md).
 
 ## M4 — Recording + Result UI refactor
 Status: _pending_
