@@ -5,6 +5,48 @@ place; these unblock the corresponding features end-to-end.
 
 ---
 
+## M6 — FFmpeg binary
+
+The render-time speed-ramp / concat / reverse / overlay pipeline is fully
+wired on the data side (timeline editor saves segments → `Booth360FFmpegRenderClient`
+builds the correct `filter_complex` string from them). Only the actual
+binary execution is stubbed because the official `ffmpeg-kit-ios` package
+was retired by its maintainer and adding SPM packages from the command
+line is unreliable.
+
+To make 360 render real:
+
+1. In Xcode: **File → Add Package Dependencies…**, paste a vetted fork URL.
+   As of 2026-05 the community is converging on
+   `https://github.com/Karthek/ffmpeg-kit` (search "ffmpeg-kit fork" before
+   committing — the landscape moves fast). Pick the **min** or **min-gpl**
+   build (NOT `full-gpl` — we don't need vidstab, M1 already covers
+   stabilization natively).
+2. Add `ffmpeg-kit-ios-min` (or equivalent) as a target dependency on
+   `Photobooth-ai`.
+3. In `Booth360FFmpegRenderClient.runPipeline`, replace the stub passthrough
+   call at the bottom with:
+   ```swift
+   import ffmpegkit  // (or whatever the fork ships)
+   let session = await FFmpegKit.executeAsync(cmd) { session in
+       // map session.state / returnCode into Booth360RenderStatus
+   }
+   ```
+   The filter_complex string the stub already builds is exactly what
+   `FFmpegKit.executeAsync` expects.
+4. Re-wire `Booth360ProcessingView.task` to prefer `Booth360FFmpegRenderClient`
+   over `Booth360APIRenderClient` for local-only renders. (Or use both:
+   render locally first, then upload the transcoded file for cloud share.)
+5. Test on an actual device — Simulator FFmpeg is dog-slow and crashes
+   on `libx264` more often than not.
+6. Once stable: wire the M4 soundtrack into the chain via
+   `-i <soundtrack> -map [outv] -map 1:a -c:a aac -shortest`.
+
+App binary will grow ~30 MB. Verify ffmpeg-kit-min's license is LGPL
+before App Store submission — `min-gpl` is GPL contaminating.
+
+---
+
 ## M5 — Twilio per-user activation
 
 Each operator brings their own Twilio account. No backend change required —

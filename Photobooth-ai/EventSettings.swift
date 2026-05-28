@@ -254,7 +254,79 @@ struct AI360Settings: Codable, Hashable, Sendable {
     var beforeRecordingOverlayName: String? = nil
     var afterRecordingOverlayName: String? = nil
 
+    /// M6: segmented timeline that drives the FFmpeg montage. When non-empty,
+    /// the active template overrides the single `clipSpeed` / `clipDirection`
+    /// values. We keep the singles for backward-compat — old persisted
+    /// settings still decode and the renderer synthesises a one-segment
+    /// template from them on the fly when `templates` is empty.
+    var templates: [CaptureTemplate] = []
+    var activeTemplateId: UUID? = nil
+
+    /// Returns the segment list the renderer should actually use. Falls back
+    /// to a one-segment template built from the legacy `clipSpeed` /
+    /// `clipDirection` values when the operator hasn't touched the editor.
+    var effectiveSegments: [CaptureSegment] {
+        if let id = activeTemplateId,
+           let template = templates.first(where: { $0.id == id }),
+           !template.segments.isEmpty {
+            return template.segments
+        }
+        // Backward-compat: one segment spanning the full recording at the
+        // single legacy speed, with reverse-on-end iff direction == .reverse.
+        return [
+            CaptureSegment(
+                duration: max(1, recordingDurationSeconds),
+                speed: max(0.1, clipSpeed),
+                reverse: clipDirection == .reverse || clipDirection == .backwards
+            )
+        ]
+    }
+
     static let `default` = AI360Settings()
+}
+
+// MARK: - Capture timeline (M6)
+
+/// One slice of the final montage. Render pipeline:
+///   trim → setpts (speed) → optional reverse → concat
+/// `duration` is the slice of RAW footage to consume (seconds), `speed` is
+/// the playback multiplier (>1 faster, <1 slow-motion).
+struct CaptureSegment: Codable, Hashable, Sendable, Identifiable {
+    var id: UUID = UUID()
+    var duration: Double
+    var speed: Double
+    var reverse: Bool = false
+
+    /// Output duration after speed adjustment. Useful for the "total length"
+    /// readout in the editor.
+    var renderedDuration: Double {
+        guard speed > 0 else { return duration }
+        return duration / speed
+    }
+}
+
+struct CaptureTemplate: Codable, Hashable, Sendable, Identifiable {
+    var id: UUID = UUID()
+    var name: String
+    var segments: [CaptureSegment]
+
+    /// Total raw footage required to satisfy this template.
+    var rawDuration: Double { segments.reduce(0) { $0 + $1.duration } }
+    /// Total length of the rendered output.
+    var renderedDuration: Double { segments.reduce(0) { $0 + $1.renderedDuration } }
+
+    /// Default sprint-1 preset — the "production" template Patryk validated.
+    /// 9s of raw footage → ~12.6s rendered with a tasteful slow-mo mid and a
+    /// punchy reverse outro.
+    static let defaultProduction = CaptureTemplate(
+        id: UUID(),
+        name: "Production (default)",
+        segments: [
+            CaptureSegment(duration: 3.0, speed: 1.25, reverse: false),
+            CaptureSegment(duration: 3.0, speed: 0.75, reverse: false),
+            CaptureSegment(duration: 3.0, speed: 2.0,  reverse: true),
+        ]
+    )
 }
 
 // MARK: - Effects

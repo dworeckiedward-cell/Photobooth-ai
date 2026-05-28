@@ -203,6 +203,16 @@ struct AI360SettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
 
+    private var timelineSubtitle: String {
+        let s = app.settings(for: eventId).ai360
+        let segs = s.effectiveSegments
+        let totalRaw = segs.reduce(0) { $0 + $1.duration }
+        let totalRendered = segs.reduce(0) { $0 + $1.renderedDuration }
+        return "\(segs.count) segment\(segs.count == 1 ? "" : "s") · raw \(format(totalRaw))s → \(format(totalRendered))s"
+    }
+
+    private func format(_ value: Double) -> String { String(format: "%.1f", value) }
+
     var body: some View {
         Form {
             Section("Recording") {
@@ -246,7 +256,34 @@ struct AI360SettingsView: View {
                 }
             }
 
-            Section("Clip") {
+            // M6: timeline editor lives in its own pushed view so the form
+            // doesn't bloat. Legacy single Direction + Speed sliders stay as a
+            // backward-compat fallback when no template is active.
+            Section {
+                NavigationLink {
+                    CaptureTimelineEditor(eventId: eventId)
+                } label: {
+                    HStack {
+                        Image(systemName: "slider.horizontal.below.rectangle")
+                            .foregroundStyle(BoothifyTheme.amber)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Capture timeline")
+                                .foregroundStyle(.white)
+                            Text(timelineSubtitle)
+                                .font(.caption)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                    }
+                }
+            } header: {
+                Text("Timeline")
+            } footer: {
+                Text("Build the slow-mo / speed-ramp / reverse montage. Default preset loads if you don't customise.")
+                    .font(.caption2)
+            }
+
+            Section("Clip (fallback)") {
                 Picker("Direction", selection: app.binding(eventId: eventId, keyPath: \.ai360.clipDirection)) {
                     ForEach(ClipDirection.allCases, id: \.self) { Text($0.label).tag($0) }
                 }

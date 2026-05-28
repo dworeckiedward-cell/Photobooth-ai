@@ -146,7 +146,56 @@ Status: ✅ done
 Build: ✅ green.
 
 ## M6 — FFmpeg pipeline + timeline editor
-Status: _pending_
+Status: ⚠️ partial — data layer + filter chain builder + UI editor done; binary swap is the remaining 10-line change
+
+### Done
+- `CaptureSegment` (duration, speed, reverse, rendered duration computed)
+  + `CaptureTemplate` (name, segments, raw/rendered duration computed)
+  in `EventSettings.swift`.
+- `AI360Settings.templates: [CaptureTemplate]` +
+  `activeTemplateId: UUID?` + computed `effectiveSegments` that falls
+  back to a one-segment template synthesised from legacy `clipSpeed` /
+  `clipDirection`. **No migration needed** — old persisted settings
+  decode + run unchanged.
+- `CaptureTemplate.defaultProduction` — the sprint-1 "Patryk-approved"
+  preset (3s @1.25× + 3s @0.75× + 3s @2× reversed). Loaded on first open.
+- New `Booth360FFmpegRenderClient` (`Booth360FFmpegRenderClient.swift`).
+  Builds the actual `filter_complex` string from `effectiveSegments`:
+  ```
+  [0:v]trim=0:3,setpts=PTS/1.25[v0];
+  [0:v]trim=3:6,setpts=PTS/0.75[v1];
+  [0:v]trim=6:9,setpts=PTS/2.000,reverse[v2];
+  [v0][v1][v2]concat=n=3:v=1:a=0[outv]
+  ```
+  + full ffmpeg argv builder. Speed clamped 0.1×–4×, duration 0.1s–60s.
+- New `CaptureTimelineEditor` view — segment list with per-row sliders
+  (duration, speed, reverse toggle), add/remove/reorder, "Load default
+  preset", "Match recording duration to template" button (syncs
+  `recordingDurationSeconds` with raw needed). Auto-hydrates the default
+  preset on first open.
+- `AI360SettingsView` gains a "Capture timeline" NavigationLink with
+  live segment count + raw/rendered preview in the row subtitle.
+- Result preview still uses real `finalVideoURL` (from M0 passthrough)
+  via the `VideoPreviewPlayer` introduced in M0 — once FFmpeg lands and
+  populates the transcoded path, the same player picks it up.
+
+### Stubbed
+- **Render client doesn't actually run FFmpeg.** Official ffmpeg-kit-ios
+  was retired by its maintainer and SPM-adding a community fork from CLI
+  is fragile. `Booth360FFmpegRenderClient.runPipeline` builds and logs
+  the full command, then hands off to `Booth360PassthroughRenderClient`
+  so the Processing UI still completes with the raw recording as final.
+- `Booth360ProcessingView` is still wired to `Booth360APIRenderClient`
+  (which falls through to passthrough). Once FFmpeg binaries land,
+  re-wire to `Booth360FFmpegRenderClient` (single-line change). See
+  `TODO-HUMAN.md` → "M6 — FFmpeg binary".
+- Audio in the rendered output: deferred. v1 ships `-an` because
+  speed-ramp + reverse audio with `atempo` is fiddly and the time-budget
+  for this run didn't allow tuning. Soundtrack from M4 will be muxed in
+  cleanly with a separate `-i` input + `-c:a aac -shortest` once FFmpeg
+  is real.
+
+Build: ✅ green.
 
 ## M7 — Logo overlay picker + bake
 Status: _pending_
