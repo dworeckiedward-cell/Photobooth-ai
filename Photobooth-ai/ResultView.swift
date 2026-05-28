@@ -5,6 +5,9 @@ import UIKit
 
 struct ResultView: View {
     @Environment(AppState.self) private var app
+    // QW3 — respect iOS Accessibility → Motion → Reduce Motion. When ON,
+    // skip the 0.7s reveal animation; the photo just appears.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let eventId: UUID
     let photoId: UUID
@@ -446,6 +449,13 @@ struct ResultView: View {
 
     private func playRevealAnimation() {
         guard revealOpacity == 0 else { return }
+        // QW3 — Reduce Motion honors the user's accessibility setting.
+        // Snap to final values without easing/glow when ON.
+        if reduceMotion {
+            revealOpacity = 1
+            glow = 0
+            return
+        }
         withAnimation(.easeOut(duration: 0.7)) { revealOpacity = 1 }
         withAnimation(.easeOut(duration: 0.75)) { glow = 0.55 }
         withAnimation(.easeIn(duration: 0.75).delay(0.75)) { glow = 0 }
