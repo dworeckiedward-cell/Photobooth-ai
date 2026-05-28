@@ -321,6 +321,10 @@ struct EmailSMSSettings: Codable, Hashable, Sendable {
         "Hi! Your AI photo is ready. Tap below to open it.\n\n{{link}}"
     var smsBodyTemplate: String = "Your Boothify photo is ready: {{link}}"
     var includeBrandingInEmail: Bool = true
+    /// M5: optional per-event override for the SMS "From" number. When empty
+    /// we use the operator's global TwilioCredentials.fromNumber. Useful when
+    /// the operator runs multiple concurrent events from different numbers.
+    var smsFromOverride: String = ""
 
     static let `default` = EmailSMSSettings()
 }

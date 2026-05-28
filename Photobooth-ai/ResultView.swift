@@ -68,7 +68,7 @@ struct ResultView: View {
                 .presentationDetents([.medium])
         }
         .sheet(isPresented: $smsPresented) {
-            SMSSheet(photoId: photoId)
+            SMSSheet(photoId: photoId, eventId: eventId)
                 .presentationDetents([.medium])
         }
         .sheet(isPresented: $surveyPresented) {
@@ -563,6 +563,8 @@ private struct EmailSheet: View {
 
 private struct SMSSheet: View {
     let photoId: UUID
+    let eventId: UUID
+    @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var phone: String = ""
     @State private var sending: Bool = false
@@ -620,17 +622,51 @@ private struct SMSSheet: View {
         errorMessage = nil
         Task {
             do {
-                try await BoothifyAPI.shared.sendSMS(photoId: photoId, phone: phone)
+                // M5: prefer the operator's own Twilio (per-user direct REST).
+                // Falls back to the global backend Twilio only when operator
+                // hasn't connected their own account yet.
+                if let creds = TwilioClient.shared.currentCredentials(), creds.isConfigured {
+                    let emailSMS = app.settings(for: eventId).emailSMS
+                    let event = app.event(id: eventId)
+                    let link = BoothifyAPI.shared.publicResultURL(photoId: photoId).absoluteString
+                    let body = renderTemplate(
+                        template: emailSMS.smsBodyTemplate,
+                        link: link,
+                        eventName: event?.name ?? ""
+                    )
+                    let override = emailSMS.smsFromOverride.trimmingCharacters(in: .whitespaces)
+                    _ = try await TwilioClient.shared.sendSMS(
+                        to: phone.trimmingCharacters(in: .whitespaces),
+                        body: body,
+                        using: creds,
+                        fromOverride: override.isEmpty ? nil : override
+                    )
+                } else {
+                    try await BoothifyAPI.shared.sendSMS(photoId: photoId, phone: phone)
+                }
                 Haptics.notify(.success)
                 sent = true
                 try? await Task.sleep(for: .seconds(1.2))
                 dismiss()
             } catch {
                 Haptics.notify(.error)
-                errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                if let twilioErr = error as? TwilioError {
+                    errorMessage = twilioErr.errorDescription
+                } else {
+                    errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                }
             }
             sending = false
         }
+    }
+
+    /// Replaces {{link}}, {{eventName}} tokens used in the SMS template.
+    /// Mirrors the same substitution the backend does for its template, so
+    /// switching paths doesn't change what the guest sees.
+    private func renderTemplate(template: String, link: String, eventName: String) -> String {
+        template
+            .replacingOccurrences(of: "{{link}}", with: link)
+            .replacingOccurrences(of: "{{eventName}}", with: eventName)
     }
 }
 

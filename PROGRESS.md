@@ -115,7 +115,35 @@ Status: ✅ done
 Build: ✅ green.
 
 ## M5 — Twilio per-user
-Status: _pending_
+Status: ✅ done
+
+- `KeychainStore` extended with `saveTwilioCredentials` / `loadTwilioCredentials`
+  / `clearTwilioCredentials`. Service: `com.servify.Photobooth-ai`, account
+  `boothify.twilio`. Accessibility `.afterFirstUnlock`.
+- New `TwilioCredentials` struct supports BOTH legacy Account SID + Auth
+  Token AND recommended API Key SID + Secret (`kind: CredentialKind`).
+- New `TwilioClient` (Swift, direct REST, no SDK):
+  - Basic Auth via base64(`authSid:authSecret`).
+  - `sendSMS(to:body:using:fromOverride:)` POSTs form-encoded body to
+    `https://api.twilio.com/2010-04-01/Accounts/<sid>/Messages.json`.
+  - Decodes Twilio's error envelope; surfaces `TwilioError.twilio(code,
+    message, moreInfo)` so the wizard shows actionable messages.
+- `AI360Settings.soundtrackRelativePath` exists (added in M4) — separate
+  from M5 but used by the recording flow.
+- New `EmailSMSSettings.smsFromOverride: String` for per-event From-number
+  override (e.g. when an operator runs two events from two different numbers).
+- New `TwilioOnboardingSheet` (large detent) — 3-field form, segmented
+  API Key / Account Token picker, **Save credentials**, **Send test SMS**,
+  **Email me the setup steps** (uses `mailto:` so no MFMailCompose dance),
+  **Disconnect** option.
+- `EmailSMSSettingsView` gains a Twilio status row (Connected / Not
+  connected) with "Connect / Manage" button + per-event From override.
+- `ResultView.SMSSheet` now routes through `TwilioClient` when the operator
+  has connected Twilio; falls back to the existing backend
+  `BoothifyAPI.sendSMS` path otherwise. Renders `{{link}}` / `{{eventName}}`
+  tokens client-side so guest sees the same message regardless of path.
+
+Build: ✅ green.
 
 ## M6 — FFmpeg pipeline + timeline editor
 Status: _pending_

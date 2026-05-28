@@ -5,6 +5,30 @@ place; these unblock the corresponding features end-to-end.
 
 ---
 
+## M5 — Twilio per-user activation
+
+Each operator brings their own Twilio account. No backend change required —
+iOS talks to Twilio REST directly.
+
+For operators using the app:
+1. Sign up at https://twilio.com
+2. **Recommended**: create an API Key at
+   https://console.twilio.com/us1/account/keys-credentials/api-keys
+   (scoped, revocable). Capture the SID (`SK…`) and Secret on creation
+   — Twilio shows the Secret once.
+3. Or use Account SID + Auth Token from https://console.twilio.com (legacy).
+4. Buy an SMS-capable phone number at
+   https://console.twilio.com/us1/develop/phone-numbers/manage/search
+5. **US senders**: register A2P 10DLC before going live or Twilio will block
+   the traffic. Mexico, India and a few other regions need similar local
+   regs. Tutorial blurb in `TwilioOnboardingSheet` warns about this but
+   doesn't replace the actual registration.
+6. In Boothify: Event → Settings → Email / SMS → Connect Twilio. Paste
+   the three values + From number. Hit Send test to confirm before going
+   live.
+
+---
+
 ## M3 — 360 cloud sync backend
 
 iOS uploads raw .mov files + polls cloud job status. Currently the API

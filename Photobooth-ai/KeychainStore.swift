@@ -8,6 +8,7 @@ import Security
 enum KeychainStore {
     private static let service = "com.servify.Photobooth-ai"
     private static let sessionAccount = "boothify.session"
+    private static let twilioAccount  = "boothify.twilio"
 
     static func saveSession(_ session: AuthSession) throws {
         let data = try JSONEncoder().encode(session)
@@ -21,6 +22,26 @@ enum KeychainStore {
 
     static func clearSession() {
         delete(account: sessionAccount)
+    }
+
+    // MARK: - Twilio (M5)
+    //
+    // Operator's Twilio credentials live here so iOS can talk directly to
+    // Twilio REST API without backend brokering. Auth Token / API Secret is
+    // a high-trust value — never in UserDefaults, never logged.
+
+    static func saveTwilioCredentials(_ creds: TwilioCredentials) throws {
+        let data = try JSONEncoder().encode(creds)
+        try set(data, account: twilioAccount)
+    }
+
+    static func loadTwilioCredentials() -> TwilioCredentials? {
+        guard let data = get(account: twilioAccount) else { return nil }
+        return try? JSONDecoder().decode(TwilioCredentials.self, from: data)
+    }
+
+    static func clearTwilioCredentials() {
+        delete(account: twilioAccount)
     }
 
     // MARK: - Low-level

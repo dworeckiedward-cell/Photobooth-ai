@@ -466,6 +466,19 @@ struct EmailSMSSettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
 
+    @State private var connectPresented: Bool = false
+
+    private var twilioConfigured: Bool {
+        TwilioClient.shared.currentCredentials()?.isConfigured == true
+    }
+
+    private var twilioStatusLabel: String {
+        guard let creds = TwilioClient.shared.currentCredentials(), creds.isConfigured else {
+            return "Not connected"
+        }
+        return "Connected · From \(creds.fromNumber)"
+    }
+
     var body: some View {
         Form {
             Section("Sender") {
@@ -478,12 +491,51 @@ struct EmailSMSSettingsView: View {
                     .lineLimit(4...10)
                     .font(.system(.body, design: .monospaced))
             }
+
+            // M5: per-operator Twilio config. Direct REST integration — no
+            // backend brokering — so operator pays for their own SMS and
+            // chooses their own number.
+            Section {
+                HStack {
+                    Image(systemName: twilioConfigured ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right.slash")
+                        .foregroundStyle(twilioConfigured ? BoothifyTheme.emerald : BoothifyTheme.amber)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Twilio SMS")
+                            .foregroundStyle(.white)
+                        Text(twilioStatusLabel)
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                    Spacer()
+                    Button(twilioConfigured ? "Manage" : "Connect") {
+                        connectPresented = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(BoothifyTheme.violet)
+                }
+                if twilioConfigured {
+                    TextField("Override From (optional, E.164)",
+                              text: app.binding(eventId: eventId, keyPath: \.emailSMS.smsFromOverride))
+                        .keyboardType(.phonePad)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            } header: {
+                Text("SMS provider")
+            } footer: {
+                Text(twilioConfigured
+                     ? "Leave the override blank to use the global Twilio number across all events."
+                     : "Connect your Twilio account to send SMS to guests. iOS talks to Twilio directly — your credentials never leave the device.")
+                    .font(.caption2)
+            }
+
             Section {
                 TextField("SMS template", text: app.binding(eventId: eventId, keyPath: \.emailSMS.smsBodyTemplate), axis: .vertical)
                     .lineLimit(2...6)
                     .font(.system(.body, design: .monospaced))
             } header: {
-                Text("SMS")
+                Text("SMS template")
             } footer: {
                 Text("Tokens: {{link}} for the public photo URL, {{style}} for the style name, {{eventName}}.")
                     .font(.caption2)
@@ -492,6 +544,10 @@ struct EmailSMSSettingsView: View {
         .styledFormBackground()
         .navigationTitle("Email / SMS")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $connectPresented) {
+            TwilioOnboardingSheet()
+                .presentationDetents([.large])
+        }
     }
 }
 
