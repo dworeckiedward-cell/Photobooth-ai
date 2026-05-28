@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import UIKit  // QW7 — UINotificationFeedbackGenerator.FeedbackType.success
 
 /// BM0 — orchestrates the post-render cloud upload (sign → PUT → confirm).
 ///
