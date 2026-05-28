@@ -255,6 +255,13 @@ struct Booth360EventHubView: View {
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
+                        // QW6 — VoiceOver: surface status + a hint of when
+                        // it was recorded so the operator can pick a take
+                        // from a long queue with their eyes off the screen.
+                        .accessibilityLabel("360 recording, status: \(job.status.label)")
+                        .accessibilityHint(job.status == .completed
+                                           ? "Opens the result"
+                                           : "Opens the processing screen")
                     }
                     if jobs.count < 3 {
                         ForEach(0..<(3 - jobs.count), id: \.self) { _ in

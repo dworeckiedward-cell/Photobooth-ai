@@ -91,12 +91,16 @@ struct SlideshowView: View {
                 .accessibilityLabel("Close slideshow")
                 Spacer()
                 Text("\((currentIndex % max(photos.count, 1)) + 1) / \(photos.count)")
-                    .font(.caption.weight(.semibold))
+                    // QW6 — monospacedDigit so the counter doesn't jiggle
+                    // as the index ticks; plus a VoiceOver label so
+                    // screen-reader users hear position context.
+                    .font(.caption.weight(.semibold).monospacedDigit())
                     .foregroundStyle(.white.opacity(0.9))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(.black.opacity(0.45))
                     .clipShape(Capsule())
+                    .accessibilityLabel("Slide \((currentIndex % max(photos.count, 1)) + 1) of \(photos.count)")
             }
             .padding(20)
             Spacer()
