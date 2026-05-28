@@ -35,7 +35,19 @@ Status: ✅ done
 Build: ✅ green on iOS Simulator (arm64 + x86_64), zero warnings.
 
 ## M1 — Native video stabilization
-Status: _pending_
+Status: ✅ done
+
+- `CameraController.configureStabilization()` requests
+  `.cinematicExtended` on the movie output's video connection. Applied
+  after session commit (connection only exists once movie output is wired)
+  and re-applied on `flip()`. AVFoundation silently falls back to the
+  closest supported mode for the device, so no manual fallback chain is
+  needed in code.
+- `StabilizationSafeAreaFrame` overlay (in `Booth360RecordingView`) shows
+  four faint corner brackets at the ~10% inset that `.cinematicExtended`
+  will crop. Operator now sees exactly what will land in the final file.
+
+Build: ✅ green.
 
 ## M2 — Apple Sign In gate ON + account UI hardening
 Status: _pending_

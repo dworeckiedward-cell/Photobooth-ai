@@ -33,6 +33,13 @@ struct Booth360RecordingView: View {
                 .ignoresSafeArea()
                 .scaleEffect(x: controller.isFront ? -1 : 1, y: 1, anchor: .center)
 
+            // M1 safe-area overlay. `.cinematicExtended` stabilization crops ~10%
+            // off each side, so the preview shows MORE than the final file. The
+            // ramka tells the operator what will actually be captured.
+            StabilizationSafeAreaFrame()
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
+
             if permissionDenied {
                 permissionOverlay
             }
@@ -376,6 +383,46 @@ struct Booth360RecordingView: View {
             .appendingPathComponent(eventId.uuidString, isDirectory: true)
         let filename = "raw_\(Int(Date().timeIntervalSince1970)).mov"
         return folder.appendingPathComponent(filename, isDirectory: false)
+    }
+}
+
+/// M1: faint rectangle inset ~10% from each edge, indicating the area that
+/// will survive `.cinematicExtended` stabilization crop. Corner brackets keep
+/// the look minimal — we don't want a full ring competing with the subject.
+private struct StabilizationSafeAreaFrame: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let inset = min(proxy.size.width, proxy.size.height) * 0.05
+            let rect = CGRect(
+                x: inset,
+                y: inset,
+                width: proxy.size.width - inset * 2,
+                height: proxy.size.height - inset * 2
+            )
+            let bracket = min(rect.width, rect.height) * 0.06
+
+            Path { p in
+                // Four corner brackets — minimal, low-distraction guide.
+                // Top-left
+                p.move(to: CGPoint(x: rect.minX, y: rect.minY + bracket))
+                p.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+                p.addLine(to: CGPoint(x: rect.minX + bracket, y: rect.minY))
+                // Top-right
+                p.move(to: CGPoint(x: rect.maxX - bracket, y: rect.minY))
+                p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+                p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + bracket))
+                // Bottom-right
+                p.move(to: CGPoint(x: rect.maxX, y: rect.maxY - bracket))
+                p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+                p.addLine(to: CGPoint(x: rect.maxX - bracket, y: rect.maxY))
+                // Bottom-left
+                p.move(to: CGPoint(x: rect.minX + bracket, y: rect.maxY))
+                p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+                p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - bracket))
+            }
+            .stroke(Color.white.opacity(0.55), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            .shadow(color: .black.opacity(0.6), radius: 3, y: 1)
+        }
     }
 }
 
