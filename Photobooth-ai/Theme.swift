@@ -17,6 +17,21 @@ enum BoothifyTheme {
     static let emerald  = Color(red: 0.063, green: 0.725, blue: 0.506)
     static let amber    = Color(red: 0.960, green: 0.620, blue: 0.043)
 
+    // MARK: - Semantic tokens (QW2)
+    //
+    // Use these instead of `.red.opacity(0.85)` / raw `.green` / `.orange`
+    // scattered through the views. Centralising means a single tweak
+    // updates the whole app and dark-mode contrast stays auditable.
+
+    /// Inline error copy / destructive button accent. ~4.5:1 on bg ✓.
+    static let error    = Color(red: 0.96, green: 0.27, blue: 0.32).opacity(0.9)
+    /// Cautionary state — same hue as `.amber` but reserved for
+    /// "needs attention" semantics, not 360 mode branding.
+    static let warning  = amber
+    /// Positive state — same hue as `.emerald` but reserved for
+    /// success/completion semantics.
+    static let success  = emerald
+
     static let primaryGradient = LinearGradient(
         colors: [violet, fuchsia],
         startPoint: .leading,

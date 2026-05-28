@@ -24,7 +24,7 @@ struct GalleryView: View {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.85))
+                            .foregroundStyle(BoothifyTheme.error)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
                     }

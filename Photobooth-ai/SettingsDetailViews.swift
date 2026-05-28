@@ -624,7 +624,7 @@ struct LockPinSettingsView: View {
                     SecureField("Confirm PIN", text: $confirmInput)
                         .keyboardType(.numberPad)
                     if let inlineError {
-                        Text(inlineError).font(.footnote).foregroundStyle(.red.opacity(0.85))
+                        Text(inlineError).font(.footnote).foregroundStyle(BoothifyTheme.error)
                     }
                     Button("Save PIN") { savePin() }
                         .disabled(pinInput.count < 4)

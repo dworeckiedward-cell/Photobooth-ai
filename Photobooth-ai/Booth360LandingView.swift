@@ -25,7 +25,7 @@ struct Booth360LandingView: View {
                     if let topErr = app.topLevelError {
                         Text(topErr)
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.85))
+                            .foregroundStyle(BoothifyTheme.error)
                             .multilineTextAlignment(.center)
                     }
 

@@ -1423,13 +1423,13 @@ struct SharingStatusView: View {
                     .textInputAutocapitalization(.never)
                     .textContentType(.emailAddress)
                 if !s.testEmail.isEmpty && !isValidEmail(s.testEmail) {
-                    Text("Invalid email format").font(.caption2).foregroundStyle(.red.opacity(0.85))
+                    Text("Invalid email format").font(.caption2).foregroundStyle(BoothifyTheme.error)
                 }
                 TextField("+48 500 111 222", text: app.mvpBinding(eventId: eventId, keyPath: \.sharing.testPhone))
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
                 if !s.testPhone.isEmpty && !isValidPhone(s.testPhone) {
-                    Text("Phone must be at least 7 digits").font(.caption2).foregroundStyle(.red.opacity(0.85))
+                    Text("Phone must be at least 7 digits").font(.caption2).foregroundStyle(BoothifyTheme.error)
                 }
             } header: {
                 Text("Test recipients")
