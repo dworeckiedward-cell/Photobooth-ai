@@ -5,6 +5,21 @@ place; these unblock the corresponding features end-to-end.
 
 ---
 
+## IM3 — Onboarding answers backend sync (optional)
+
+Quiz answers persist locally in UserDefaults. If you want cross-device
+preference sync, add:
+
+`POST /api/users/me/onboarding` accepting `{ category, primary_mode,
+branding, preferred_template_raw_duration }`. iOS would send after Finish
+and on each subsequent sign-in (idempotent backfill, same pattern as
+M2 Apple first-login email).
+
+No iOS work required to enable this — just unblock by shipping the
+endpoint; iOS gets the hook in a tiny follow-up PR.
+
+---
+
 ## IM2 — Cloud status backend endpoint
 
 iOS displays a 4-counter status panel (queued / uploading / done / sent)

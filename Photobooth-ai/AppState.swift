@@ -130,13 +130,39 @@ final class AppState {
     /// the operator can walk through the navigation flow.
     @discardableResult
     func createEvent(name: String) async throws -> Event {
+        let event: Event
         if isDemoMode {
-            let demo = Event.localDemo(name: name)
-            events.insert(demo, at: 0)
-            return demo
+            event = Event.localDemo(name: name)
+            events.insert(event, at: 0)
+        } else {
+            event = try await BoothifyAPI.shared.createEvent(name: name)
+            events.insert(event, at: 0)
         }
-        let event = try await BoothifyAPI.shared.createEvent(name: name)
-        events.insert(event, at: 0)
+
+        // IM3: seed per-event settings from onboarding answers (if any) so
+        // the operator's stated preferences actually take effect on the very
+        // first event without them having to dig through settings.
+        if let answers = OnboardingStore.lastAnswers {
+            var settings = EventSettings.default
+            if let raw = answers.preferredTemplateRawDuration {
+                settings.ai360.recordingDurationSeconds = raw
+            }
+            if let branding = answers.branding {
+                switch branding {
+                case .clientLogo:
+                    settings.brandOverlay.enabled = true
+                    settings.brandOverlay.logoSource = .uploaded
+                case .eventName:
+                    settings.brandOverlay.enabled = true
+                    settings.brandOverlay.logoSource = .textFallback
+                    settings.brandOverlay.overlayText = name.uppercased()
+                case .none:
+                    break
+                }
+            }
+            updateSettings(settings, for: event.id)
+        }
+
         return event
     }
 

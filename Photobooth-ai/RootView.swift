@@ -3,6 +3,11 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var app
 
+    // IM3: surface the first-login quiz once the user is past the auth gate
+    // and `OnboardingStore.hasCompleted` is false. Re-checked when auth state
+    // flips so re-installs / sign-outs get prompted again.
+    @State private var onboardingPresented: Bool = false
+
     var body: some View {
         @Bindable var app = app
         Group {
@@ -18,8 +23,36 @@ struct RootView: View {
                             destination(for: route)
                         }
                 }
+                .sheet(isPresented: $onboardingPresented) {
+                    OnboardingQuizSheet { answers in
+                        applyOnboardingDefaults(answers)
+                    }
+                    .interactiveDismissDisabled(false)
+                }
+                .task {
+                    // Defer slightly so the navigation stack settles before
+                    // the sheet pops — avoids first-frame flicker.
+                    if !OnboardingStore.hasCompleted {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        onboardingPresented = true
+                    }
+                }
             }
         }
+    }
+
+    /// IM3: translate quiz answers into sensible default app state. Today we
+    /// only set the most universally-useful default (preferred template
+    /// duration → bumps recordingDurationSeconds on AI360Settings so the
+    /// FIRST event the operator creates inherits it). Per-mode and branding
+    /// defaults are wired into event creation in a future sprint —
+    /// preferences are stored either way.
+    private func applyOnboardingDefaults(_ answers: OnboardingAnswers) {
+        // No event exists yet at first login, so we stash preferences on
+        // `OnboardingStore`; createEvent path can read them when it ships
+        // a "first event uses onboarding defaults" hook. Mark this in
+        // TODO-HUMAN if we want full preference propagation.
+        OnboardingStore.save(answers)
     }
 
     @ViewBuilder

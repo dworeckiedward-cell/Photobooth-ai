@@ -201,6 +201,32 @@ Build: ✅ green.
 
 # Second run (2026-05-28) — domknięcie z calla
 
+## IM3 — Onboarding quiz
+Status: ✅ done (local persistence; backend sync optional later)
+
+- New `OnboardingQuiz.swift` — 4-step skippable sheet:
+  1. **Event category** — Wedding / Corporate / Birthday / Club / Other.
+  2. **Primary mode** — AI Photobooth / 360 AI Booth / Both.
+  3. **Branding** — Client logo / Event-name watermark / None.
+  4. **360 montage length** — Quick 4s / Standard 9s / Epic 15s.
+- Skip available at every step (toolbar button); progress dots show
+  position. Animated transitions, haptics on select.
+- Persistence: `OnboardingStore` (UserDefaults). Two flags —
+  `hasCompleted` (gate) and `lastAnswers` (Codable answers blob).
+  `OnboardingStore.reset()` for test/dev.
+- `RootView` presents sheet via `.task` 350ms after the navigation stack
+  mounts when `!hasCompleted && isAuthenticated`. `interactiveDismissDisabled(false)`
+  so swipe-down also counts as skip.
+- **Answers actually do something:** `AppState.createEvent(name:)` now
+  reads `OnboardingStore.lastAnswers` and seeds the new event's
+  `EventSettings` accordingly — `preferredTemplateRawDuration` →
+  `AI360Settings.recordingDurationSeconds`, branding choice →
+  `BrandOverlaySettings.enabled / logoSource / overlayText`. Operator's
+  stated preferences take effect on their very first event without
+  digging through settings.
+
+Build: ✅ green.
+
 ## IM2 — Cloud status panel
 Status: ✅ done (iOS), ⚠️ backend endpoint pending
 
