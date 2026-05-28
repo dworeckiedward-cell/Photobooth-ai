@@ -44,7 +44,27 @@ against the deployed backend (`pnpm supabase db push` + Vercel redeploy
 required first per RUN A's TODO-HUMAN).
 
 ## BM1 — Upload resilience
-Status: ✅ partial (queue + uploader retry shipped in BM0; UI surfaces below)
+Status: ✅ done
+
+The retry logic + persistent queue itself was shipped in BM0
+(`Booth360CloudUploader` + `Booth360UploadQueue`). BM1 closes the loop:
+
+- `AppState.bootstrapAuth` now calls
+  `Booth360UploadQueue.shared.replayPending(app:)` at the end. Every
+  app cold-start re-fires queued failed uploads whose local mp4 still
+  exists; orphans get dropped.
+- `Booth360ResultView` gains a new `uploadStatusBar(job:)` row that
+  surfaces between the metadata chips and the action grid:
+  - `.uploaded` / `.notStarted` → empty view (happy path, no clutter)
+  - `.uploading` → amber pill with spinner + percent
+  - `.failed` → red pill with error text + **Send again** button that
+    calls `Booth360UploadQueue.shared.retry(jobId:app:)`
+- The 3-attempt exponential-backoff per-step (1s/3s/9s, sign / PUT /
+  confirm independently) already lives in `Booth360CloudUploader`.
+  Combined with the per-app-launch replay, a stable iPad can drop
+  WiFi mid-event and not lose a take.
+
+Build: ✅ green.
 
 ## BM2 — SMS-ping + full_name
 Status: _pending_

@@ -34,6 +34,12 @@ struct Booth360ResultView: View {
                     metadataChips(job: job)
                         .padding(.horizontal, 16)
 
+                    // BM1: per-job upload-status row. Hidden when uploaded
+                    // (the default success state) — only surfaces when the
+                    // operator needs to act or wait.
+                    uploadStatusBar(job: job)
+                        .padding(.horizontal, 16)
+
                     actionGrid(job: job)
                         .padding(.horizontal, 16)
 
@@ -296,6 +302,80 @@ struct Booth360ResultView: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+
+    // MARK: - Upload status (BM1)
+
+    /// Visible only when there's something to communicate — uploading or
+    /// failed. `.uploaded` and `.notStarted` collapse to an empty view so
+    /// the happy-path Result screen isn't cluttered.
+    @ViewBuilder
+    private func uploadStatusBar(job: Booth360Job) -> some View {
+        switch job.cloudUploadStatus {
+        case .uploaded, .notStarted:
+            EmptyView()
+        case .uploading:
+            HStack(spacing: 10) {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .scaleEffect(0.8)
+                    .tint(BoothifyTheme.amber)
+                Text("Uploading to cloud…")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                if job.progress > 0 {
+                    Text("\(Int(job.progress * 100))%")
+                        .font(.footnote.monospaced())
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(BoothifyTheme.amber.opacity(0.12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(BoothifyTheme.amber.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        case .failed:
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.body)
+                    .foregroundStyle(.red.opacity(0.9))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Upload failed")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white)
+                    if let err = job.cloudUploadError {
+                        Text(err)
+                            .font(.caption2)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                            .lineLimit(2)
+                    }
+                }
+                Spacer()
+                Button {
+                    Haptics.tap()
+                    Booth360UploadQueue.shared.retry(jobId: job.id, app: app)
+                } label: {
+                    Label("Send again", systemImage: "arrow.clockwise")
+                        .font(.footnote.weight(.semibold))
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(BoothifyTheme.violet, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(12)
+            .background(Color.red.opacity(0.12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.red.opacity(0.45), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
     }
 
     // MARK: - Bottom secondary actions

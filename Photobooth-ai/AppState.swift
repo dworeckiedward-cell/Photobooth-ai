@@ -62,6 +62,12 @@ final class AppState {
             }
         }
         isAuthLoading = false
+
+        // BM1: re-fire any 360 uploads that didn't make it to the cloud
+        // before the app was killed. Persistent queue lives in
+        // Application Support; dead entries (local file gone) are dropped.
+        // Non-blocking — uploads race in the background.
+        Booth360UploadQueue.shared.replayPending(app: self)
     }
 
     /// Persist a freshly minted session (from Apple sign-in). Updates both
