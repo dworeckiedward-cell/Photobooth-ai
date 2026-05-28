@@ -41,6 +41,8 @@ struct EventHubView: View {
 
                         primaryCard
 
+                        CloudStatusPanel(eventId: eventId)
+
                         recentCapturesSection
 
                         statsRow

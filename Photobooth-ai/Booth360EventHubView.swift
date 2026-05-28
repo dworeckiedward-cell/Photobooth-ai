@@ -25,6 +25,7 @@ struct Booth360EventHubView: View {
                     if event != nil {
                         compactHeader
                         primaryCard
+                        CloudStatusPanel(eventId: eventId)
                         recentRecordingsSection
                         statsRow
                         shareEventSection

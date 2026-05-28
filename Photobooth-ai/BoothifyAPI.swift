@@ -256,6 +256,13 @@ final class BoothifyAPI {
         return wrapper.jobs
     }
 
+    /// `GET /api/events/{slug}/status` — IM2 rollup of pipeline counters.
+    /// Backend not deployed yet → graceful 404 / decode failure handled by
+    /// the caller, which falls back to a local snapshot.
+    func eventStatus(slug: String) async throws -> EventCloudStatus {
+        try await request("/api/events/\(slug)/status")
+    }
+
     /// `PATCH /api/events/{slug}` — currently only used for share mode toggle.
     /// Returns the updated event.
     @discardableResult

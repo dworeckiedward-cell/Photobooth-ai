@@ -157,6 +157,55 @@ final class AppState {
         }
     }
 
+    // MARK: - Cloud status (IM2)
+    //
+    // Cache keyed by event id so the EventHub panel reads a stable snapshot
+    // while a background refresh runs. Refresh hits the backend first; on
+    // failure (404 / network) we compose a local snapshot from the in-memory
+    // `Booth360Job` cache + `Event.completedPhotos`.
+
+    var cloudStatusCache: [UUID: EventCloudStatus] = [:]
+
+    func cloudStatus(for eventId: UUID) -> EventCloudStatus {
+        cloudStatusCache[eventId] ?? localCloudStatus(for: eventId)
+    }
+
+    /// Background refresh — tries the backend, falls back to local compute.
+    /// Safe to call repeatedly; throttling left to callers.
+    func refreshCloudStatus(for eventId: UUID) async {
+        // Optimistic local snapshot so the panel paints immediately on first open.
+        cloudStatusCache[eventId] = localCloudStatus(for: eventId)
+
+        guard isAuthenticated, let event = self.event(id: eventId) else { return }
+        do {
+            let remote = try await BoothifyAPI.shared.eventStatus(slug: event.slug)
+            cloudStatusCache[eventId] = remote
+        } catch {
+            // Backend not deployed / network blip — keep the local snapshot.
+            // Surface via topLevelError only if it persists (skipped for now).
+        }
+    }
+
+    /// Pure local rollup. Source of truth in demo mode + on any backend
+    /// failure. Counts:
+    ///   - queued: jobs `.idle` or `.queued`
+    ///   - uploading: jobs `.uploading`
+    ///   - done: jobs `.completed` + photos `completed_photos` on the event
+    ///   - sent: 0 (local SMS log not implemented; backend owns this)
+    private func localCloudStatus(for eventId: UUID) -> EventCloudStatus {
+        let eventJobs = jobs(for: eventId)
+        let queued = eventJobs.filter { $0.status == .idle || $0.status == .queued }.count
+        let uploading = eventJobs.filter { $0.status == .uploading || $0.status == .processing }.count
+        let completedJobs = eventJobs.filter { $0.status == .completed }.count
+        let completedPhotos = event(id: eventId)?.completedPhotos ?? 0
+        return EventCloudStatus(
+            queued: queued,
+            uploading: uploading,
+            done: completedJobs + completedPhotos,
+            sent: 0
+        )
+    }
+
     // MARK: - Navigation
 
     func push(_ route: Route) {

@@ -5,6 +5,33 @@ place; these unblock the corresponding features end-to-end.
 
 ---
 
+## IM2 — Cloud status backend endpoint
+
+iOS displays a 4-counter status panel (queued / uploading / done / sent)
+on every Event hub. Today it works on the local snapshot only — for the
+"sent" counter and accurate aggregated state across multiple devices we
+need a backend endpoint.
+
+`GET /api/events/{slug}/status` returning:
+```
+{
+  "queued": <int>,
+  "uploading": <int>,
+  "done": <int>,
+  "sent": <int>
+}
+```
+- `queued` = photos + 360 jobs awaiting render/upload
+- `uploading` = currently transferring from any operator device
+- `done` = render-complete items with a final URL
+- `sent` = SMS sends recorded (from M5 send log — needs a row per send
+  in a `sms_deliveries` table or similar)
+
+Until this ships, iOS computes locally from in-memory state. `sent` will
+report 0.
+
+---
+
 ## IM0 — Real-device FFmpeg test (replaces "M6 — FFmpeg binary")
 
 The FFmpeg pipeline (M6 + IM0) is now **live in code**: SPM package added,

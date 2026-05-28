@@ -201,6 +201,25 @@ Build: ✅ green.
 
 # Second run (2026-05-28) — domknięcie z calla
 
+## IM2 — Cloud status panel
+Status: ✅ done (iOS), ⚠️ backend endpoint pending
+
+- New `EventCloudStatus` model (queued / uploading / done / sent) — Codable
+  for the future `/api/events/{slug}/status` wire format.
+- `BoothifyAPI.eventStatus(slug:)` added.
+- `AppState.cloudStatus(for:)` always-populated reader + async
+  `refreshCloudStatus(for:)` that tries backend first, falls back to a
+  local rollup built from `Booth360Job` cache + `Event.completedPhotos`.
+  Sent counter stays 0 locally (no delivery log).
+- New `CloudStatusPanel` SwiftUI view — 4 animated counters
+  (`contentTransition(.numericText())`), tap-to-refresh spinner. Mounted
+  in `Booth360EventHubView` AND `EventHubView`, between primary card
+  and recent items. Auto-refreshes on appear (`task(id: eventId)`).
+- Backend doesn't crash the panel when 404 — local snapshot keeps it
+  populated. Bumped to TODO-HUMAN.
+
+Build: ✅ green.
+
 ## IM1 — QR + AirDrop
 Status: ✅ done
 
