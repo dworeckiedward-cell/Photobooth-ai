@@ -115,7 +115,10 @@ struct Booth360ProcessingView: View {
                 .animation(.easeInOut(duration: 0.4), value: progressFraction)
             VStack(spacing: 2) {
                 Text("\(Int(progressFraction * 100))%")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    // monospacedDigit so the % counter doesn't jitter
+                    // left/right by 1-2pt as digits flip during render —
+                    // the operator stares at this for 10s every recording.
+                    .font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit())
                     .foregroundStyle(.white)
                 Text(job?.status.label ?? "—")
                     .font(.caption2.weight(.semibold))
