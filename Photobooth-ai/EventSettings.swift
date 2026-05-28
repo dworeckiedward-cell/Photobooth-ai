@@ -245,6 +245,10 @@ struct AI360Settings: Codable, Hashable, Sendable {
     var clipDirection: ClipDirection = .reverse
     var clipSpeed: Double = 1.0              // 0.25…2.0 typical
     var soundtrackName: String? = nil        // placeholder — pick from library later
+    /// M4: relative path under `Documents/events/<eventId>/audio/` to the
+    /// soundtrack picked via fileImporter. nil = no soundtrack. Stored as
+    /// relative path (not absolute URL) so it survives app container changes.
+    var soundtrackRelativePath: String? = nil
     var imageOverlayName: String? = nil      // placeholder
     var animatedOverlayName: String? = nil   // placeholder
     var beforeRecordingOverlayName: String? = nil

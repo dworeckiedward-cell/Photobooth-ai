@@ -19,23 +19,35 @@ struct Booth360ResultView: View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    if let job {
-                        previewCard(job: job)
-                        metadataChips(job: job)
-                        actionGrid(job: job)
-                        bottomActions(job: job)
-                    } else {
-                        Text("Job not found")
-                            .font(.body)
-                            .foregroundStyle(BoothifyTheme.textSecondary)
-                            .padding(.top, 40)
-                    }
+            if let job {
+                // M4: fixed layout — no ScrollView. Preview fills the available
+                // vertical space, metadata chips stack tightly underneath, and
+                // the action / nav rows are pinned to the bottom so the operator
+                // can act without scrolling during an event.
+                VStack(spacing: 12) {
+                    previewCard(job: job)
+                        .padding(.horizontal, 16)
+                        .frame(maxHeight: .infinity)
+
+                    metadataChips(job: job)
+                        .padding(.horizontal, 16)
+
+                    actionGrid(job: job)
+                        .padding(.horizontal, 16)
+
+                    bottomActions(job: job)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 6)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
-                .padding(.bottom, 30)
+                .padding(.top, 12)
+            } else {
+                VStack {
+                    Spacer()
+                    Text("Job not found")
+                        .font(.body)
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                    Spacer()
+                }
             }
         }
         .navigationTitle("360 Result")

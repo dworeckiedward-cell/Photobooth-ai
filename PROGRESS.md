@@ -94,7 +94,25 @@ Status: ✅ done (iOS), ⚠️ blocked on backend
 Build: ✅ green. Functional path waits on backend (see TODO-HUMAN.md).
 
 ## M4 — Recording + Result UI refactor
-Status: _pending_
+Status: ✅ done
+
+- `Booth360RecordingView` bottom controls reorganized to a 3-button row:
+  **Music ← REC → Presets**. All overlay buttons; the screen remains
+  fullscreen camera preview with no scrolling required mid-event.
+- Music: `fileImporter` (audio types) — DRM-safe local files only, no
+  Apple Music. Picked file is copied into
+  `Documents/events/<eventId>/audio/<filename>` (security-scoped resource
+  handled). New `AI360Settings.soundtrackRelativePath` field persists the
+  selection; existing `soundtrackName` updated for display.
+- Presets: new `QuickPresetsSheet` (`.medium` detent) with three baked
+  presets (Quick 4s · 720p / Standard 6s · 1080p · slow-mo / Epic 10s ·
+  1080p · slow-mo) plus a "All 360 settings…" jump to the full
+  AI360SettingsView.
+- `Booth360ResultView` migrated from `ScrollView` to fixed vertical layout
+  — preview fills available space, metadata chips stack tightly,
+  action grid + secondary actions pin to the bottom. No scroll needed.
+
+Build: ✅ green.
 
 ## M5 — Twilio per-user
 Status: _pending_

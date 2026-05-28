@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import AudioToolbox
+import UniformTypeIdentifiers
 
 /// 360 AI Booth recording screen — full-screen camera preview with countdown,
 /// fake-recording timer, and beep + haptic feedback. Frontend MVP: we don't
@@ -19,6 +20,10 @@ struct Booth360RecordingView: View {
     @State private var permissionDenied: Bool = false
     @State private var permissionMessage: String? = nil
     @State private var activeRecordingURL: URL? = nil
+    // M4 quick-controls state
+    @State private var musicPickerPresented: Bool = false
+    @State private var presetSheetPresented: Bool = false
+    @State private var lastMusicError: String? = nil
 
     private var ai360: AI360Settings { app.settings(for: eventId).ai360 }
     private var brand: BrandOverlaySettings { app.settings(for: eventId).brandOverlay }
@@ -157,9 +162,115 @@ struct Booth360RecordingView: View {
                     .background(.black.opacity(0.4), in: Capsule())
             }
 
-            recordButton
+            // M4: music ← REC → presets quick-controls row. Operator can swap
+            // soundtrack or change duration/quality without leaving the screen.
+            HStack(alignment: .center, spacing: 36) {
+                musicButton
+                recordButton
+                presetButton
+            }
         }
         .padding(.bottom, 36)
+        .fileImporter(
+            isPresented: $musicPickerPresented,
+            allowedContentTypes: [.audio, .mp3, .wav, .mpeg4Audio, UTType("public.mp3") ?? .audio],
+            allowsMultipleSelection: false
+        ) { result in
+            handleMusicPick(result)
+        }
+        .sheet(isPresented: $presetSheetPresented) {
+            QuickPresetsSheet(eventId: eventId)
+                .presentationDetents([.medium])
+                .presentationBackground(.ultraThinMaterial)
+        }
+    }
+
+    private var hasSoundtrack: Bool {
+        ai360.soundtrackRelativePath != nil
+    }
+
+    private var musicButton: some View {
+        Button {
+            Haptics.tap()
+            musicPickerPresented = true
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: hasSoundtrack ? "music.note.list" : "music.note")
+                    .font(.title3.weight(.semibold))
+                Text(hasSoundtrack ? "Track" : "Music")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(hasSoundtrack ? BoothifyTheme.amber : .white)
+            .frame(width: 64, height: 64)
+            .background(.black.opacity(0.4))
+            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+            .clipShape(Circle())
+        }
+        .disabled(recording || countdown != nil)
+        .opacity(recording || countdown != nil ? 0.4 : 1)
+        .accessibilityLabel(hasSoundtrack ? "Change soundtrack" : "Choose soundtrack")
+    }
+
+    private var presetButton: some View {
+        Button {
+            Haptics.tap()
+            presetSheetPresented = true
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.title3.weight(.semibold))
+                Text("Presets")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .frame(width: 64, height: 64)
+            .background(.black.opacity(0.4))
+            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+            .clipShape(Circle())
+        }
+        .disabled(recording || countdown != nil)
+        .opacity(recording || countdown != nil ? 0.4 : 1)
+        .accessibilityLabel("Quick presets — duration and quality")
+    }
+
+    private func handleMusicPick(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let src = urls.first else { return }
+            do {
+                // Security-scoped resource — required for files outside the app sandbox.
+                let didStart = src.startAccessingSecurityScopedResource()
+                defer { if didStart { src.stopAccessingSecurityScopedResource() } }
+
+                let folder = Self.audioFolder(eventId: eventId)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let dest = folder.appendingPathComponent(src.lastPathComponent)
+                if FileManager.default.fileExists(atPath: dest.path) {
+                    try FileManager.default.removeItem(at: dest)
+                }
+                try FileManager.default.copyItem(at: src, to: dest)
+
+                var current = app.settings(for: eventId)
+                current.ai360.soundtrackRelativePath = "audio/\(src.lastPathComponent)"
+                current.ai360.soundtrackName = src.deletingPathExtension().lastPathComponent
+                app.updateSettings(current, for: eventId)
+                Haptics.notify(.success)
+            } catch {
+                lastMusicError = error.localizedDescription
+                Haptics.notify(.error)
+            }
+        case .failure(let error):
+            lastMusicError = error.localizedDescription
+        }
+    }
+
+    private static func audioFolder(eventId: UUID) -> URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return docs
+            .appendingPathComponent("events", isDirectory: true)
+            .appendingPathComponent(eventId.uuidString, isDirectory: true)
+            .appendingPathComponent("audio", isDirectory: true)
     }
 
     private var recordingStatus: some View {
@@ -383,6 +494,107 @@ struct Booth360RecordingView: View {
             .appendingPathComponent(eventId.uuidString, isDirectory: true)
         let filename = "raw_\(Int(Date().timeIntervalSince1970)).mov"
         return folder.appendingPathComponent(filename, isDirectory: false)
+    }
+}
+
+/// M4: lightweight sheet operator can summon mid-event without leaving the
+/// recording screen. Three baked presets + jump to the full settings hub.
+private struct QuickPresetsSheet: View {
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    let eventId: UUID
+
+    private struct Preset: Identifiable, Hashable {
+        let id: String
+        let label: String
+        let duration: Double
+        let quality: VideoQuality
+        let speed: Double
+        let direction: ClipDirection
+        let symbol: String
+    }
+
+    // Three presets cover 95% of real events. Operator can still drill into
+    // AI360SettingsView for full tuning.
+    private let presets: [Preset] = [
+        .init(id: "quick", label: "Quick (4s · 720p)",
+              duration: 4, quality: .sd720p, speed: 1.0, direction: .forwards,
+              symbol: "bolt.fill"),
+        .init(id: "standard", label: "Standard (6s · 1080p · slow-mo)",
+              duration: 6, quality: .hd1080p, speed: 0.75, direction: .reverse,
+              symbol: "video.fill"),
+        .init(id: "epic", label: "Epic (10s · 1080p · slow-mo)",
+              duration: 10, quality: .hd1080p, speed: 0.5, direction: .reverse,
+              symbol: "sparkles.tv.fill"),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Quick presets") {
+                    ForEach(presets) { preset in
+                        Button {
+                            apply(preset)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: preset.symbol)
+                                    .frame(width: 22)
+                                    .foregroundStyle(BoothifyTheme.amber)
+                                Text(preset.label)
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                if isActive(preset) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(BoothifyTheme.emerald)
+                                }
+                            }
+                        }
+                    }
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                Section {
+                    Button {
+                        Haptics.tap()
+                        dismiss()
+                        // Defer push slightly so the sheet finishes dismissing.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            app.push(.settingsAI360(eventId: eventId))
+                        }
+                    } label: {
+                        Label("All 360 settings…", systemImage: "gearshape.fill")
+                    }
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+            }
+            .scrollContentBackground(.hidden)
+            .navigationTitle("Quick presets")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func isActive(_ preset: Preset) -> Bool {
+        let s = app.settings(for: eventId).ai360
+        return s.recordingDurationSeconds == preset.duration
+            && s.videoQuality == preset.quality
+            && s.clipSpeed == preset.speed
+            && s.clipDirection == preset.direction
+    }
+
+    private func apply(_ preset: Preset) {
+        var all = app.settings(for: eventId)
+        all.ai360.recordingDurationSeconds = preset.duration
+        all.ai360.videoQuality = preset.quality
+        all.ai360.clipSpeed = preset.speed
+        all.ai360.clipDirection = preset.direction
+        app.updateSettings(all, for: eventId)
+        Haptics.notify(.success)
+        dismiss()
     }
 }
 
