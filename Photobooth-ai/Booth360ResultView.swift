@@ -463,7 +463,11 @@ private struct VideoPreviewPlayer: View {
     private func setup() {
         let item = AVPlayerItem(url: url)
         let p = AVPlayer(playerItem: item)
-        p.isMuted = false
+        // QW4 — start muted. The result screen auto-plays the moment the
+        // operator opens it; un-muted audio surprises them mid-event
+        // (especially during quiet ceremony moments). Native AVPlayer
+        // controls let the guest unmute when they share-watch later.
+        p.isMuted = true
         player = p
 
         loopObserver = NotificationCenter.default.addObserver(
