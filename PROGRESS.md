@@ -137,3 +137,20 @@ Build: ✅ green.
 
 See git log for M0-M5/M7 (recording + auth + cloud + UI + Twilio) and
 IM0-IM4 (FFmpeg / QR+AirDrop / cloud status / onboarding / debug bypass).
+
+---
+
+## UX Polish Pass — 2026-05-28
+
+Read-only audit + 8 low-risk commits + strategic roadmap. See:
+- `UX_AUDIT.md` — full audit (A1-A14 scored, TOP 10 issues, gap
+  analysis vs Halide / Darkroom / Procreate / Linear / Loomabub).
+- `QUICK_WINS.md` — eight `polish(qw1-8):` commits delivered
+  (commits `b7c78d5 → 4b6a452`). Each before/after + rationale.
+- `STRATEGIC_PROPOSALS.md` — four larger moves awaiting greenlight:
+  P1 motion+typography spec, P2 operator HUD overlay, P3 result
+  redesign, P4 guest viewer + marketing footer.
+
+**Overall UX score:** 🟡 3.1/5 — functional, branded, behind world-class
+on motion + accessibility + state-design. Loomabub parity 2-3 polish
+sprints out; Halide parity 1-2 month follow-up.
