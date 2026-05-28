@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import UIKit
+import PhotosUI
 
 // MVP add-on settings — hardened demo-ready pass. Each section saves persistently
 // via `app.updateSettings(_:for:)` and shows realistic placeholders so the app feels
@@ -458,6 +459,10 @@ struct BrandOverlaySettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
 
+    @State private var pickerItem: PhotosPickerItem? = nil
+    @State private var uploadError: String? = nil
+    @State private var uploadSuccess: Bool = false
+
     private var s: BrandOverlaySettings { app.settings(for: eventId).brandOverlay }
 
     var body: some View {
@@ -493,13 +498,42 @@ struct BrandOverlaySettingsView: View {
                         Label("Use Boothify sample logo", systemImage: "checkmark.seal.fill")
                     }
                 } else if s.logoSource == .uploaded {
-                    Button {
-                        Haptics.tap()
-                    } label: {
-                        Label("Upload logo (coming soon)", systemImage: "square.and.arrow.up")
+                    // M7: real picker. Saves to Documents/events/<id>/logo.png
+                    // and updates BrandOverlaySettings.customLogoRelativePath.
+                    PhotosPicker(
+                        selection: $pickerItem,
+                        matching: .images,
+                        preferredItemEncoding: .compatible
+                    ) {
+                        Label(
+                            s.customLogoRelativePath == nil ? "Upload logo (PNG)" : "Replace logo",
+                            systemImage: "square.and.arrow.up.fill"
+                        )
                     }
-                    .disabled(true)
-                    Text("Real logo upload via Supabase Storage ships in Sprint 4. For now the Boothify sample is used.")
+                    if let uploadError {
+                        Text(uploadError)
+                            .font(.footnote)
+                            .foregroundStyle(.red.opacity(0.9))
+                    }
+                    if uploadSuccess {
+                        Label("Logo saved", systemImage: "checkmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(BoothifyTheme.emerald)
+                    }
+                    if let path = s.customLogoRelativePath {
+                        Text("Stored: \(path)")
+                            .font(.caption2)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        Button(role: .destructive) {
+                            removeUploadedLogo()
+                        } label: {
+                            Label("Remove uploaded logo", systemImage: "trash")
+                        }
+                    }
+                    Text("PNG with alpha recommended. Logo is baked into 360 videos by the FFmpeg renderer (once the binary is wired) and composited on top of every photo result immediately.")
                         .font(.caption2)
                         .foregroundStyle(BoothifyTheme.textTertiary)
                 } else if s.logoSource == .textFallback {
@@ -544,7 +578,7 @@ struct BrandOverlaySettingsView: View {
             .disabled(!s.enabled)
 
             Section("Live preview") {
-                BrandOverlayPreviewCard(settings: s)
+                BrandOverlayPreviewCard(settings: s, eventId: eventId)
                     .frame(height: 280)
                     .listRowInsets(EdgeInsets())
             }
@@ -552,6 +586,75 @@ struct BrandOverlaySettingsView: View {
         .mvpFormBackground()
         .navigationTitle("Brand Overlay")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: pickerItem) { _, item in
+            guard let item else { return }
+            Task { await handlePickedLogo(item) }
+        }
+    }
+
+    private func handlePickedLogo(_ item: PhotosPickerItem) async {
+        uploadError = nil
+        uploadSuccess = false
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                throw NSError(domain: "Boothify", code: -30,
+                              userInfo: [NSLocalizedDescriptionKey: "Couldn't read picked image."])
+            }
+
+            // Validate we got a decodable image. PNG preferred — keeps alpha.
+            // If user picked a JPEG, accept it but warn (no transparency).
+            guard let img = UIImage(data: data) else {
+                throw NSError(domain: "Boothify", code: -31,
+                              userInfo: [NSLocalizedDescriptionKey: "Picked file isn't an image we can read."])
+            }
+            // Re-encode as PNG so we always end up with consistent format on
+            // disk. PhotosPicker doesn't guarantee PNG even when filtering.
+            guard let pngData = img.pngData() else {
+                throw NSError(domain: "Boothify", code: -32,
+                              userInfo: [NSLocalizedDescriptionKey: "Couldn't encode logo as PNG."])
+            }
+
+            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+                ?? FileManager.default.temporaryDirectory
+            let folder = docs
+                .appendingPathComponent("events", isDirectory: true)
+                .appendingPathComponent(eventId.uuidString, isDirectory: true)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let dest = folder.appendingPathComponent("logo.png")
+            try pngData.write(to: dest, options: .atomic)
+
+            var all = app.settings(for: eventId)
+            all.brandOverlay.customLogoRelativePath = "logo.png"
+            app.updateSettings(all, for: eventId)
+
+            uploadSuccess = true
+            Haptics.notify(.success)
+            // Auto-dismiss success label after a beat.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2.5))
+                uploadSuccess = false
+            }
+        } catch {
+            uploadError = error.localizedDescription
+            Haptics.notify(.error)
+        }
+        pickerItem = nil
+    }
+
+    private func removeUploadedLogo() {
+        var all = app.settings(for: eventId)
+        if let relative = all.brandOverlay.customLogoRelativePath {
+            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+                ?? FileManager.default.temporaryDirectory
+            let url = docs
+                .appendingPathComponent("events", isDirectory: true)
+                .appendingPathComponent(eventId.uuidString, isDirectory: true)
+                .appendingPathComponent(relative)
+            try? FileManager.default.removeItem(at: url)
+        }
+        all.brandOverlay.customLogoRelativePath = nil
+        app.updateSettings(all, for: eventId)
+        Haptics.notify(.success)
     }
 }
 
@@ -559,6 +662,11 @@ struct BrandOverlaySettingsView: View {
 /// Used by Settings preview AND ResultView.
 struct BrandOverlayLayer: View {
     let settings: BrandOverlaySettings
+    /// M7: optional event scope so the layer can resolve `.uploaded` PNGs
+    /// from `Documents/events/<eventId>/`. Omit to keep the previous bundled-
+    /// asset behavior (used in static previews and the photo flow which
+    /// passes the event id when wired).
+    var eventId: UUID? = nil
 
     var body: some View {
         GeometryReader { proxy in
@@ -568,12 +676,31 @@ struct BrandOverlayLayer: View {
 
             Group {
                 switch settings.logoSource {
-                case .boothifySample, .uploaded:
+                case .boothifySample:
                     Image(settings.logoAssetName)
                         .resizable()
                         .scaledToFit()
                         .frame(width: logoSide, height: logoSide)
                         .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
+                case .uploaded:
+                    // Resolve uploaded PNG from disk if we have an event scope
+                    // AND the relative path is set; otherwise fall through to
+                    // the bundled asset so nothing blanks out the overlay.
+                    if let eventId,
+                       let relative = settings.customLogoRelativePath,
+                       let image = Self.loadUploadedLogo(eventId: eventId, relative: relative) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: logoSide, height: logoSide)
+                            .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
+                    } else {
+                        Image(settings.logoAssetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: logoSide, height: logoSide)
+                            .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
+                    }
                 case .textFallback:
                     Text(settings.overlayText)
                         .font(.system(size: max(11, logoSide * 0.30), weight: .bold, design: .rounded))
@@ -592,10 +719,38 @@ struct BrandOverlayLayer: View {
         }
         .allowsHitTesting(false)
     }
+
+    /// File lookup helper — kept static so it's testable + cheap. Returns nil
+    /// if file missing / not decodable so the view can fall through to the
+    /// bundled placeholder.
+    static func loadUploadedLogo(eventId: UUID, relative: String) -> UIImage? {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let url = docs
+            .appendingPathComponent("events", isDirectory: true)
+            .appendingPathComponent(eventId.uuidString, isDirectory: true)
+            .appendingPathComponent(relative)
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return UIImage(data: data)
+    }
+
+    /// Returns the on-disk URL for an event's uploaded logo (if any). FFmpeg's
+    /// overlay filter takes it as an `-i` input — useful once M6 binary ships.
+    static func uploadedLogoURL(eventId: UUID, settings: BrandOverlaySettings) -> URL? {
+        guard settings.logoSource == .uploaded,
+              let relative = settings.customLogoRelativePath else { return nil }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return docs
+            .appendingPathComponent("events", isDirectory: true)
+            .appendingPathComponent(eventId.uuidString, isDirectory: true)
+            .appendingPathComponent(relative)
+    }
 }
 
 private struct BrandOverlayPreviewCard: View {
     let settings: BrandOverlaySettings
+    var eventId: UUID? = nil
 
     var body: some View {
         ZStack {
@@ -604,7 +759,7 @@ private struct BrandOverlayPreviewCard: View {
                 .scaledToFill()
 
             if settings.enabled {
-                BrandOverlayLayer(settings: settings)
+                BrandOverlayLayer(settings: settings, eventId: eventId)
             }
         }
         .clipped()

@@ -207,7 +207,7 @@ struct ResultView: View {
             // Brand overlay (client logo / event watermark) on top of the AI result.
             let brand = app.settings(for: eventId).brandOverlay
             if brand.rendersOnResults {
-                BrandOverlayLayer(settings: brand)
+                BrandOverlayLayer(settings: brand, eventId: eventId)
             }
         }
         .shadow(color: BoothifyTheme.violet.opacity(glow), radius: 40)
@@ -437,9 +437,101 @@ struct ResultView: View {
     }
 
     private func saveToPhotos() {
-        guard let img = loadedImage else { Haptics.notify(.error); return }
+        guard let raw = loadedImage else { Haptics.notify(.error); return }
+        let brand = app.settings(for: eventId).brandOverlay
+        // M7: bake the brand overlay into the exported image so it survives
+        // the share. SwiftUI overlay is preview-only — without bake the saved
+        // file is the raw AI image.
+        let img = brand.rendersOnResults
+            ? bakeBrandOverlay(into: raw, settings: brand, eventId: eventId)
+            : raw
         UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil)
         Haptics.notify(.success)
+    }
+
+    /// Composite the brand overlay onto `base` and return a new UIImage. Mirrors
+    /// the SwiftUI `BrandOverlayLayer` positioning so on-screen preview and
+    /// saved file match.
+    private func bakeBrandOverlay(
+        into base: UIImage,
+        settings: BrandOverlaySettings,
+        eventId: UUID
+    ) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: base.size)
+        return renderer.image { ctx in
+            base.draw(in: CGRect(origin: .zero, size: base.size))
+
+            let shorter = min(base.size.width, base.size.height)
+            let side = shorter * CGFloat(settings.size)
+            let pad = shorter * CGFloat(settings.padding)
+
+            switch settings.logoSource {
+            case .boothifySample, .uploaded:
+                let logo: UIImage?
+                if settings.logoSource == .uploaded,
+                   let relative = settings.customLogoRelativePath {
+                    logo = BrandOverlayLayer.loadUploadedLogo(eventId: eventId, relative: relative)
+                        ?? UIImage(named: settings.logoAssetName)
+                } else {
+                    logo = UIImage(named: settings.logoAssetName)
+                }
+                guard let logo else { return }
+                let rect = anchoredRect(side: side, pad: pad, container: base.size, position: settings.position)
+                ctx.cgContext.setAlpha(CGFloat(settings.opacity))
+                logo.draw(in: rect)
+            case .textFallback:
+                let fontSize = max(11, side * 0.30)
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+                    .foregroundColor: UIColor.white.withAlphaComponent(CGFloat(settings.opacity)),
+                ]
+                let text = settings.overlayText as NSString
+                let textSize = text.size(withAttributes: attrs)
+                let rect = anchoredRect(side: max(side, textSize.width + 16),
+                                        pad: pad,
+                                        container: base.size,
+                                        position: settings.position)
+                // Pill background for legibility.
+                let bg = UIColor.black.withAlphaComponent(0.42 * CGFloat(settings.opacity))
+                bg.setFill()
+                let bgPath = UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2)
+                bgPath.fill()
+                text.draw(
+                    in: CGRect(
+                        x: rect.midX - textSize.width / 2,
+                        y: rect.midY - textSize.height / 2,
+                        width: textSize.width,
+                        height: textSize.height
+                    ),
+                    withAttributes: attrs
+                )
+            }
+        }
+    }
+
+    /// Convert anchor + size + padding into a concrete drawing rect.
+    private func anchoredRect(
+        side: CGFloat,
+        pad: CGFloat,
+        container: CGSize,
+        position: BrandOverlayPosition
+    ) -> CGRect {
+        switch position {
+        case .topLeft:
+            return CGRect(x: pad, y: pad, width: side, height: side)
+        case .topRight:
+            return CGRect(x: container.width - side - pad, y: pad, width: side, height: side)
+        case .bottomLeft:
+            return CGRect(x: pad, y: container.height - side - pad, width: side, height: side)
+        case .bottomRight:
+            return CGRect(x: container.width - side - pad,
+                          y: container.height - side - pad,
+                          width: side, height: side)
+        case .center:
+            return CGRect(x: (container.width - side) / 2,
+                          y: (container.height - side) / 2,
+                          width: side, height: side)
+        }
     }
 
     private func funnyMessage(index: Int) -> String {

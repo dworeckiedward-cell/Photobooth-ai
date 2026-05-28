@@ -81,14 +81,15 @@ struct Booth360ResultView: View {
             if let videoURL = job.finalVideoURL,
                FileManager.default.fileExists(atPath: videoURL.path) {
                 // Real recorded video (M0 passthrough or M6 transcoded).
-                VideoPreviewPlayer(url: videoURL, brand: job.brandOverlay)
+                VideoPreviewPlayer(url: videoURL, brand: job.brandOverlay, eventId: job.eventId)
             } else {
                 // No file yet — render the animated placeholder so the screen
                 // never goes blank. M3 cloud-failure path also lands here.
                 AnimatedDemoPreviewCard(
                     durationLabel: durationLabel(job: job),
                     qualityLabel: job.settingsSnapshot.videoQuality.label,
-                    brand: job.brandOverlay
+                    brand: job.brandOverlay,
+                    eventId: job.eventId
                 )
             }
         }
@@ -250,6 +251,7 @@ struct Booth360ResultView: View {
 private struct VideoPreviewPlayer: View {
     let url: URL
     let brand: BrandOverlaySettings
+    let eventId: UUID
 
     @State private var player: AVPlayer? = nil
     @State private var loopObserver: NSObjectProtocol? = nil
@@ -263,7 +265,8 @@ private struct VideoPreviewPlayer: View {
                 Color.black
             }
             if brand.rendersOnResults {
-                BrandOverlayLayer(settings: brand)
+                // M7: pass eventId so .uploaded source can resolve from disk.
+                BrandOverlayLayer(settings: brand, eventId: eventId)
             }
         }
         .onAppear { setup() }
@@ -303,6 +306,7 @@ private struct AnimatedDemoPreviewCard: View {
     let durationLabel: String
     let qualityLabel: String
     let brand: BrandOverlaySettings
+    let eventId: UUID
 
     @State private var anim: CGFloat = 0
 
@@ -360,7 +364,8 @@ private struct AnimatedDemoPreviewCard: View {
 
             // Brand overlay (matches the photo result rendering behavior)
             if brand.rendersOnResults {
-                BrandOverlayLayer(settings: brand)
+                // M7: pass eventId so .uploaded source can resolve from disk.
+                BrandOverlayLayer(settings: brand, eventId: eventId)
             }
         }
         .onAppear {

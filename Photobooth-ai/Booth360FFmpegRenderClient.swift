@@ -39,9 +39,26 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
             .deletingLastPathComponent()
             .appendingPathComponent("final_\(jobId.uuidString.prefix(8)).mp4")
 
-        let chain = Self.buildFilterComplex(segments: segments)
+        // M7: if the operator uploaded a custom logo we'll bake it into the
+        // final via FFmpeg's overlay filter (added in buildFilterComplex when
+        // overlayLogoURL != nil).
+        let overlayURL = BrandOverlayLayer.uploadedLogoURL(
+            eventId: job.eventId,
+            settings: job.brandOverlay
+        )
+
+        let chain = Self.buildFilterComplex(
+            segments: segments,
+            overlay: overlayURL == nil ? nil : OverlaySpec(
+                position: job.brandOverlay.position,
+                sizeFraction: job.brandOverlay.size,
+                paddingFraction: job.brandOverlay.padding,
+                opacity: job.brandOverlay.opacity
+            )
+        )
         let cmd = Self.buildCommand(
             inputURL: rawURL,
+            overlayURL: overlayURL,
             outputURL: outputURL,
             filterComplex: chain,
             bitrateMbps: job.settingsSnapshot.bitrateMbps,
@@ -54,6 +71,14 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
         await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
     }
 
+    /// Overlay positioning spec passed into the filter chain builder.
+    struct OverlaySpec: Sendable {
+        let position: BrandOverlayPosition
+        let sizeFraction: Double      // 0…1 fraction of the shorter video edge
+        let paddingFraction: Double   // 0…1 fraction of the shorter video edge
+        let opacity: Double           // 0…1
+    }
+
     // MARK: - Filter chain builder (covered by tests in the future)
     //
     // Builds something like:
@@ -64,7 +89,13 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
 
     /// Pure function — given a segment list returns the `filter_complex` body.
     /// Empty input returns empty string (caller should detect and skip render).
-    static func buildFilterComplex(segments: [CaptureSegment]) -> String {
+    ///
+    /// If `overlay` is non-nil, an extra `[concatOut][1:v]overlay=…[outv]`
+    /// stage is appended that assumes input index `[1:v]` is the overlay PNG.
+    static func buildFilterComplex(
+        segments: [CaptureSegment],
+        overlay: OverlaySpec? = nil
+    ) -> String {
         guard !segments.isEmpty else { return "" }
 
         var parts: [String] = []
@@ -94,8 +125,53 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
         }
 
         let concatInputs = labels.map { "[\($0)]" }.joined()
-        let concat = "\(concatInputs)concat=n=\(segments.count):v=1:a=0[outv]"
+        let concatOutLabel = overlay == nil ? "outv" : "concatOut"
+        let concat = "\(concatInputs)concat=n=\(segments.count):v=1:a=0[\(concatOutLabel)]"
         parts.append(concat)
+
+        // M7: overlay logo if present. We first scale the PNG to a fraction
+        // of the shorter video edge, then composite at the requested anchor
+        // with padding. `main_w` / `main_h` are FFmpeg's video dimensions;
+        // `overlay_w` / `overlay_h` are the (scaled) overlay dimensions.
+        if let overlay {
+            let size = max(0.01, min(0.5, overlay.sizeFraction))
+            let pad = max(0.0, min(0.2, overlay.paddingFraction))
+            let opacity = max(0.0, min(1.0, overlay.opacity))
+
+            // Scale: side = shorter_edge * size. Use `min(iw,ih)` of the main
+            // input via `main_w` / `main_h` placeholders by composing two filters.
+            // Easier: precompute scaled overlay with -2 to keep aspect.
+            let scaleExpr = String(format: "min(iw,ih)*%.3f", size)
+            // Apply opacity via colorchannelmixer or format=rgba + colorchannelmixer.
+            let alpha = String(format: "%.3f", opacity)
+
+            let xExpr: String
+            let yExpr: String
+            switch overlay.position {
+            case .topLeft:
+                xExpr = String(format: "main_w*%.3f", pad)
+                yExpr = String(format: "main_h*%.3f", pad)
+            case .topRight:
+                xExpr = String(format: "main_w-overlay_w-main_w*%.3f", pad)
+                yExpr = String(format: "main_h*%.3f", pad)
+            case .bottomLeft:
+                xExpr = String(format: "main_w*%.3f", pad)
+                yExpr = String(format: "main_h-overlay_h-main_h*%.3f", pad)
+            case .bottomRight:
+                xExpr = String(format: "main_w-overlay_w-main_w*%.3f", pad)
+                yExpr = String(format: "main_h-overlay_h-main_h*%.3f", pad)
+            case .center:
+                xExpr = "(main_w-overlay_w)/2"
+                yExpr = "(main_h-overlay_h)/2"
+            }
+
+            // Prep overlay: scale + alpha. Reference main video by passing
+            // `[concatOut]` first so `main_w`/`main_h` resolve.
+            let overlayPrep = "[1:v]format=rgba,colorchannelmixer=aa=\(alpha),scale=\(scaleExpr):-2[ovl]"
+            let overlayApply = "[concatOut][ovl]overlay=\(xExpr):\(yExpr):format=auto[outv]"
+            parts.append(overlayPrep)
+            parts.append(overlayApply)
+        }
 
         // FFmpeg expects filter_complex parts joined by `;` (or newline-equivalent).
         return parts.joined(separator: ";")
@@ -106,6 +182,7 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
     /// lands, swap this for `FFmpegKit.executeAsync(_:)` with the same string.
     static func buildCommand(
         inputURL: URL,
+        overlayURL: URL? = nil,
         outputURL: URL,
         filterComplex: String,
         bitrateMbps: Double,
@@ -116,6 +193,10 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
             "-y",
             "-i", inputURL.path,
         ]
+        if let overlayURL {
+            // Second input — referenced as [1:v] in filter_complex.
+            argv += ["-i", overlayURL.path]
+        }
         argv += ["-filter_complex", "\"\(filterComplex)\""]
         argv += ["-map", "[outv]"]
         if !includeAudio {

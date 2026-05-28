@@ -198,4 +198,37 @@ Status: ⚠️ partial — data layer + filter chain builder + UI editor done; b
 Build: ✅ green.
 
 ## M7 — Logo overlay picker + bake
-Status: _pending_
+Status: ✅ done (photo bake live, video bake hooked into M6 chain)
+
+- `BrandOverlaySettings.customLogoRelativePath: String?` for the on-disk
+  PNG path. Persists per event.
+- `BrandOverlayLayer` now accepts an optional `eventId` and resolves the
+  uploaded PNG from `Documents/events/<eventId>/<relative>` when
+  `logoSource == .uploaded`. Falls back to the bundled sample if the file
+  is missing or unreadable.
+- Static helpers `BrandOverlayLayer.loadUploadedLogo(eventId:relative:)`
+  and `BrandOverlayLayer.uploadedLogoURL(eventId:settings:)` — the latter
+  is what `Booth360FFmpegRenderClient` uses as `-i` input.
+- `BrandOverlaySettingsView` Upload row replaced with a real `PhotosPicker`
+  (images, compatible encoding). Image is re-encoded to PNG (so we keep
+  alpha) and saved to `Documents/events/<eventId>/logo.png`. Shows status
+  ("Logo saved", relative path, errors) + Remove button.
+- `BrandOverlayPreviewCard` takes optional `eventId` so the live preview
+  in settings shows the uploaded logo.
+- `Booth360ResultView` and `Booth360ResultView.AnimatedDemoPreviewCard` +
+  `VideoPreviewPlayer` updated to pass `job.eventId` through to
+  `BrandOverlayLayer`.
+- `ResultView.saveToPhotos` now bakes the brand overlay into the saved
+  UIImage via a new `bakeBrandOverlay(into:settings:eventId:)` helper
+  (UIGraphicsImageRenderer + per-anchor rect math). Mirrors the SwiftUI
+  layer positioning so on-screen preview matches the saved file.
+- `Booth360FFmpegRenderClient.buildFilterComplex` extended with optional
+  `OverlaySpec` argument. When present, appends:
+  ```
+  [1:v]format=rgba,colorchannelmixer=aa=<opacity>,scale=min(iw,ih)*<size>:-2[ovl];
+  [concatOut][ovl]overlay=<x>:<y>:format=auto[outv]
+  ```
+  with anchor math for all 5 positions. `buildCommand` adds the second
+  `-i <overlay>` input when needed. Reachable as soon as M6 binary lands.
+
+Build: ✅ green.

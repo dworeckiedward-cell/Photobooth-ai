@@ -655,6 +655,9 @@ struct BrandOverlaySettings: Codable, Hashable, Sendable {
     var logoSource: BrandLogoSource = .boothifySample
     /// Asset catalog name for uploaded/built-in image source. Defaults to the Boothify mark.
     var logoAssetName: String = "BoothifyLogo"
+    /// M7: relative path under `Documents/events/<eventId>/` to an uploaded
+    /// custom PNG. Used when `logoSource == .uploaded`. nil = no upload yet.
+    var customLogoRelativePath: String? = nil
     /// Text used when `logoSource == .textFallback`.
     var overlayText: String = "ACME EVENT"
     var position: BrandOverlayPosition = .bottomRight
