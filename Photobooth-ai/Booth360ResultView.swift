@@ -12,6 +12,7 @@ struct Booth360ResultView: View {
 
     @State private var sharePresented: Bool = false
     @State private var qrPresented: Bool = false
+    @State private var smsPresented: Bool = false   // BM2
     @State private var copiedLink: Bool = false
     @State private var saveToast: String? = nil
 
@@ -87,6 +88,13 @@ struct Booth360ResultView: View {
                 Booth360QRSheet(url: url)
                     .presentationDetents([.medium, .large])
                     .presentationBackground(.ultraThinMaterial)
+            }
+        }
+        // BM2: SMS sheet (uses operator's Twilio + pings backend on success).
+        .sheet(isPresented: $smsPresented) {
+            if let url = job?.publicShareURL, let j = job {
+                Booth360SMSSheet(jobId: j.id, eventId: j.eventId, publicURL: url)
+                    .presentationDetents([.medium])
             }
         }
         // IM1: lightweight "Saved to Photos" toast over the fixed layout.
@@ -202,6 +210,14 @@ struct Booth360ResultView: View {
             actionTile(symbol: "qrcode", label: "QR", enabled: hasShareURL) {
                 Haptics.tap()
                 qrPresented = true
+            }
+
+            // BM2: SMS via operator's Twilio (M5). After successful send we
+            // ping POST /api/booth360/jobs/<id>/sms so the cloud status
+            // 'sent' counter (BM4 backend) is accurate.
+            actionTile(symbol: "message.fill", label: "SMS", enabled: hasShareURL) {
+                Haptics.tap()
+                smsPresented = true
             }
 
             actionTile(
@@ -603,6 +619,133 @@ private struct Booth360QRSheet: View {
             .padding(.bottom, 24)
 
             Spacer(minLength: 0)
+        }
+    }
+}
+
+// MARK: - BM2 SMS sheet
+//
+// Wraps the same TwilioClient flow the photo SMSSheet uses, but for 360
+// jobs. On success we also fire `markBooth360SMSSent` so the backend
+// status counter ticks.
+
+private struct Booth360SMSSheet: View {
+    let jobId: UUID
+    let eventId: UUID
+    let publicURL: URL
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var phone: String = ""
+    @State private var sending: Bool = false
+    @State private var sent: Bool = false
+    @State private var errorMessage: String?
+
+    private var twilioConfigured: Bool {
+        TwilioClient.shared.currentCredentials()?.isConfigured == true
+    }
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text(sent ? "SMS sent" : "Send via SMS")
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+                .padding(.top, 20)
+
+            if sent {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(BoothifyTheme.emerald)
+                Spacer()
+            } else {
+                if !twilioConfigured {
+                    Text("Twilio isn't connected yet. Open Email / SMS settings to add credentials.")
+                        .font(.footnote)
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+                TextField("+48 500 111 222", text: $phone)
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 48)
+                    .background(BoothifyTheme.surface1)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 24)
+                    .foregroundStyle(.white)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red.opacity(0.9))
+                        .padding(.horizontal, 24)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    send()
+                } label: {
+                    Text(sending ? "Sending…" : "Send")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(sending || phone.filter(\.isNumber).count < 7 || !twilioConfigured)
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func send() {
+        sending = true
+        errorMessage = nil
+        Task {
+            do {
+                guard let creds = TwilioClient.shared.currentCredentials(), creds.isConfigured else {
+                    throw TwilioError.notConfigured
+                }
+                let emailSMS = app.settings(for: eventId).emailSMS
+                let event = app.event(id: eventId)
+                let body = emailSMS.smsBodyTemplate
+                    .replacingOccurrences(of: "{{link}}", with: publicURL.absoluteString)
+                    .replacingOccurrences(of: "{{eventName}}", with: event?.name ?? "")
+                let override = emailSMS.smsFromOverride.trimmingCharacters(in: .whitespaces)
+                let trimmedPhone = phone.trimmingCharacters(in: .whitespaces)
+
+                _ = try await TwilioClient.shared.sendSMS(
+                    to: trimmedPhone,
+                    body: body,
+                    using: creds,
+                    fromOverride: override.isEmpty ? nil : override
+                )
+                // BM2: tell backend so /api/events/<slug>/status `sent`
+                // counter goes up. Fire-and-forget — operator already saw
+                // success; a failed ping shouldn't bother them.
+                Task.detached {
+                    try? await BoothifyAPI.shared.markBooth360SMSSent(
+                        jobId: jobId,
+                        phone: trimmedPhone
+                    )
+                }
+                Haptics.notify(.success)
+                sent = true
+                try? await Task.sleep(for: .seconds(1.2))
+                dismiss()
+            } catch {
+                Haptics.notify(.error)
+                if let twilioErr = error as? TwilioError {
+                    errorMessage = twilioErr.errorDescription
+                } else {
+                    errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                }
+            }
+            sending = false
         }
     }
 }

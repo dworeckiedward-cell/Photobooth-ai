@@ -25,5 +25,24 @@ struct AuthSession: Codable, Equatable {
 
 struct AuthUser: Codable, Equatable {
     let id: String
+    /// May be null when Apple shipped no email (private relay, post-first-login).
+    /// AuthUser decoder must always tolerate null here — backend AM2 made it
+    /// nullable too, removing the prior synthetic `apple_*@apple.local` workaround.
     let email: String?
+    /// BM2 + backend AM2 — operator's display name from Apple's first-login
+    /// payload. Optional in the wire response (backend column is nullable,
+    /// not every session row has it backfilled).
+    let fullName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case fullName = "full_name"
+    }
+
+    init(id: String, email: String? = nil, fullName: String? = nil) {
+        self.id = id
+        self.email = email
+        self.fullName = fullName
+    }
 }

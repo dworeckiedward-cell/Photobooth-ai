@@ -1580,7 +1580,12 @@ struct AccountSettingsView: View {
         // on first login (the only time Apple ever gives us an email).
         app.currentUser?.email ?? AppleProfileCache.cachedEmail
     }
-    private var signedInName: String? { AppleProfileCache.cachedFullName }
+    private var signedInName: String? {
+        // BM2 — prefer the backend-issued `full_name` (AM2 column on users)
+        // which now rides in the AuthSession response. Falls back to the
+        // local AppleProfileCache (populated on first Apple sign-in).
+        app.currentUser?.fullName ?? AppleProfileCache.cachedFullName
+    }
     private var apiBaseURL: String { BoothifyAPI.shared.baseURL.absoluteString }
     private var appVersion: String {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"

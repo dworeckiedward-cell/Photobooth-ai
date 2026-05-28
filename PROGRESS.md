@@ -66,8 +66,33 @@ The retry logic + persistent queue itself was shipped in BM0
 
 Build: ✅ green.
 
-## BM2 — SMS-ping + full_name
-Status: _pending_
+## BM2 — SMS-ping + full_name + email-null safety
+Status: ✅ done
+
+- `AuthUser`:
+  - Confirmed `email: String?` already optional (M2). Decoder safely
+    accepts `null` from backend AM2 (private-relay users now persist as
+    NULL email instead of synthetic placeholder).
+  - **New `fullName: String?`** field with snake_case `full_name`
+    CodingKey. Backend AM2 returns it in `/api/auth/apple` +
+    `/api/auth/refresh` response bodies.
+  - Memberwise init parameter defaults so existing call sites keep
+    compiling.
+- `AccountSettingsView.signedInName` now prefers `currentUser?.fullName`
+  (backend AM2 column) and falls back to `AppleProfileCache.cachedFullName`
+  — Apple's first-login name becomes source of truth across devices.
+- `Booth360ResultView` action grid gains a 6th tile (SMS) which opens
+  a new `Booth360SMSSheet`:
+  - Sends via operator's Twilio (M5) using the same `TwilioClient`
+    pattern as the photo flow.
+  - On success fires `BoothifyAPI.markBooth360SMSSent(jobId:phone:)`
+    in a detached Task — POSTs `/api/booth360/jobs/<id>/sms` so the
+    backend cloud-status `sent` counter ticks. Fire-and-forget: a
+    failed ping doesn't bother the operator since the SMS already went.
+  - Disabled state + "Twilio not connected" hint when
+    `TwilioClient.currentCredentials()` is nil.
+
+Build: ✅ green.
 
 ## BM3 — Sanity + size
 Status: _pending_
