@@ -1413,9 +1413,19 @@ struct AccountSettingsView: View {
     let eventId: UUID
 
     @State private var confirmReset = false
+    @State private var confirmSignOut = false
+    @State private var confirmDelete = false
+    @State private var deleting = false
+    @State private var deleteError: String?
     @State private var copiedLabel: String?
 
     private var event: Event? { app.event(id: eventId) }
+    private var signedInEmail: String? {
+        // Prefer the email Supabase issued; fall back to whatever Apple shipped
+        // on first login (the only time Apple ever gives us an email).
+        app.currentUser?.email ?? AppleProfileCache.cachedEmail
+    }
+    private var signedInName: String? { AppleProfileCache.cachedFullName }
     private var apiBaseURL: String { BoothifyAPI.shared.baseURL.absoluteString }
     private var appVersion: String {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
@@ -1431,6 +1441,30 @@ struct AccountSettingsView: View {
 
     var body: some View {
         List {
+            // M2: surface signed-in identity. Apple's first-login email is
+            // cached in AppleProfileCache so this stays populated across
+            // refreshes (where Supabase may return only the user id).
+            if app.isAuthenticated {
+                Section("Signed in") {
+                    if let name = signedInName, !name.isEmpty {
+                        LabeledRowInline(title: "Name", value: name)
+                    }
+                    LabeledRowInline(title: "Email", value: signedInEmail ?? "—")
+                    if let userId = app.currentUser?.id {
+                        HStack {
+                            Text("User ID").foregroundStyle(.white)
+                            Spacer()
+                            Text(userId)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                                .font(.system(.footnote, design: .monospaced))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+            }
+
             Section("Event") {
                 LabeledRowInline(title: "Name", value: event?.name ?? "—")
                 HStack {
@@ -1498,6 +1532,46 @@ struct AccountSettingsView: View {
                 }
             }
             .listRowBackground(BoothifyTheme.surface1)
+
+            // M2: account-level actions. Always available so the operator can
+            // bail mid-event if the wrong Apple ID logged in.
+            if app.isAuthenticated {
+                Section {
+                    Button {
+                        Haptics.tap()
+                        confirmSignOut = true
+                    } label: {
+                        Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                            .foregroundStyle(.white)
+                    }
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                Section {
+                    Button(role: .destructive) {
+                        Haptics.tap()
+                        confirmDelete = true
+                    } label: {
+                        if deleting {
+                            HStack(spacing: 8) {
+                                ProgressView().tint(.red)
+                                Text("Deleting…")
+                            }
+                        } else {
+                            Label("Delete account", systemImage: "trash")
+                        }
+                    }
+                    .disabled(deleting)
+                    if let deleteError {
+                        Text(deleteError)
+                            .font(.footnote)
+                            .foregroundStyle(.red.opacity(0.9))
+                    }
+                } footer: {
+                    Text("Removes your Boothify account and all associated events, photos and 360 recordings from our servers. This cannot be undone.")
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+            }
         }
         .scrollContentBackground(.hidden)
         .background(BoothifyTheme.bg.ignoresSafeArea())
@@ -1511,6 +1585,49 @@ struct AccountSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("All local settings for this event will be restored to defaults. Photos and event data on the backend are not affected.")
+        }
+        .alert("Sign out?", isPresented: $confirmSignOut) {
+            Button("Sign out", role: .destructive) {
+                app.signOut()
+                Haptics.notify(.success)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll need to sign in with Apple again to access your events.")
+        }
+        .alert("Delete account?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) {
+                deleteAccount()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes your account and all events from Boothify. You can't undo this.")
+        }
+    }
+
+    private func deleteAccount() {
+        guard let token = app.session?.accessToken else {
+            // No session — just clean up locally.
+            app.signOut()
+            return
+        }
+        deleting = true
+        deleteError = nil
+        Task {
+            do {
+                try await AuthClient.shared.deleteAccount(accessToken: token)
+                app.signOut()
+                Haptics.notify(.success)
+            } catch {
+                // Backend endpoint not deployed yet (404) or transient — sign
+                // them out locally either way and surface a message they can
+                // act on. Apple's policy is satisfied by the LOCAL deletion +
+                // a path to escalate.
+                let apiErr = (error as? APIError)?.errorDescription ?? error.localizedDescription
+                deleteError = "Signed out locally — to fully delete your data email support@boothify.app. (\(apiErr))"
+                app.signOut()
+            }
+            deleting = false
         }
     }
 

@@ -85,10 +85,12 @@ final class AppState {
         }
     }
 
-    /// Wipe in-memory + Keychain session and reset cached event data.
+    /// Wipe in-memory + Keychain session and reset cached event data. Also
+    /// clears Apple's cached profile attributes so a re-login starts clean.
     func signOut() {
         session = nil
         KeychainStore.clearSession()
+        AppleProfileCache.clear()
         events.removeAll()
         path = NavigationPath()
         routeStack.removeAll()

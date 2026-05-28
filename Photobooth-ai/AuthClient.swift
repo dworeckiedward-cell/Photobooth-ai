@@ -25,15 +25,75 @@ final class AuthClient {
     }
 
     /// POST /api/auth/apple — exchanges Apple's identityToken + raw nonce for a Supabase session.
-    func signInWithApple(identityToken: String, nonce: String) async throws -> AuthSession {
-        struct Body: Encodable { let identityToken: String; let nonce: String }
-        return try await post("/api/auth/apple", body: Body(identityToken: identityToken, nonce: nonce))
+    ///
+    /// `firstLoginEmail` / `firstLoginFullName` are non-nil only on the very
+    /// first sign-in for this Apple ID + app. Backend should persist them on
+    /// first arrival (idempotent backfill) — Apple never re-sends them and we
+    /// permanently lose the email if we drop them here.
+    func signInWithApple(
+        identityToken: String,
+        nonce: String,
+        firstLoginEmail: String? = nil,
+        firstLoginFullName: String? = nil
+    ) async throws -> AuthSession {
+        struct Body: Encodable {
+            let identityToken: String
+            let nonce: String
+            let firstLoginEmail: String?
+            let firstLoginFullName: String?
+            enum CodingKeys: String, CodingKey {
+                case identityToken
+                case nonce
+                case firstLoginEmail = "first_login_email"
+                case firstLoginFullName = "first_login_full_name"
+            }
+        }
+        return try await post(
+            "/api/auth/apple",
+            body: Body(
+                identityToken: identityToken,
+                nonce: nonce,
+                firstLoginEmail: firstLoginEmail,
+                firstLoginFullName: firstLoginFullName
+            )
+        )
     }
 
     /// POST /api/auth/refresh — exchanges a refresh_token for a new session.
     func refresh(refreshToken: String) async throws -> AuthSession {
         struct Body: Encodable { let refresh_token: String }
         return try await post("/api/auth/refresh", body: Body(refresh_token: refreshToken))
+    }
+
+    /// DELETE /api/auth/account — backend permanently deletes the user's
+    /// Supabase row + cascades to events/photos/360 jobs. On success the caller
+    /// should also clear local state (`AppState.signOut`, `AppleProfileCache.clear`).
+    ///
+    /// Returns `true` if the backend confirmed deletion. If the endpoint isn't
+    /// implemented yet, surfaces an `APIError` so the UI can fall back to "we
+    /// signed you out locally — finish removing your data by emailing us".
+    func deleteAccount(accessToken: String) async throws {
+        guard let url = URL(string: "/api/auth/account", relativeTo: baseURL) else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: req)
+        } catch let urlError as URLError {
+            throw APIError.network(urlError)
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.serverError(status: 0, message: "Non-HTTP response")
+        }
+        if (200..<300).contains(http.statusCode) { return }
+        if http.statusCode == 401 { throw APIError.unauthorized }
+        let msg = String(data: data, encoding: .utf8)
+        throw APIError.serverError(status: http.statusCode, message: msg)
     }
 
     // MARK: - Nonce helpers

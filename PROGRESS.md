@@ -50,7 +50,26 @@ Status: ✅ done
 Build: ✅ green.
 
 ## M2 — Apple Sign In gate ON + account UI hardening
-Status: _pending_
+Status: ✅ done
+
+- `AppConfig.authGateEnabled = true` — RootView now shows `LoginView`
+  whenever there's no session.
+- LoginView requests `[.email, .fullName]` scopes. New `AppleProfileCache`
+  (`AppleProfileCache.swift`) persists Apple's first-login `email` +
+  `fullName` to UserDefaults so they survive the rest of the app's lifetime
+  (Apple ships them ONLY on first authorization, never again).
+- `AuthClient.signInWithApple(_:nonce:firstLoginEmail:firstLoginFullName:)`
+  forwards those values to the backend on every sign-in (so the backend
+  can idempotently backfill them).
+- `AuthClient.deleteAccount(accessToken:)` calls `DELETE /api/auth/account`
+  (endpoint not deployed yet — graceful fallback in UI signs the user out
+  locally + shows a "email support to finish removal" hint).
+- `AppState.signOut()` now also clears `AppleProfileCache`.
+- `AccountSettingsView` gains: Signed-in identity section (name, email,
+  Supabase user id with monospaced display), **Sign out** confirmation,
+  **Delete account** confirmation + spinner + graceful error path.
+
+Build: ✅ green.
 
 ## M3 — Cloud sync for 360 jobs (iOS side)
 Status: _pending_

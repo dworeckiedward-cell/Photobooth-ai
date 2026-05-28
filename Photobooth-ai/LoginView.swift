@@ -44,7 +44,11 @@ struct LoginView: View {
                         onRequest: { request in
                             let nonce = AuthClient.randomNonceString()
                             rawNonce = nonce
-                            request.requestedScopes = [.email]
+                            // Request both — Apple only delivers them on the
+                            // VERY FIRST sign-in for this Apple ID + app pair.
+                            // Persist locally on receipt so they survive future
+                            // logins (which only return the user identifier).
+                            request.requestedScopes = [.email, .fullName]
                             request.nonce = AuthClient.sha256(nonce)
                         },
                         onCompletion: handle(result:),
@@ -102,6 +106,20 @@ struct LoginView: View {
                 return
             }
 
+            // First-login persistence: Apple only ships email + fullName THE
+            // FIRST TIME a user authorizes this app. Capture them now so the
+            // backend can store them and we never lose them. Subsequent logins
+            // return nil for both and just identify by `credential.user`.
+            let firstLoginEmail = credential.email
+            let firstLoginFullName = credential.fullName.map(Self.formatFullName(_:))
+            if let firstLoginEmail {
+                AppleProfileCache.persistFirstLogin(
+                    userId: credential.user,
+                    email: firstLoginEmail,
+                    fullName: firstLoginFullName
+                )
+            }
+
             let nonce = rawNonce
             isSigningIn = true
             Task {
@@ -109,6 +127,8 @@ struct LoginView: View {
                     let session = try await AuthClient.shared.signInWithApple(
                         identityToken: identityToken,
                         nonce: nonce,
+                        firstLoginEmail: firstLoginEmail,
+                        firstLoginFullName: firstLoginFullName,
                     )
                     app.setSession(session)
                 } catch {
@@ -117,6 +137,12 @@ struct LoginView: View {
                 isSigningIn = false
             }
         }
+    }
+
+    private static func formatFullName(_ components: PersonNameComponents) -> String {
+        let f = PersonNameComponentsFormatter()
+        f.style = .default
+        return f.string(from: components)
     }
 }
 

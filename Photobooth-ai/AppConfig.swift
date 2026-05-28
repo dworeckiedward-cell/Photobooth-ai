@@ -13,5 +13,5 @@ enum AppConfig {
     ///   1. Set `authGateEnabled = true` here.
     ///   2. Verify Apple provider is enabled in Supabase Auth (see audit doc).
     ///   3. Build & ship — the existing AppState/RootView wiring takes over.
-    static let authGateEnabled: Bool = false
+    static let authGateEnabled: Bool = true
 }
