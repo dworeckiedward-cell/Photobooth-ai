@@ -137,6 +137,10 @@ final class Booth360CloudUploader {
         live.cloudUploadStatus = .uploaded
         live.cloudUploadError = nil
         live.progress = 1
+        // QW7 — gentle success haptic on cloud confirmation. Operator may
+        // have moved on to recording the next guest; this is their cue
+        // that the previous take has reached the cloud and is shareable.
+        Haptics.notify(.success)
         if let real = URL(string: dto.publicShareUrl ?? "") {
             live.publicShareURL = real
         } else {
