@@ -17,6 +17,8 @@ struct Booth360RecordingView: View {
     @State private var recordingElapsed: TimeInterval = 0
     @State private var recordingTask: Task<Void, Never>?
     @State private var permissionDenied: Bool = false
+    @State private var permissionMessage: String? = nil
+    @State private var activeRecordingURL: URL? = nil
 
     private var ai360: AI360Settings { app.settings(for: eventId).ai360 }
     private var brand: BrandOverlaySettings { app.settings(for: eventId).brandOverlay }
@@ -229,7 +231,7 @@ struct Booth360RecordingView: View {
                 Text("Camera permission needed")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
-                Text("Enable Camera access in Settings to use the 360 booth.")
+                Text(permissionMessage ?? "Enable Camera access in Settings to use the 360 booth.")
                     .font(.footnote)
                     .foregroundStyle(BoothifyTheme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -250,19 +252,32 @@ struct Booth360RecordingView: View {
     // MARK: - Actions
 
     private func prepareCamera() async {
-        let status = AVCaptureDevice.authorizationStatus(for: .video)
-        switch status {
-        case .authorized:
-            await controller.start()
-        case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            if granted {
-                await controller.start()
-            } else {
-                permissionDenied = true
-            }
-        default:
+        // Need BOTH camera + microphone for video recording. We surface a single
+        // permission overlay covering whichever one is missing.
+        let cameraOK = await ensurePermission(for: .video)
+        let micOK = await ensurePermission(for: .audio)
+
+        guard cameraOK else {
             permissionDenied = true
+            permissionMessage = "Enable Camera access in Settings to use the 360 booth."
+            return
+        }
+        guard micOK else {
+            permissionDenied = true
+            permissionMessage = "Enable Microphone access in Settings so the 360 video can include audio."
+            return
+        }
+
+        await controller.start(mode: .video)
+    }
+
+    /// Returns true when the user already granted (or now grants) access. False
+    /// otherwise — caller surfaces the permission overlay.
+    private func ensurePermission(for media: AVMediaType) async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: media) {
+        case .authorized: return true
+        case .notDetermined: return await AVCaptureDevice.requestAccess(for: media)
+        default: return false
         }
     }
 
@@ -290,6 +305,24 @@ struct Booth360RecordingView: View {
         // Audible "start" cue
         AudioServicesPlaySystemSound(SystemSoundID(1057))
 
+        // Build a clean destination per recording so consecutive takes don't
+        // collide. Lives under Documents/events/<eventId>/raw_<timestamp>.mov so
+        // it survives app restarts and is reachable for upload later (M3).
+        let destination = Self.recordingDestination(eventId: eventId)
+        activeRecordingURL = destination
+
+        // Kick the AVCaptureMovieFileOutput first; even if it throws we still
+        // honour the visible countdown timer so the operator doesn't see a frozen UI.
+        Task {
+            do {
+                _ = try await controller.startRecording(to: destination)
+            } catch {
+                // Simulator / no-camera path. We keep the timer running so the
+                // flow still advances and lands on Booth360PassthroughRenderClient,
+                // which has its own simulator fallback.
+            }
+        }
+
         recordingTask?.cancel()
         recordingTask = Task {
             let startedAt = Date()
@@ -308,16 +341,41 @@ struct Booth360RecordingView: View {
         Haptics.notify(.success)
         AudioServicesPlaySystemSound(SystemSoundID(1106))
         recording = false
+
+        // Stop the file output FIRST so the .mov finalizes on disk before the
+        // session shuts down. If we stop the session first AVFoundation may drop
+        // the trailing frames.
+        var savedURL: URL?
+        do {
+            savedURL = try await controller.stopRecording()
+        } catch {
+            // No active recording (simulator path) — fall back to the planned
+            // destination URL even though no file was written. Passthrough client
+            // will catch the missing file and switch to mock pipeline.
+            savedURL = activeRecordingURL
+        }
         controller.stop()
 
-        // Create job (mock raw video URL — backend wiring placeholder).
-        let job = Booth360Job(
+        var job = Booth360Job(
             eventId: eventId,
             settingsSnapshot: ai360,
             brandOverlay: brand
         )
+        job.rawVideoLocalURL = savedURL
         app.upsertJob(job)
         app.push(.booth360Processing(jobId: job.id))
+    }
+
+    /// Documents/events/<eventId>/raw_<unixSeconds>.mov. Stable per recording,
+    /// survives app restarts, addressable for cloud upload in M3.
+    private static func recordingDestination(eventId: UUID) -> URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let folder = docs
+            .appendingPathComponent("events", isDirectory: true)
+            .appendingPathComponent(eventId.uuidString, isDirectory: true)
+        let filename = "raw_\(Int(Date().timeIntervalSince1970)).mov"
+        return folder.appendingPathComponent(filename, isDirectory: false)
     }
 }
 

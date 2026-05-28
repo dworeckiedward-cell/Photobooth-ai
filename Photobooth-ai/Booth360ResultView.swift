@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AVKit
 
 /// 360 AI Booth final preview. Frontend MVP: renders an animated gradient
 /// "demo preview" card stand-in for the final video. Once the backend ships a
@@ -64,11 +65,21 @@ struct Booth360ResultView: View {
 
     @ViewBuilder
     private func previewCard(job: Booth360Job) -> some View {
-        AnimatedDemoPreviewCard(
-            durationLabel: durationLabel(job: job),
-            qualityLabel: job.settingsSnapshot.videoQuality.label,
-            brand: job.brandOverlay
-        )
+        Group {
+            if let videoURL = job.finalVideoURL,
+               FileManager.default.fileExists(atPath: videoURL.path) {
+                // Real recorded video (M0 passthrough or M6 transcoded).
+                VideoPreviewPlayer(url: videoURL, brand: job.brandOverlay)
+            } else {
+                // No file yet — render the animated placeholder so the screen
+                // never goes blank. M3 cloud-failure path also lands here.
+                AnimatedDemoPreviewCard(
+                    durationLabel: durationLabel(job: job),
+                    qualityLabel: job.settingsSnapshot.videoQuality.label,
+                    brand: job.brandOverlay
+                )
+            }
+        }
         .aspectRatio(9.0/16.0, contentMode: .fit)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -214,6 +225,63 @@ struct Booth360ResultView: View {
             }
             .buttonStyle(SecondaryButtonStyle())
         }
+    }
+}
+
+// MARK: - Real video preview (M0)
+//
+// Plays a finished .mov file inline. Auto-starts, loops, mutes nothing —
+// operator wants to QA the take immediately on the result screen. Brand
+// overlay is composited on top via SwiftUI (matches the placeholder behavior);
+// M6 will bake the overlay into the file itself.
+
+private struct VideoPreviewPlayer: View {
+    let url: URL
+    let brand: BrandOverlaySettings
+
+    @State private var player: AVPlayer? = nil
+    @State private var loopObserver: NSObjectProtocol? = nil
+
+    var body: some View {
+        ZStack {
+            if let player {
+                VideoPlayer(player: player)
+                    .disabled(false)
+            } else {
+                Color.black
+            }
+            if brand.rendersOnResults {
+                BrandOverlayLayer(settings: brand)
+            }
+        }
+        .onAppear { setup() }
+        .onDisappear { teardown() }
+    }
+
+    private func setup() {
+        let item = AVPlayerItem(url: url)
+        let p = AVPlayer(playerItem: item)
+        p.isMuted = false
+        player = p
+
+        loopObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { _ in
+            p.seek(to: .zero)
+            p.play()
+        }
+        p.play()
+    }
+
+    private func teardown() {
+        if let loopObserver {
+            NotificationCenter.default.removeObserver(loopObserver)
+        }
+        loopObserver = nil
+        player?.pause()
+        player = nil
     }
 }
 

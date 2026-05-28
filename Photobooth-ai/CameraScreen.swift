@@ -404,18 +404,30 @@ struct CameraScreen: View {
 @MainActor
 @Observable
 final class CameraController {
+    /// Two operating modes. `.photo` keeps the original AI Photobooth flow
+    /// (still images via `AVCapturePhotoOutput`). `.video` reconfigures the
+    /// session for the 360 booth (`AVCaptureMovieFileOutput` + audio input +
+    /// hardware stabilization). Switch at runtime by calling `start(mode:)` —
+    /// the session is rebuilt safely.
+    enum Mode { case photo, video }
+
     let session = AVCaptureSession()
     private var photoOutput = AVCapturePhotoOutput()
+    private var movieOutput = AVCaptureMovieFileOutput()
+    private var audioInput: AVCaptureDeviceInput?
+    private(set) var currentMode: Mode = .photo
+    private(set) var isRecording: Bool = false
     private(set) var isFront: Bool = true
     private var currentInput: AVCaptureDeviceInput?
-    private var captureContinuation: CheckedContinuation<UIImage, Error>?
-    private let delegate = PhotoCaptureDelegate()
+    private let photoDelegate = PhotoCaptureDelegate()
+    private let movieDelegate = MovieCaptureDelegate()
 
     /// True when the capture session has everything required to safely call
     /// `AVCapturePhotoOutput.capturePhoto`. On the Simulator there's no camera
     /// hardware so the connection won't be active — callers should fall back to
     /// the placeholder demo image when this returns false.
     var canCapturePhoto: Bool {
+        guard currentMode == .photo else { return false }
         guard session.isRunning else { return false }
         guard !session.inputs.isEmpty else { return false }
         guard session.outputs.contains(photoOutput) else { return false }
@@ -423,25 +435,58 @@ final class CameraController {
         return connection.isEnabled && connection.isActive
     }
 
-    func start() async {
-        session.beginConfiguration()
-        session.sessionPreset = .photo
+    /// True when video recording can actually start. Simulator and
+    /// permission-denied devices return false; callers should surface a friendly
+    /// message instead of crashing.
+    var canRecordVideo: Bool {
+        guard currentMode == .video else { return false }
+        guard session.isRunning else { return false }
+        guard session.outputs.contains(movieOutput) else { return false }
+        guard let connection = movieOutput.connection(with: .video) else { return false }
+        return connection.isEnabled && connection.isActive
+    }
 
-        // Wire up output once.
-        if !session.outputs.contains(photoOutput) {
-            if session.canAddOutput(photoOutput) {
+    func start(mode: Mode = .photo) async {
+        currentMode = mode
+        session.beginConfiguration()
+
+        // Session preset — `.hd1920x1080` is the sweet spot for 360 booth and is
+        // supported by every device we'd realistically run on. `.photo` keeps the
+        // original AI Photobooth output quality intact.
+        switch mode {
+        case .photo:
+            session.sessionPreset = .photo
+            if session.outputs.contains(movieOutput) { session.removeOutput(movieOutput) }
+            if !session.outputs.contains(photoOutput), session.canAddOutput(photoOutput) {
                 session.addOutput(photoOutput)
+            }
+        case .video:
+            if session.canSetSessionPreset(.hd1920x1080) {
+                session.sessionPreset = .hd1920x1080
+            } else {
+                session.sessionPreset = .high
+            }
+            if session.outputs.contains(photoOutput) { session.removeOutput(photoOutput) }
+            if !session.outputs.contains(movieOutput), session.canAddOutput(movieOutput) {
+                session.addOutput(movieOutput)
             }
         }
 
         await reconfigureInput()
+        await reconfigureAudio(for: mode)
 
         session.commitConfiguration()
 
+        if mode == .video {
+            // M1: native AVFoundation stabilization. Applied AFTER commit because
+            // the video connection only exists once the movie output is wired.
+            configureStabilization()
+        }
+
         // If the Simulator (or a permission-denied device) couldn't attach any
-        // input, leave the session stopped. The UI stays usable; `capturePhoto`
-        // will report "no active connection" instead of crashing.
-        guard !session.inputs.isEmpty, session.outputs.contains(photoOutput) else { return }
+        // input, leave the session stopped. The UI stays usable; capture / record
+        // calls will report "no active connection" instead of crashing.
+        guard !session.inputs.isEmpty, !session.outputs.isEmpty else { return }
 
         // Starting the session blocks; do it off the main actor.
         let session = self.session
@@ -466,6 +511,9 @@ final class CameraController {
         session.beginConfiguration()
         await reconfigureInput()
         session.commitConfiguration()
+        if currentMode == .video {
+            configureStabilization()
+        }
     }
 
     private func reconfigureInput() async {
@@ -483,6 +531,83 @@ final class CameraController {
             session.addInput(input)
             currentInput = input
         }
+    }
+
+    private func reconfigureAudio(for mode: Mode) async {
+        // Tear down whatever was there. We add audio only in video mode so the
+        // photo flow doesn't surface a microphone permission prompt unnecessarily.
+        if let audioInput {
+            session.removeInput(audioInput)
+            self.audioInput = nil
+        }
+        guard mode == .video else { return }
+        guard let device = AVCaptureDevice.default(for: .audio) else { return }
+        guard let input = try? AVCaptureDeviceInput(device: device) else { return }
+        if session.canAddInput(input) {
+            session.addInput(input)
+            audioInput = input
+        }
+    }
+
+    /// M1: enable native hardware stabilization on the movie output's video
+    /// connection. AVFoundation silently falls back to the closest supported
+    /// mode for the device, so we just request the strongest one we want.
+    /// `.cinematicExtended` (iOS 13+, A12+) is the right mode for a static
+    /// 360° pan — it smooths platform vibration without altering pacing.
+    private func configureStabilization() {
+        guard let connection = movieOutput.connection(with: .video) else { return }
+        guard connection.isVideoStabilizationSupported else { return }
+        connection.preferredVideoStabilizationMode = .cinematicExtended
+    }
+
+    /// Start recording to a new file under `<tmp or documents>/url`. Caller picks
+    /// the destination so we can keep per-event organization in Booth360RecordingView.
+    @discardableResult
+    func startRecording(to url: URL) async throws -> URL {
+        guard currentMode == .video else {
+            throw NSError(domain: "Boothify", code: -20,
+                          userInfo: [NSLocalizedDescriptionKey: "Camera is not in video mode"])
+        }
+        guard canRecordVideo else {
+            throw NSError(domain: "Boothify", code: -21,
+                          userInfo: [NSLocalizedDescriptionKey: "No active video connection"])
+        }
+        guard !movieOutput.isRecording else { return url }
+
+        // Mirror front-camera output so the saved file matches what the operator
+        // saw on the preview. AVCaptureMovieFileOutput won't mirror by default.
+        if let connection = movieOutput.connection(with: .video), isFront,
+           connection.isVideoMirroringSupported {
+            connection.automaticallyAdjustsVideoMirroring = false
+            connection.isVideoMirrored = true
+        }
+
+        // Clean up any stale file at the target URL so AVFoundation doesn't refuse to write.
+        try? FileManager.default.removeItem(at: url)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                withIntermediateDirectories: true)
+
+        movieOutput.startRecording(to: url, recordingDelegate: movieDelegate)
+        isRecording = true
+        return url
+    }
+
+    /// Stop the in-flight recording. Returns the on-disk URL of the finished
+    /// `.mov`. Safe to call when not recording (returns immediately with an error).
+    @discardableResult
+    func stopRecording() async throws -> URL {
+        guard isRecording, movieOutput.isRecording else {
+            throw NSError(domain: "Boothify", code: -22,
+                          userInfo: [NSLocalizedDescriptionKey: "Not recording"])
+        }
+        let url: URL = try await withCheckedThrowingContinuation { cont in
+            movieDelegate.completion = { result in
+                cont.resume(with: result)
+            }
+            movieOutput.stopRecording()
+        }
+        isRecording = false
+        return url
     }
 
     func capturePhoto() async throws -> UIImage {
@@ -509,14 +634,41 @@ final class CameraController {
             }
         }
         return try await withCheckedThrowingContinuation { cont in
-            delegate.completion = { result in
+            photoDelegate.completion = { result in
                 switch result {
                 case .success(let image): cont.resume(returning: image)
                 case .failure(let err):   cont.resume(throwing: err)
                 }
             }
-            photoOutput.capturePhoto(with: settings, delegate: delegate)
+            photoOutput.capturePhoto(with: settings, delegate: photoDelegate)
         }
+    }
+}
+
+// MARK: - Movie file output delegate
+
+private final class MovieCaptureDelegate: NSObject, AVCaptureFileOutputRecordingDelegate {
+    var completion: ((Result<URL, Error>) -> Void)?
+
+    nonisolated func fileOutput(
+        _ output: AVCaptureFileOutput,
+        didFinishRecordingTo outputFileURL: URL,
+        from connections: [AVCaptureConnection],
+        error: Error?
+    ) {
+        // AVCaptureFileOutput surfaces a non-nil error even on a clean stop —
+        // when `AVErrorRecordingSuccessfullyFinishedKey` is true it means "user
+        // stopped, file is fine". Treat that as success.
+        if let error {
+            let ns = error as NSError
+            if let okFlag = ns.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool, okFlag {
+                DispatchQueue.main.async { self.completion?(.success(outputFileURL)) }
+                return
+            }
+            DispatchQueue.main.async { self.completion?(.failure(error)) }
+            return
+        }
+        DispatchQueue.main.async { self.completion?(.success(outputFileURL)) }
     }
 }
 

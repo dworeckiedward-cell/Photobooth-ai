@@ -155,3 +155,61 @@ final class MockBooth360RenderClient: Booth360RenderClient {
         app.upsertJob(job)
     }
 }
+
+// MARK: - Passthrough render client (M0)
+//
+// Bridges the gap between the M0 fundament (real video file written by
+// `CameraController` + `Booth360RecordingView`) and M6 (FFmpeg pipeline +
+// speed ramp + overlays). Takes the raw recording, surfaces it as the final
+// render, walks the processing UI through the same step sequence so the user
+// gets familiar feedback. No transcode, no edit — just plumbing.
+//
+// Drop-in replacement for MockBooth360RenderClient: it's the new default wired
+// in `Booth360ProcessingView.task`. M6 swaps this for the real FFmpeg-backed
+// client; the protocol stays identical.
+@MainActor
+final class Booth360PassthroughRenderClient: Booth360RenderClient {
+    static let shared = Booth360PassthroughRenderClient()
+    private init() {}
+
+    func runPipeline(jobId: UUID, app: AppState) async {
+        guard var job = app.job(id: jobId) else { return }
+
+        // Sanity: passthrough requires a real raw file. If recording somehow
+        // failed (e.g. simulator with no camera), fall back to the mock so the
+        // UI doesn't hang in `.idle`.
+        guard let rawURL = job.rawVideoLocalURL,
+              FileManager.default.fileExists(atPath: rawURL.path) else {
+            await MockBooth360RenderClient.shared.runPipeline(jobId: jobId, app: app)
+            return
+        }
+
+        let steps: [Booth360ProcessingStep] = [
+            .uploading, .stabilizing, .slowMotion,
+            .cinematicEffects, .soundtrackOverlays, .sharePage,
+        ]
+        // ~0.4s per step — quick enough to feel snappy, slow enough to read the labels.
+        let stepDuration: TimeInterval = 0.4
+
+        for (i, step) in steps.enumerated() {
+            if Task.isCancelled { return }
+            guard var inner = app.job(id: jobId) else { return }
+            inner.status = (step == .uploading) ? .uploading : .processing
+            inner.currentStep = step
+            inner.progress = Double(i) / Double(steps.count)
+            app.upsertJob(inner)
+            try? await Task.sleep(for: .seconds(stepDuration))
+        }
+
+        if Task.isCancelled { return }
+        job.status = .completed
+        job.currentStep = nil
+        job.progress = 1.0
+        job.completedAt = .now
+        // Until M6 transcodes, the raw recording IS the final.
+        job.finalVideoURL = rawURL
+        job.uploadedRawVideoURL = nil  // M3 will populate when cloud sync lands.
+        job.publicShareURL = URL(string: "https://boothify.app/v/\(jobId.uuidString.prefix(8).lowercased())")
+        app.upsertJob(job)
+    }
+}

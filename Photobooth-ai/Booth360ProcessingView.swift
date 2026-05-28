@@ -41,11 +41,12 @@ struct Booth360ProcessingView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .navigationBar)
         .task(id: jobId) {
-            // Kick off the mock pipeline once; subsequent appears (e.g. swipe-back
-            // during nav animation) shouldn't restart it.
+            // Kick off the render pipeline once; subsequent appears (e.g. swipe-back
+            // during nav animation) shouldn't restart it. Wired to the M0 passthrough
+            // client (which uses the real on-disk recording) — M6 swaps to FFmpeg.
             if pipelineTask == nil, let j = job, !j.status.isTerminal {
                 pipelineTask = Task {
-                    await MockBooth360RenderClient.shared.runPipeline(jobId: jobId, app: app)
+                    await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
                 }
             }
         }

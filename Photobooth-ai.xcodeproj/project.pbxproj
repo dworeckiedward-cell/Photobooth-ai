@@ -255,8 +255,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Boothify;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos to your Photos library.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots and record 360 videos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos and 360 videos to your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Boothify needs photo library access to import existing photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -293,8 +294,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Boothify;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos to your Photos library.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots and record 360 videos.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos and 360 videos to your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Boothify needs photo library access to import existing photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
