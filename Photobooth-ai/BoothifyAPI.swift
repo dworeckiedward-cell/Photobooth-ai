@@ -223,6 +223,155 @@ final class BoothifyAPI {
         return wrapper.job
     }
 
+    // MARK: - 360 direct upload (BM0)
+
+    /// Response shape for `POST /api/booth360/uploads/sign`.
+    struct UploadURLResponse: Decodable {
+        let uploadURL: URL
+        let uploadToken: String?
+        let storagePath: String
+        let shortCode: String
+        let publicShareURL: URL
+        let expectedContentType: String
+
+        enum CodingKeys: String, CodingKey {
+            case uploadURL = "upload_url"
+            case uploadToken = "upload_token"
+            case storagePath = "storage_path"
+            case shortCode = "short_code"
+            case publicShareURL = "public_share_url"
+            case expectedContentType = "expected_content_type"
+        }
+    }
+
+    /// Step 1 — ask the backend for a signed Supabase Storage URL we can PUT
+    /// the rendered mp4 directly to. Bypasses Vercel's 4.5 MB body cap.
+    /// Idempotent: same `clientJobId` returns the same `storagePath` +
+    /// `shortCode` so retries don't allocate new objects.
+    func requestUploadURL(
+        eventSlug: String,
+        clientJobId: String,
+        contentType: String = "video/mp4"
+    ) async throws -> UploadURLResponse {
+        struct Body: Encodable {
+            let eventSlug: String
+            let clientJobId: String
+            let contentType: String
+            enum CodingKeys: String, CodingKey {
+                case eventSlug = "event_slug"
+                case clientJobId = "client_job_id"
+                case contentType = "content_type"
+            }
+        }
+        return try await request(
+            "/api/booth360/uploads/sign",
+            method: "POST",
+            body: Body(eventSlug: eventSlug, clientJobId: clientJobId, contentType: contentType)
+        )
+    }
+
+    /// Step 2 — PUT the rendered file directly to Supabase Storage.
+    ///
+    /// Uses `URLSession.uploadTask(with:fromFile:)` (file-backed, NOT memory-backed)
+    /// so even big takes stream off disk instead of being loaded whole. Reports
+    /// progress through the optional `onProgress` callback so the UI can keep
+    /// the FFmpeg progress bar moving past the render phase.
+    ///
+    /// We deliberately don't go through `BoothifyAPI.session` here — the signed
+    /// URL is on Supabase Storage's host, no Authorization header allowed.
+    func uploadVideoDirect(
+        fileURL: URL,
+        to signedURL: URL,
+        contentType: String = "video/mp4",
+        onProgress: (@MainActor (Double) -> Void)? = nil
+    ) async throws {
+        var req = URLRequest(url: signedURL)
+        req.httpMethod = "PUT"
+        req.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        // Supabase Storage upserts on signed PUT when the URL was created with
+        // `upsert: true` (backend's sign endpoint does this). Setting the
+        // header explicitly is belt-and-braces — Supabase ignores duplicates.
+        req.setValue("true", forHTTPHeaderField: "x-upsert")
+
+        let delegate = UploadProgressDelegate(onProgress: onProgress)
+        // Use a transient session so the delegate's lifecycle is bounded by
+        // this call — no leaks if the caller cancels.
+        let cfg = URLSessionConfiguration.default
+        cfg.timeoutIntervalForRequest = 60
+        cfg.timeoutIntervalForResource = 300
+        cfg.waitsForConnectivity = false
+        let session = URLSession(configuration: cfg, delegate: delegate, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+
+        let (data, response) = try await session.upload(for: req, fromFile: fileURL)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.serverError(status: 0, message: "Non-HTTP response from Supabase")
+        }
+        if !(200..<300).contains(http.statusCode) {
+            let body = String(data: data, encoding: .utf8) ?? "—"
+            throw APIError.serverError(
+                status: http.statusCode,
+                message: "Supabase upload rejected: \(body)"
+            )
+        }
+    }
+
+    /// Step 3 — confirm the upload to the backend. Body is JSON (NOT
+    /// multipart) so the route handler picks the AM1 direct-confirm branch
+    /// instead of trying to parse a file from form-data.
+    func confirmBooth360Job(
+        storagePath: String,
+        shortCode: String?,
+        clientJobId: String,
+        eventSlug: String,
+        durationSeconds: Double?,
+        metadata: AI360Settings?
+    ) async throws -> Booth360JobDTO {
+        struct Body: Encodable {
+            let eventSlug: String
+            let clientJobId: String
+            let storagePath: String
+            let shortCode: String?
+            let durationSeconds: Double?
+            let metadata: AI360Settings?
+            enum CodingKeys: String, CodingKey {
+                case eventSlug = "event_slug"
+                case clientJobId = "client_job_id"
+                case storagePath = "storage_path"
+                case shortCode = "short_code"
+                case durationSeconds = "duration_seconds"
+                case metadata
+            }
+        }
+        struct Wrapper: Decodable { let job: Booth360JobDTO }
+        let wrapper: Wrapper = try await request(
+            "/api/booth360/jobs",
+            method: "POST",
+            body: Body(
+                eventSlug: eventSlug,
+                clientJobId: clientJobId,
+                storagePath: storagePath,
+                shortCode: shortCode,
+                durationSeconds: durationSeconds,
+                metadata: metadata
+            )
+        )
+        return wrapper.job
+    }
+
+    /// `POST /api/booth360/jobs/{id}/sms` — flag that iOS already sent the
+    /// SMS via the operator's own Twilio (per-event, M5). Drives the "sent"
+    /// counter in cloud status (BM4 on the backend).
+    func markBooth360SMSSent(jobId: UUID, phone: String?) async throws {
+        struct Body: Encodable { let phone: String? }
+        struct Resp: Decodable { let ok: Bool }
+        let _: Resp = try await request(
+            "/api/booth360/jobs/\(jobId.uuidString)/sms",
+            method: "POST",
+            body: Body(phone: phone)
+        )
+    }
+
     /// `GET /api/booth360/jobs/{id}` — poll one job.
     func getBooth360Job(id: UUID) async throws -> Booth360JobDTO {
         struct Wrapper: Decodable { let job: Booth360JobDTO }
@@ -434,6 +583,26 @@ private extension Data {
 }
 
 private struct EmptyBody: Encodable {}
+
+/// BM0 — URLSession delegate that forwards the upload byte counter to a
+/// MainActor callback. Bounded lifetime (one per `uploadVideoDirect` call).
+private final class UploadProgressDelegate: NSObject, URLSessionTaskDelegate {
+    let onProgress: (@MainActor (Double) -> Void)?
+    init(onProgress: (@MainActor (Double) -> Void)?) {
+        self.onProgress = onProgress
+    }
+    nonisolated func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didSendBodyData bytesSent: Int64,
+        totalBytesSent: Int64,
+        totalBytesExpectedToSend totalBytesExpectedToSend: Int64
+    ) {
+        guard let onProgress, totalBytesExpectedToSend > 0 else { return }
+        let pct = max(0.0, min(1.0, Double(totalBytesSent) / Double(totalBytesExpectedToSend)))
+        Task { @MainActor in onProgress(pct) }
+    }
+}
 
 private struct SimpleErrorEnvelope: Decodable {
     let error: String?

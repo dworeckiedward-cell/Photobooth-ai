@@ -1,77 +1,46 @@
-# DECISIONS
+# DECISIONS — iOS RUN B
 
-Architectural / scope decisions taken autonomously during the build run that
-weren't already pinned in the executive prompt. The prompt's "DECYZJE
-ARCHITEKTONICZNE" section is the source of truth — anything here is *in
-addition to* those, not a contradiction.
+(Decisions taken autonomously this run, in addition to the locked-in
+DECYZJE from the executive prompt.)
 
 ---
 
-## IM4 — Debug auth bypass implementation
+## BM0 — Cloud upload as separate phase from render
 
-`AppConfig.authGateEnabled` is now a computed property that returns:
-- Always `true` in Release builds (compile-time guarantee).
-- `false` in Debug builds **only** when the environment variable
-  `BOOTHIFY_BYPASS_AUTH=1` is set on the scheme.
+The FFmpeg render and the cloud upload are intentionally **two phases**,
+not one chained call. Render writes a local mp4 + marks status
+`.completed`; upload runs after as a background `Task` via
+`Booth360CloudUploader.enqueue`.
 
-Chose env-var over a hard `#if DEBUG` flip because:
-- A blanket DEBUG=false would silently disable auth for every developer
-  every time they Cmd+R. Easy to accidentally ship a build that thinks
-  auth is off because someone forgot to flip back.
-- An opt-in env var keeps Debug behavior identical to Release by default,
-  and the bypass is visible in the scheme editor — discoverable and
-  trivially togglable.
+Why split:
+- Operator can navigate to the Result screen / start the next guest's
+  recording the instant render finishes. Upload runs invisibly in the
+  background.
+- Failed upload doesn't undo a successful render — the local file is
+  still there to share via AirDrop / Save to Photos, and the queue
+  retries the cloud step independently.
+- BM1's persistent queue lives entirely in the upload phase; nothing
+  about render needs to know about it.
 
-To enable: Xcode → Edit Scheme → Run → Arguments → Environment Variables
-→ add `BOOTHIFY_BYPASS_AUTH = 1`.
+## BM0 — `clientJobId` lifecycle
 
-## IM0 — FFmpeg package pin
+Generated **once** at `Booth360Job.init` time and reused unchanged on
+every retry attempt. The backend's idempotency contract (AM1: lookup
+via `metadata->>client_job_id`) means re-running sign → PUT → confirm
+with the same id always lands on the same row + storage object.
 
-Picked `tylerjonesio/ffmpeg-kit-spm` per the prompt. Their tag scheme is
-non-semver (`min.v5.1.2.6`, `v5.1`, `v5.1.2`) — Xcode SPM expects strict
-SemVer for `upToNextMajorVersion`-style ranges, so resolution failed when
-asking for `6.0.0..<7.0.0`. **Resolution:** pin to commit
-`6053b0e4f8607314ff5e14e0b18fc250c0f87c9b` (current `main` HEAD at run time).
+That's why `Booth360Job.clientJobId` is a `var` only for Codable
+synthesis convenience — semantically it's write-once.
 
-Trade-off vs. tag range:
-- `revision` pin = reproducible, doesn't drift on `pod update`, but you
-  need to bump manually when the package ships fixes.
-- `branch = "main"` was the alternative — auto-tracks but breaks
-  reproducible builds.
+## BM0 — Mock share URL kept as optimistic placeholder
 
-When the maintainer starts publishing semver tags, switch the requirement
-to `from: "5.1.2"` (their highest semver tag today) and bump from there.
+Right after render, `publicShareURL` is set to a fake `boothify.app/v/...`
+URL. The real one only arrives after `confirm`. We keep the mock so that
+the Result screen's QR / Copy Link / ShareLink buttons render with
+*something* even if the upload hasn't completed yet — the displayed link
+would 404 if scanned immediately, but the UI doesn't crash. Once upload
+completes the URL silently swaps to the real backend-minted one.
 
-## IM0 — Audio path
-
-Render command's audio handling:
-- If operator picked a soundtrack in M4 (`AI360Settings.soundtrackRelativePath`)
-  → mux as a separate `-i` input with `-c:a aac_at -b:a 128k -shortest`.
-  `aac_at` is Apple's hardware AAC encoder, no extra deps.
-- No soundtrack → `-an` (silent). Audio from raw input is dropped on
-  purpose — we'd need `atempo` chained for speed-ramp segments, which
-  desyncs noticeably at extreme speeds and adds 30-60% to the cmdline
-  complexity. Decision from the M6 prompt explicitly allowed this skip.
-
-If a soundtrack is set but the file is missing on disk we silently fall
-back to `-an` — never block the render on a missing audio asset.
-
-## M1 — Stabilization safe-area indicator
-
-Chose **corner-bracket overlay** (~10% inset) over a full inner ring or a
-cropped preview. Reasoning:
-
-- A full ring competes visually with the guest in frame and reads as a UI
-  bug to anyone who hasn't been briefed.
-- Cropping the preview itself would solve the WYSIWYG problem but loses
-  peripheral info the operator may want to see (e.g. someone walking into
-  shot from the side). Brackets keep the full sensor view while marking
-  the safe area.
-- Brackets are how cinema viewfinders show action-safe / title-safe
-  zones; operators with any prior video gear background read it instantly.
-
-No fallback chain in code for `.cinematicExtended → .cinematic → .standard`
-— AVFoundation silently downgrades to the closest supported mode when you
-just set `preferredVideoStabilizationMode`. Adding our own iteration would
-duplicate that and lock us out of future improvements (e.g. iOS 27's
-hypothetical `.cinematicProMax`).
+If we hard-required the real URL upfront the operator would see a
+broken Result screen for 5-30s while the upload runs. Bad UX during a
+live event.

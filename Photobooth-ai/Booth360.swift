@@ -96,6 +96,24 @@ struct Booth360Job: Identifiable, Codable, Hashable, Sendable {
     var completedAt: Date?
     var errorMessage: String?
 
+    // MARK: - BM0 cloud-upload (direct-to-Supabase flow)
+    //
+    // Render still happens client-side (IM0 FFmpeg). After render the local
+    // file at `finalVideoURL` gets sign-PUT-confirm'd up to the backend —
+    // these fields track that second pipeline independently of the render
+    // pipeline. Backend keys idempotency by `clientJobId` so a retry never
+    // duplicates rows.
+
+    /// Stable id we send to the backend in `client_job_id`. Generated once
+    /// at job creation time + reused on every retry of sign / PUT / confirm.
+    var clientJobId: String = UUID().uuidString
+    /// Backend-issued storage path inside `booth360-renders/`. Set after sign.
+    var cloudStoragePath: String?
+    /// Where the upload pipeline currently is. Drives UI badges + retry logic.
+    var cloudUploadStatus: Booth360CloudUploadStatus = .notStarted
+    /// Most recent upload error, surfaced in UI as a tooltip / retry hint.
+    var cloudUploadError: String?
+
     /// Convenience: build a fresh job at recording-end time with everything
     /// snapshotted from the operator's current settings.
     init(eventId: UUID, settingsSnapshot: AI360Settings, brandOverlay: BrandOverlaySettings) {
@@ -106,6 +124,33 @@ struct Booth360Job: Identifiable, Codable, Hashable, Sendable {
         self.settingsSnapshot = settingsSnapshot
         self.brandOverlay = brandOverlay
         self.createdAt = .now
+        self.clientJobId = UUID().uuidString
+        self.cloudUploadStatus = .notStarted
+    }
+}
+
+/// BM0 — per-job cloud upload state. Independent of `Booth360RenderStatus`
+/// (which tracks the local FFmpeg render). A job can be render-`completed`
+/// AND upload-`failed` simultaneously: it has a watchable local file but no
+/// shareable cloud link yet.
+enum Booth360CloudUploadStatus: String, Codable, CaseIterable, Hashable, Sendable {
+    /// Render done locally, upload hasn't been attempted yet (or was queued).
+    case notStarted
+    /// Sign / PUT / confirm in flight.
+    case uploading
+    /// All three steps succeeded; `publicShareURL` is now the backend's real URL.
+    case uploaded
+    /// At least one step failed. Job lives in the persistent pending queue;
+    /// operator can tap "Send again" or the queue auto-retries on app launch.
+    case failed
+
+    var label: String {
+        switch self {
+        case .notStarted: "Local only"
+        case .uploading:  "Uploading"
+        case .uploaded:   "Shared"
+        case .failed:     "Upload failed"
+        }
     }
 }
 

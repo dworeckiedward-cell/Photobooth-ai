@@ -121,11 +121,20 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
             live.progress = 1.0
             live.completedAt = .now
             live.finalVideoURL = outputURL
-            // Best-effort mock share URL until M3 backend mints real ones.
+            // Optimistic mock share URL — replaced by the real one returned
+            // from /api/booth360/jobs (confirm) once the BM0 cloud uploader
+            // finishes. If the operator opens the result screen before the
+            // upload completes, the mock URL keeps copy-link / share working
+            // (link itself will 404 until upload lands, but UI doesn't break).
             if live.publicShareURL == nil {
                 live.publicShareURL = URL(string: "https://boothify.app/v/\(jobId.uuidString.prefix(8).lowercased())")
             }
             app.upsertJob(live)
+
+            // BM0: kick off the cloud upload pipeline (sign → PUT → confirm).
+            // Non-blocking — operator can navigate to Result screen / start
+            // recording the next guest while the upload runs in background.
+            Booth360CloudUploader.shared.enqueue(jobId: jobId, app: app)
             return
         }
 
