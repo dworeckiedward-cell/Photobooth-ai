@@ -183,3 +183,61 @@ milestone. Photo flow + 8 quick wins inventoried — no regressions.
 in Info.plist, wire `sentry-cli` dSYM upload as post-archive Build
 Phase, run Xcode Archive once to measure real-device IPA size (Release
 strip flags are in place; expected ~35-45 MB).
+
+---
+
+## Loose-End Closure — RUN A2 — 2026-05-29
+
+Follow-up close on RUN A. Build was reported red on a fresh checkout
+("Missing package product 'FFmpeg-Kit' / 'Sentry'") — turned out to
+be a stale Xcode SPM cache issue; first `xcodebuild` after the RUN A
+commits resolved cleanly. No package fix needed.
+
+Then a small follow-up pass to close loose ends from prior runs:
+audit the BM2 / RA0 / P3 / P4 hooks, close 3 stale comments/docs
+that no longer match the impl.
+
+| #  | Milestone                                  | Status | Commit    |
+|----|--------------------------------------------|--------|-----------|
+| P0 | Debug + Release builds + simulator smoke   | ✅     | (no code) |
+| P1 | BM2 SMS-ping wire — verified               | ✅     | (no code) |
+| P2 | RA0 mock-URL gate — 2 holes closed         | ✅     | `6412e97` |
+| P3 | AuthUser.email nullable safety — verified  | ✅     | (no code) |
+| P4 | 9 missing Sentry breadcrumbs filled        | ✅     | `972527c` |
+| P5 | 3 stale limitations / comments closed      | ✅     | `2aaaf42` |
+| P6 | Full sanity sweep (this section)           | ✅     | this commit |
+
+**Findings worth noting:**
+
+- P2 found two real RA0 leak paths the original audit missed:
+  1. `Booth360EventHubView.guestShareURL()` returned the placeholder
+     URL based on `status == .completed` (render done) without
+     checking `cloudUploadStatus == .uploaded` (cloud confirmed).
+     The "Share event" + "Copy link" buttons + the URL label all
+     surfaced 404-bound boothify.app/v/<short> for 3-30s post-render.
+  2. Dead-code `sharePresented` `@State` + `.sheet { ShareSheet }`
+     block in `Booth360ResultView` left over from the pre-RA0 path,
+     before native `ShareLink` replaced it. A future caller toggling
+     the flag would have re-opened the hole.
+
+- P4 found the Sentry breadcrumb timeline was sparse — operator
+  signs in, then 10 minutes of silence in the crumb trail, then a
+  crash with no context about what they were doing. Filled in:
+  recording start/end, render done, upload start/success/fail,
+  share/QR/SMS open, SMS sent, session refresh success/failure.
+
+- P5 found the auth gate "TODO: Re-enable Sign in with Apple before
+  production" comments in 3 files were stale — `AppConfig.authGateEnabled`
+  defaults to `true`, has since IM4 (BOOTHIFY_BYPASS_AUTH only flips
+  it off in Debug). Also the `Booth360ResultView` header doc still
+  described a pre-IM0 placeholder gradient card that no longer exists.
+
+**Build sanity (final):**
+- Debug Simulator universal: ✅ green, 85 MB .app on disk
+  (+9 MB vs post-BM3 from Sentry framework + ffmpeg-kit-spm
+  subframeworks newly resolved this session).
+- Release Simulator universal: ✅ green, 72 MB .app on disk
+  (matches RA7 measurement; real-device IPA still TBD via Archive).
+- Photo flow + 360 flow + RA0-RA7 + QW1-8: inventoried, no regressions.
+- Smoke test: simulator launch clean, Sentry correctly no-ops
+  without DSN (RA3 design), no crashes in early-launch logs.
