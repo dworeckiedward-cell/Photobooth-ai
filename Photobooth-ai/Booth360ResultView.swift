@@ -189,13 +189,22 @@ struct Booth360ResultView: View {
 
     @ViewBuilder
     private func actionGrid(job: Booth360Job) -> some View {
-        let hasShareURL = job.publicShareURL != nil
+        // RA0 — Mock Share URL Gate. `publicShareURL` is set optimistically
+        // to a `boothify.app/v/<short>` placeholder the moment FFmpeg renders
+        // a local file. The REAL URL only arrives after `Booth360CloudUploader`
+        // finishes (sign → PUT → confirm, 3-30s). Sending the placeholder
+        // to a guest = guest gets a 404 that "starts working in a minute".
+        // First impression of the whole product = "broken".
+        //
+        // So: share / QR / SMS / copy stay disabled until the cloud confirms
+        // and `cloudUploadStatus == .uploaded`. Local-only actions (Save to
+        // Photos, start New take) stay enabled — they don't need a cloud URL.
+        let cloudReady = job.cloudUploadStatus == .uploaded && job.publicShareURL != nil
         let hasVideo = job.finalVideoURL != nil
 
         HStack(spacing: 8) {
-            // Native ShareLink covers AirDrop + Messages + Mail + WhatsApp +
-            // copy-to-clipboard in one sheet. Disabled when there's no URL yet.
-            if let url = job.publicShareURL {
+            // Native ShareLink — only when cloud has the real URL.
+            if cloudReady, let url = job.publicShareURL {
                 ShareLink(item: url,
                           subject: Text("Your 360 video from Boothify"),
                           message: Text("Check out the 360 take →")) {
@@ -207,7 +216,7 @@ struct Booth360ResultView: View {
                 actionTile(symbol: "square.and.arrow.up", label: "Share", enabled: false) {}
             }
 
-            actionTile(symbol: "qrcode", label: "QR", enabled: hasShareURL) {
+            actionTile(symbol: "qrcode", label: "QR", enabled: cloudReady) {
                 Haptics.tap()
                 qrPresented = true
             }
@@ -215,7 +224,7 @@ struct Booth360ResultView: View {
             // BM2: SMS via operator's Twilio (M5). After successful send we
             // ping POST /api/booth360/jobs/<id>/sms so the cloud status
             // 'sent' counter (BM4 backend) is accurate.
-            actionTile(symbol: "message.fill", label: "SMS", enabled: hasShareURL) {
+            actionTile(symbol: "message.fill", label: "SMS", enabled: cloudReady) {
                 Haptics.tap()
                 smsPresented = true
             }
@@ -223,7 +232,7 @@ struct Booth360ResultView: View {
             actionTile(
                 symbol: copiedLink ? "checkmark" : "doc.on.doc",
                 label: copiedLink ? "Copied" : "Copy link",
-                enabled: hasShareURL
+                enabled: cloudReady
             ) {
                 Haptics.notify(.success)
                 if let url = job.publicShareURL {
@@ -236,6 +245,7 @@ struct Booth360ResultView: View {
                 }
             }
 
+            // Save and New don't need the cloud — local file is enough.
             actionTile(symbol: "arrow.down.to.line", label: "Save", enabled: hasVideo) {
                 Haptics.tap()
                 if let url = job.finalVideoURL { saveVideoToLibrary(url) }
