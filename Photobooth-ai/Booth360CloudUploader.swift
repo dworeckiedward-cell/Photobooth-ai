@@ -71,6 +71,18 @@ final class Booth360CloudUploader {
         job.cloudUploadError = nil
         app.upsertJob(job)
 
+        // P4 — breadcrumb the start of each upload attempt. Event slug
+        // is an opaque identifier, not PII; job-id helps correlate with
+        // the matching `render completed` crumb a few seconds earlier.
+        SentryClient.shared.breadcrumb(
+            "upload start",
+            category: "upload",
+            data: [
+                "job_id": String(jobId.uuidString.prefix(8)),
+                "event_slug": event.slug,
+            ]
+        )
+
         // Step 1 — sign
         let signed: BoothifyAPI.UploadURLResponse
         do {
@@ -149,12 +161,27 @@ final class Booth360CloudUploader {
             // keep whatever mock we had; UI still works.
         }
         app.upsertJob(live)
+        // P4 — success breadcrumb. Pairs with `upload start`; in a Sentry
+        // event you can see the time-to-cloud per take.
+        SentryClient.shared.breadcrumb(
+            "upload success",
+            category: "upload",
+            data: ["job_id": String(jobId.uuidString.prefix(8))]
+        )
         // Once a job is uploaded, drop it from the persistent queue (BM1).
         Booth360UploadQueue.shared.remove(jobId: jobId)
     }
 
     private func markFailed(jobId: UUID, app: AppState, step: String, error: Error) async {
         log.error("upload \(step, privacy: .public) failed for \(jobId.uuidString, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        // P4 — leading breadcrumb so the captured error event includes the
+        // failure context in its own crumb timeline. capture() ships the
+        // exception; the crumb keeps it visible in the parent scope too.
+        SentryClient.shared.breadcrumb(
+            "upload failed (\(step))",
+            category: "upload",
+            data: ["job_id": String(jobId.uuidString.prefix(8))]
+        )
         // RA3 — report to Sentry with context. Only after retries are
         // exhausted so transient blips don't spam.
         SentryClient.shared.capture(error, context: [

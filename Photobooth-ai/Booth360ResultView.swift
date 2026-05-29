@@ -212,13 +212,28 @@ struct Booth360ResultView: View {
                     actionTileLabel(symbol: "square.and.arrow.up", label: "Share", enabled: true)
                 }
                 .buttonStyle(.plain)
-                .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
+                .simultaneousGesture(TapGesture().onEnded {
+                    Haptics.tap()
+                    // P4 — share-sheet open. URL itself is intentionally
+                    // not logged (PII-adjacent: encodes the short code
+                    // that identifies the take to anyone who has the URL).
+                    SentryClient.shared.breadcrumb(
+                        "share sheet opened",
+                        category: "share",
+                        data: ["job_id": String(job.id.uuidString.prefix(8))]
+                    )
+                })
             } else {
                 actionTile(symbol: "square.and.arrow.up", label: "Share", enabled: false) {}
             }
 
             actionTile(symbol: "qrcode", label: "QR", enabled: cloudReady) {
                 Haptics.tap()
+                SentryClient.shared.breadcrumb(
+                    "qr opened",
+                    category: "share",
+                    data: ["job_id": String(job.id.uuidString.prefix(8))]
+                )
                 qrPresented = true
             }
 
@@ -227,6 +242,11 @@ struct Booth360ResultView: View {
             // 'sent' counter (BM4 backend) is accurate.
             actionTile(symbol: "message.fill", label: "SMS", enabled: cloudReady) {
                 Haptics.tap()
+                SentryClient.shared.breadcrumb(
+                    "sms sheet opened",
+                    category: "share",
+                    data: ["job_id": String(job.id.uuidString.prefix(8))]
+                )
                 smsPresented = true
             }
 
@@ -748,6 +768,12 @@ private struct Booth360SMSSheet: View {
                         phone: trimmedPhone
                     )
                 }
+                // P4 — phone number is PII; DO NOT log it. Job-id only.
+                await SentryClient.shared.breadcrumb(
+                    "sms sent",
+                    category: "share",
+                    data: ["job_id": String(jobId.uuidString.prefix(8))]
+                )
                 Haptics.notify(.success)
                 sent = true
                 try? await Task.sleep(for: .seconds(1.2))

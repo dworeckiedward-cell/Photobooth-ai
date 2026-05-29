@@ -145,6 +145,18 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
             }
             app.upsertJob(live)
 
+            // P4 — render success breadcrumb. Pair with the existing
+            // `Booth360 FFmpeg render failed` captureMessage so we can see
+            // a stream of successes vs failures in the breadcrumb timeline.
+            SentryClient.shared.breadcrumb(
+                "render completed",
+                category: "recording",
+                data: [
+                    "job_id": String(jobId.uuidString.prefix(8)),
+                    "bitrate_mbps": String(format: "%.1f", effectiveBitrate),
+                ]
+            )
+
             // BM0: kick off the cloud upload pipeline (sign → PUT → confirm).
             // Non-blocking — operator can navigate to Result screen / start
             // recording the next guest while the upload runs in background.

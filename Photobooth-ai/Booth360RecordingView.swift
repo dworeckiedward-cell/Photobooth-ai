@@ -422,6 +422,18 @@ struct Booth360RecordingView: View {
         Haptics.notify(.success)
         // Audible "start" cue
         AudioServicesPlaySystemSound(SystemSoundID(1057))
+        // P4 — breadcrumb for the recording start. Helps correlate any
+        // subsequent FFmpeg crash / upload failure with the take that
+        // produced it. Duration is the planned length; actual elapsed
+        // ships on finishRecording crumb.
+        SentryClient.shared.breadcrumb(
+            "recording started",
+            category: "recording",
+            data: [
+                "duration_s": "\(Int(duration))",
+                "event_id": eventId.uuidString,
+            ]
+        )
 
         // Build a clean destination per recording so consecutive takes don't
         // collide. Lives under Documents/events/<eventId>/raw_<timestamp>.mov so
@@ -459,6 +471,13 @@ struct Booth360RecordingView: View {
         Haptics.notify(.success)
         AudioServicesPlaySystemSound(SystemSoundID(1106))
         recording = false
+        // P4 — pair with `recording started`. Actual elapsed seconds
+        // surfaces any clock drift or early cancellation.
+        SentryClient.shared.breadcrumb(
+            "recording finished",
+            category: "recording",
+            data: ["elapsed_s": String(format: "%.1f", recordingElapsed)]
+        )
 
         // Stop the file output FIRST so the .mov finalizes on disk before the
         // session shuts down. If we stop the session first AVFoundation may drop

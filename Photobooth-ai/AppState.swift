@@ -116,9 +116,19 @@ final class AppState {
         guard let rt = session?.refreshToken else { return nil }
         do {
             let fresh = try await AuthClient.shared.refresh(refreshToken: rt)
+            // P4 — successful refresh crumb. setSession will also fire a
+            // `signed in` crumb (same code path as first sign-in); the
+            // `session refreshed` here distinguishes "renewed silently"
+            // from "fresh Apple Sign In" in the timeline.
+            SentryClient.shared.breadcrumb("session refreshed", category: "auth")
             setSession(fresh)
             return fresh.accessToken
         } catch {
+            // P4 — distinguish refresh expiry from explicit operator sign-out.
+            // signOut() below fires its own `signed out` crumb; this one tells
+            // Sentry the cause was an expired/rejected refresh token, not a
+            // user action.
+            SentryClient.shared.breadcrumb("session refresh failed", category: "auth")
             signOut()
             return nil
         }
