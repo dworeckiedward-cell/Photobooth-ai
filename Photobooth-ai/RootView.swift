@@ -23,6 +23,14 @@ struct RootView: View {
                             destination(for: route)
                         }
                 }
+                // RA4 — Status HUD on top of the entire authed app. Only
+                // renders pill when there's a real problem (offline / hot /
+                // low battery / pending uploads). Tap-target is the pill
+                // itself; expanding a multi-alert list is a future polish.
+                .overlay(alignment: .top) {
+                    StatusOverlay()
+                        .allowsHitTesting(false)
+                }
                 .sheet(isPresented: $onboardingPresented) {
                     OnboardingQuizSheet { answers in
                         applyOnboardingDefaults(answers)
