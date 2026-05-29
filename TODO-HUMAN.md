@@ -5,6 +5,32 @@ The iOS code is in place; these unblock the realistic flow.
 
 ---
 
+## 🚨 CRITICAL — REVERT BEFORE APP STORE SUBMISSION
+
+**Apple Sign In gate is currently DISABLED for pre-event testing.**
+
+- File: `Photobooth-ai/AppConfig.swift`, line ~24 (inside `#if DEBUG`)
+- Current behavior: Debug builds skip `LoginView`; Release builds still
+  require Apple Sign In (unchanged).
+- Commit reference: `d610b6b` — `test(auth): temporarily disable Apple
+  Sign In gate for testing`
+
+**Revert (two options):**
+
+1. **Cleanest** — `git revert d610b6b` restores the IM4 opt-in env-var
+   semantics (gate ON by default in Debug, `BOOTHIFY_BYPASS_AUTH=1`
+   flips it OFF).
+2. **Surgical** — open `AppConfig.swift`, find the `#if DEBUG` branch,
+   change `return false` (the unconditional fallback after the env
+   check) to `return true`. Update the doc comment to drop the 🚨
+   warning.
+
+**Why this matters:** App Store review will reject if the entitlement
+is present (which it is) but the app never actually shows the Apple
+Sign In flow. The gate must be ON before TestFlight / submission.
+
+---
+
 ## RUN B test prerequisites
 
 Backend must be live first (RUN A → `pnpm supabase db push` + Vercel
