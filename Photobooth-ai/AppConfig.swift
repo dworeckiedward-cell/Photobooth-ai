@@ -8,17 +8,22 @@ enum AppConfig {
     /// `/api/auth/apple`, the entitlement) is intentionally left intact and is
     /// re-activated by flipping this back to `true`.
     ///
-    /// Default: ON (App Store requirement). IM4: in DEBUG builds this can be
-    /// overridden by setting the environment variable `BOOTHIFY_BYPASS_AUTH=1`
-    /// in the Xcode scheme — useful for on-device testing of camera / montage
-    /// before the backend auth + Supabase Apple provider are wired.
+    /// Default: ON in Release (App Store requirement).
+    ///
+    /// 🚨 TEMPORARY: in Debug builds the gate is OFF by default for
+    /// pre-event testing without the backend auth round-trip. Set
+    /// `BOOTHIFY_REQUIRE_AUTH=1` in the Xcode scheme env to force-test
+    /// the Apple Sign In flow. Release behavior is unchanged — App Store
+    /// submission still requires Sign in with Apple.
+    /// See TODO-HUMAN.md for the revert instructions.
     static var authGateEnabled: Bool {
-        let baseline = true
         #if DEBUG
-        if ProcessInfo.processInfo.environment["BOOTHIFY_BYPASS_AUTH"] == "1" {
-            return false
+        if ProcessInfo.processInfo.environment["BOOTHIFY_REQUIRE_AUTH"] == "1" {
+            return true
         }
+        return false
+        #else
+        return true
         #endif
-        return baseline
     }
 }
