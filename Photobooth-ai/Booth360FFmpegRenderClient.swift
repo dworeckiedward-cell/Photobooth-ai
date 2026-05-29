@@ -154,11 +154,20 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
 
         // Anything other than success → log + passthrough fallback so the
         // operator still gets the raw take + a non-nil finalVideoURL.
+        let rcDescription: String
         if let rc = returnCode {
+            rcDescription = "rc=\(rc.getValue())"
             log.error("ffmpeg returned \(rc.getValue(), privacy: .public) — falling back to passthrough")
         } else {
+            rcDescription = "rc=nil"
             log.error("ffmpeg session returned nil — falling back to passthrough")
         }
+        // RA3 — surface render failures so we can spot pattern (e.g. one
+        // device model always fails at a specific bitrate).
+        SentryClient.shared.captureMessage(
+            "Booth360 FFmpeg render failed (\(rcDescription)) — falling back to passthrough",
+            level: .warning
+        )
         var failed = job
         failed.errorMessage = "Montage failed — saved the raw recording instead."
         app.upsertJob(failed)

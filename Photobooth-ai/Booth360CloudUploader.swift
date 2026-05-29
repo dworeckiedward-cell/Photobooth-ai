@@ -155,6 +155,13 @@ final class Booth360CloudUploader {
 
     private func markFailed(jobId: UUID, app: AppState, step: String, error: Error) async {
         log.error("upload \(step, privacy: .public) failed for \(jobId.uuidString, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        // RA3 — report to Sentry with context. Only after retries are
+        // exhausted so transient blips don't spam.
+        SentryClient.shared.capture(error, context: [
+            "phase": "booth360_upload",
+            "step": step,
+            "job_id": jobId.uuidString,
+        ])
         guard var live = app.job(id: jobId) else { return }
         live.cloudUploadStatus = .failed
         live.cloudUploadError = "\(step) failed: \(error.localizedDescription)"

@@ -101,6 +101,11 @@ final class AppState {
     /// Persist a freshly minted session (from Apple sign-in). Updates both
     /// in-memory state and Keychain.
     func setSession(_ new: AuthSession) {
+        // RA3 — tag this user on Sentry events so we can correlate
+        // crashes/errors to specific operators. Only the Supabase uuid
+        // is sent; no email, no PII.
+        SentryClient.shared.setUser(id: new.user.id)
+        SentryClient.shared.breadcrumb("signed in", category: "auth")
         session = new
         try? KeychainStore.saveSession(new)
     }
@@ -122,6 +127,9 @@ final class AppState {
     /// Wipe in-memory + Keychain session and reset cached event data. Also
     /// clears Apple's cached profile attributes so a re-login starts clean.
     func signOut() {
+        // RA3 — wipe user tag so post-sign-out crashes aren't mis-attributed.
+        SentryClient.shared.setUser(id: nil)
+        SentryClient.shared.breadcrumb("signed out", category: "auth")
         session = nil
         KeychainStore.clearSession()
         AppleProfileCache.clear()

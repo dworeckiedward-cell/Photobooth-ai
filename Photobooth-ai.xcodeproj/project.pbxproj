@@ -20,6 +20,7 @@
 
 /* Begin PBXBuildFile section */
 		0EFF000110000000000000A1 /* FFmpeg-Kit in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000130000000000000C1 /* FFmpeg-Kit */; };
+		0EFF000210000000000000A2 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000230000000000000C2 /* Sentry */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0EFF000110000000000000A1 /* FFmpeg-Kit in Frameworks */,
+				0EFF000210000000000000A2 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = "Photobooth-ai";
 			packageProductDependencies = (
 				0EFF000130000000000000C1 /* FFmpeg-Kit */,
+				0EFF000230000000000000C2 /* Sentry */,
 			);
 			productName = "Photobooth-ai";
 			productReference = 0EE36FEB2FB0A0D400F745CF /* Photobooth-ai.app */;
@@ -109,6 +112,7 @@
 			);
 			packageReferences = (
 				0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */,
+				0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 		};
 /* End PBXProject section */
@@ -365,11 +369,27 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section (sentry-cocoa) */
+		0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section (sentry-cocoa) */
+
 /* Begin XCSwiftPackageProductDependency section */
 		0EFF000130000000000000C1 /* FFmpeg-Kit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */;
 			productName = "FFmpeg-Kit";
+		};
+		0EFF000230000000000000C2 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
