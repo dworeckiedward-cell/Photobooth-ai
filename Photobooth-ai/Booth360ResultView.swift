@@ -2,10 +2,11 @@ import SwiftUI
 import UIKit
 import AVKit
 
-/// 360 AI Booth final preview. Frontend MVP: renders an animated gradient
-/// "demo preview" card stand-in for the final video. Once the backend ships a
-/// `finalVideoURL` we'll swap the placeholder for an `AVPlayerLayer` — every
-/// share/copy/save action below already targets the real `publicShareURL`.
+/// 360 AI Booth final preview. Renders the real `finalVideoURL` (produced
+/// by `Booth360FFmpegRenderClient` since IM0) in an inline `VideoPreviewPlayer`
+/// with brand overlay, plus an action grid for share / QR / SMS / copy /
+/// save / new. Share-side actions stay disabled until the cloud upload
+/// confirms (RA0 + P2).
 struct Booth360ResultView: View {
     @Environment(AppState.self) private var app
     let jobId: UUID

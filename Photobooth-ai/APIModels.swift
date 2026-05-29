@@ -68,11 +68,10 @@ struct Event: Codable, Identifiable, Hashable, Sendable {
     var effectiveShareMode: ShareMode { shareMode ?? .private }
 
     /// Demo-mode-only constructor — builds an in-memory `Event` without hitting
-    /// the backend. Used while the LoginView gate is temporarily bypassed
-    /// (see `AppConfig.authGateEnabled`). Backend-bound flows (photo upload,
-    /// generate, share) will still fail with 401 because no real session exists.
-    ///
-    /// TODO: Re-enable Sign in with Apple before production multi-user launch.
+    /// the backend. Only reachable when `AppConfig.authGateEnabled == false`,
+    /// which in production is never (gate is always on). Used in Debug builds
+    /// with `BOOTHIFY_BYPASS_AUTH=1` env for camera / montage iteration without
+    /// the backend round-trip. Backend-bound flows still 401 in that mode.
     static func localDemo(name: String) -> Event {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         let slug = trimmed

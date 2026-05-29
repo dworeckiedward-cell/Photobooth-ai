@@ -109,14 +109,12 @@ Status: ✅ done
   + `BoothifyAPI.sendSMS` (photo path) untouched. `AuthUser` decoder
   change is additive (`fullName` optional default-nil).
 - iOS-side known limitations updated:
-  - **Mock share URL window:** right after render the optimistic
+  - ~~**Mock share URL window:** right after render the optimistic
     `boothify.app/v/<short>` link is the one the operator sees on the
-    Result screen. Real backend URL swaps in after ~3-30s when upload
-    completes. A guest who scans during that window gets a 404 — UI
-    doesn't flag this. Acceptable for now (operator typically waits
-    a beat anyway); future tweak: gate Share/Copy buttons behind
-    `cloudUploadStatus == .uploaded` if event tests show guests
-    scanning instantly.
+    Result screen…~~ **Closed** by RA0 (`1c27ec0`) which disabled
+    share/QR/SMS/copy until `cloudUploadStatus == .uploaded`, and
+    P2 (`6412e97`) which extended the gate to `Booth360EventHubView`'s
+    "Share event" surface and removed dead-code paths in `Booth360ResultView`.
   - **No upload progress on actionGrid for queued/failed jobs viewed
     elsewhere** — only the Result screen for the active job shows
     upload status. A pending failed upload from a previous take has no

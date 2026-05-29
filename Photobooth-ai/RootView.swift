@@ -14,7 +14,6 @@ struct RootView: View {
             if app.isAuthLoading {
                 AuthSplashView()
             } else if AppConfig.authGateEnabled && !app.isAuthenticated {
-                // TODO: Re-enable Sign in with Apple before production multi-user launch.
                 LoginView()
             } else {
                 NavigationStack(path: $app.path) {

@@ -43,7 +43,8 @@ final class AppState {
     /// short-circuit in this state so the operator can navigate the UI without
     /// every screen throwing 401s.
     ///
-    /// TODO: Re-enable Sign in with Apple before production multi-user launch.
+    /// Production: gate is always on (`baseline = true` in AppConfig); only
+    /// Debug builds with `BOOTHIFY_BYPASS_AUTH=1` env hit this path. See IM4.
     var isDemoMode: Bool { !AppConfig.authGateEnabled && session == nil }
 
     /// Called once from `Photobooth_aiApp.task`. Loads any persisted session
