@@ -421,8 +421,16 @@ struct Booth360EventHubView: View {
 
     // Temporary fallback: 360 events share the latest completed render's
     // `publicShareURL` until `/e/<event-slug>` event landing page exists.
+    // RA0 — only surface a URL once the cloud upload has actually confirmed.
+    // `status == .completed` means the local render finished; the real public
+    // URL only exists after `cloudUploadStatus == .uploaded`. Otherwise we'd
+    // hand the operator a placeholder boothify.app/v/<short> link that 404s
+    // for a few seconds after render. Same protection as the per-take action
+    // grid in Booth360ResultView.
     private func guestShareURL() -> URL? {
-        completed.first?.publicShareURL
+        completed
+            .first(where: { $0.cloudUploadStatus == .uploaded })?
+            .publicShareURL
     }
 }
 

@@ -10,7 +10,6 @@ struct Booth360ResultView: View {
     @Environment(AppState.self) private var app
     let jobId: UUID
 
-    @State private var sharePresented: Bool = false
     @State private var qrPresented: Bool = false
     @State private var smsPresented: Bool = false   // BM2
     @State private var copiedLink: Bool = false
@@ -74,25 +73,27 @@ struct Booth360ResultView: View {
                 .accessibilityLabel("360 settings")
             }
         }
-        .sheet(isPresented: $sharePresented) {
-            if let url = job?.publicShareURL {
-                ShareSheet(items: [url])
-                    .presentationDetents([.medium, .large])
-            }
-        }
         // IM1: QR sheet — operator points guest's phone at the screen, they
         // get the public_share_url. Detents give them a comfortable size to
         // hold up at the booth.
+        // RA0 belt-and-suspenders: require the real cloud URL even though
+        // the action tile is already gated. Defense against a future caller
+        // toggling `qrPresented` without checking `cloudUploadStatus`.
         .sheet(isPresented: $qrPresented) {
-            if let url = job?.publicShareURL {
+            if let j = job,
+               j.cloudUploadStatus == .uploaded,
+               let url = j.publicShareURL {
                 Booth360QRSheet(url: url)
                     .presentationDetents([.medium, .large])
                     .presentationBackground(.ultraThinMaterial)
             }
         }
         // BM2: SMS sheet (uses operator's Twilio + pings backend on success).
+        // RA0 belt-and-suspenders gate, same reason as the QR sheet above.
         .sheet(isPresented: $smsPresented) {
-            if let url = job?.publicShareURL, let j = job {
+            if let j = job,
+               j.cloudUploadStatus == .uploaded,
+               let url = j.publicShareURL {
                 Booth360SMSSheet(jobId: j.id, eventId: j.eventId, publicURL: url)
                     .presentationDetents([.medium])
             }
