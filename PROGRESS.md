@@ -154,3 +154,34 @@ Read-only audit + 8 low-risk commits + strategic roadmap. See:
 **Overall UX score:** 🟡 3.1/5 — functional, branded, behind world-class
 on motion + accessibility + state-design. Loomabub parity 2-3 polish
 sprints out; Halide parity 1-2 month follow-up.
+
+---
+
+## Pre-Event Omnibus — RUN A — 2026-05-29
+
+Two-layer pre-event close: **Event Survival** (thermal, crash-restart,
+error reporting, status HUD, mock-URL gate, release tuning) + **Design
+System Foundation** (motion + typography tokens). All świętości
+preserved (upload / auth / render / cloud sync / photo flow / QW1-8).
+
+See `OMNIBUS_REPORT.md` for the full narrative.
+
+| #   | Milestone                              | Status | Commit    |
+|-----|----------------------------------------|--------|-----------|
+| RA0 | Mock Share URL gate                    | ✅     | `1c27ec0` |
+| RA1 | Thermal monitor + auto-degrade bitrate | ✅     | `cee3b29` |
+| RA2 | Crash-restart context                  | ✅     | `621f846` |
+| RA3 | Sentry SDK + breadcrumbs               | ✅     | `b46340b` |
+| RA4 | Unified Status HUD overlay             | ✅     | `0bb0396` |
+| RA5 | MotionTokens system + 7-file sweep     | ✅     | `bddfd17` |
+| RA6 | Typography token system + 4-file sweep | ✅     | `218792c` |
+| RA7 | Release build strip / dead-code        | ✅     | `3e903c1` |
+| RA8 | Docs + final report                    | ✅     | this commit |
+
+Build: ✅ green on Debug + Release Simulator universal after every
+milestone. Photo flow + 8 quick wins inventoried — no regressions.
+
+**TODO-HUMAN (RA):** create Sentry project + set `BOOTHIFY_SENTRY_DSN`
+in Info.plist, wire `sentry-cli` dSYM upload as post-archive Build
+Phase, run Xcode Archive once to measure real-device IPA size (Release
+strip flags are in place; expected ~35-45 MB).
