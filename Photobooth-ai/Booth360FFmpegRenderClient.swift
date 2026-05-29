@@ -64,13 +64,27 @@ final class Booth360FFmpegRenderClient: Booth360RenderClient {
                 opacity: job.brandOverlay.opacity
             )
         )
+        // RA1 — Thermal-aware bitrate. When the device is hot (`.serious`
+        // or `.critical`), drop the encode bitrate proactively. Operator
+        // sees a clear HUD signal (RA4); avoids the OS doing the same
+        // throttling later without explanation. Anti-flap: only act when
+        // the thermal state has been stable for ≥30s so a brief blip
+        // doesn't downgrade an in-flight render.
+        let thermal = ThermalMonitor.shared
+        let baseBitrate = job.settingsSnapshot.bitrateMbps
+        let multiplier = thermal.isStable() ? thermal.bitrateMultiplier : 1.0
+        let effectiveBitrate = baseBitrate * multiplier
+        if multiplier < 1.0 {
+            log.notice("thermal \(thermal.thermalState.label, privacy: .public) → bitrate \(baseBitrate)→\(effectiveBitrate)Mbps")
+        }
+
         let cmd = Self.buildCommand(
             inputURL: rawURL,
             overlayURL: overlayURL,
             soundtrackURL: soundtrackURL,
             outputURL: outputURL,
             filterComplex: chain,
-            bitrateMbps: job.settingsSnapshot.bitrateMbps
+            bitrateMbps: effectiveBitrate
         )
 
         log.debug("ffmpeg cmd: \(cmd, privacy: .public)")
