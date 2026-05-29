@@ -36,8 +36,8 @@ struct StatusOverlay: View {
                     ? .identity
                     : .move(edge: .top).combined(with: .opacity)
                 )
-                .animation(
-                    reduceMotion ? nil : .easeInOut(duration: 0.25),
+                .animation(                                            // RA5
+                    reduceMotion ? nil : BoothifyMotion.smoothFlow,
                     value: alerts.count
                 )
                 .onAppear { startBatteryMonitoring() }

@@ -110,7 +110,7 @@ struct Booth360ResultView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.spring, value: saveToast)
+        .animation(BoothifyMotion.bouncy, value: saveToast)   // RA5
     }
 
     // MARK: - Preview card (animated placeholder)
@@ -237,10 +237,10 @@ struct Booth360ResultView: View {
                 Haptics.notify(.success)
                 if let url = job.publicShareURL {
                     UIPasteboard.general.string = url.absoluteString
-                    withAnimation(.spring) { copiedLink = true }
+                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }   // RA5
                     Task {
                         try? await Task.sleep(for: .seconds(1.4))
-                        withAnimation { copiedLink = false }
+                        withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
                     }
                 }
             }
@@ -618,10 +618,10 @@ private struct Booth360QRSheet: View {
             Button {
                 UIPasteboard.general.string = url.absoluteString
                 Haptics.notify(.success)
-                withAnimation(.spring) { copied = true }
+                withAnimation(BoothifyMotion.bouncy) { copied = true }       // RA5
                 Task {
                     try? await Task.sleep(for: .seconds(1.4))
-                    withAnimation { copied = false }
+                    withAnimation(BoothifyMotion.quickTap) { copied = false }
                 }
             } label: {
                 Label(copied ? "Copied" : "Copy link",

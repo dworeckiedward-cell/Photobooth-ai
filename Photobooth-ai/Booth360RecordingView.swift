@@ -405,13 +405,13 @@ struct Booth360RecordingView: View {
         countdown = countdownStart
         Task {
             for value in stride(from: countdownStart, through: 1, by: -1) {
-                withAnimation(.easeOut(duration: 0.2)) { countdown = value }
+                withAnimation(BoothifyMotion.quickTap) { countdown = value }   // RA5
                 Haptics.tap(.light)
                 // System beep — short audio cue per countdown tick
                 AudioServicesPlaySystemSound(SystemSoundID(1306))
                 try? await Task.sleep(for: .seconds(1))
             }
-            withAnimation { countdown = nil }
+            withAnimation(BoothifyMotion.quickTap) { countdown = nil }     // RA5
             startRecording()
         }
     }

@@ -396,10 +396,10 @@ struct Booth360EventHubView: View {
                     guard let url else { return }
                     Haptics.notify(.success)
                     UIPasteboard.general.string = url.absoluteString
-                    withAnimation(.spring) { copiedLink = true }
+                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }   // RA5
                     Task {
                         try? await Task.sleep(for: .seconds(1.4))
-                        withAnimation { copiedLink = false }
+                        withAnimation(BoothifyMotion.quickTap) { copiedLink = false }  // RA5
                     }
                 } label: {
                     Label(copiedLink ? "Copied" : "Copy", systemImage: copiedLink ? "checkmark" : "doc.on.doc")

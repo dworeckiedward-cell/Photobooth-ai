@@ -84,7 +84,7 @@ struct Booth360ProcessingView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(BoothifyTheme.amber)
                 .multilineTextAlignment(.center)
-                .animation(.easeInOut(duration: 0.4), value: job?.currentStep)
+                .animation(BoothifyMotion.gentle, value: job?.currentStep)
         }
     }
 
@@ -112,7 +112,7 @@ struct Booth360ProcessingView: View {
                 )
                 .rotationEffect(.degrees(-90))
                 .frame(width: 160, height: 160)
-                .animation(.easeInOut(duration: 0.4), value: progressFraction)
+                .animation(BoothifyMotion.gentle, value: progressFraction)
             VStack(spacing: 2) {
                 Text("\(Int(progressFraction * 100))%")
                     // monospacedDigit so the % counter doesn't jitter
