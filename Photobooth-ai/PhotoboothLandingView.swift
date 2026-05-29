@@ -59,7 +59,7 @@ struct PhotoboothLandingView: View {
     private var headerBlock: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Start a new event")
-                .font(.system(size: 28, weight: .bold))
+                .font(BoothifyType.displayMedium)                       // RA6
                 .foregroundStyle(.white)
             Text("Create an event and start capturing AI portraits instantly.")
                 .font(.subheadline)

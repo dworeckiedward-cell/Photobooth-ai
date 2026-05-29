@@ -201,7 +201,7 @@ struct EventHubView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("AI Photobooth")
-                        .font(.system(size: 26, weight: .bold))
+                        .font(BoothifyType.title)                       // RA6
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.55), radius: 8, y: 2)
                     Text("Capture a guest photo, choose a style, generate the result.")

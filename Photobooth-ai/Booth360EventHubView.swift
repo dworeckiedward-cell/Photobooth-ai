@@ -173,7 +173,7 @@ struct Booth360EventHubView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("360 AI Booth")
-                        .font(.system(size: 26, weight: .bold))
+                        .font(BoothifyType.title)                       // RA6
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.55), radius: 8, y: 2)
                     Text("Record a rotating clip — AI handles slow-mo, effects, and the share page.")

@@ -53,10 +53,10 @@ struct Booth360LandingView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text("Start a new 360 session")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(BoothifyType.displayMedium)                  // RA6
                     .foregroundStyle(.white)
                 Text("BETA")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.caption2.weight(.bold))                      // RA6 — Dynamic-Type-aware badge
                     .kerning(0.6)
                     .foregroundStyle(BoothifyTheme.amber)
                     .padding(.horizontal, 6).padding(.vertical, 3)
