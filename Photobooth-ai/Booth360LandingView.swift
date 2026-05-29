@@ -40,7 +40,12 @@ struct Booth360LandingView: View {
         }
         .navigationTitle("360 AI Booth")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await app.loadRecentEvents() }
+        .task {
+            // RA2 — wipe crash-restore stash on the picker (operator
+            // intentionally backed out of an event hub).
+            CrashRestoreManager.clearActiveEvent()
+            await app.loadRecentEvents()
+        }
         .refreshable { await app.loadRecentEvents() }
     }
 

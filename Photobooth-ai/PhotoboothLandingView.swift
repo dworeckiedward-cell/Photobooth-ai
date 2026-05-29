@@ -44,7 +44,13 @@ struct PhotoboothLandingView: View {
         }
         .navigationTitle("Photobooth")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await app.loadRecentEvents() }
+        .task {
+            // RA2 — landing back at the picker means whichever event we
+            // had stashed is no longer "active". Clear so the next launch
+            // doesn't re-push us into a hub the operator just left.
+            CrashRestoreManager.clearActiveEvent()
+            await app.loadRecentEvents()
+        }
         .refreshable { await app.loadRecentEvents() }
     }
 

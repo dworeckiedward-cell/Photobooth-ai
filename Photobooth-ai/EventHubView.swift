@@ -81,6 +81,9 @@ struct EventHubView: View {
             }
         }
         .task(id: eventId) {
+            // RA2 — stash for crash-restore. Cleared when operator backs
+            // out of the hub intentionally (see PhotoboothLandingView).
+            CrashRestoreManager.setActiveEvent(eventId)
             if let slug = event?.slug {
                 await app.refreshEvent(slug: slug)
                 await loadRecent(slug: slug)

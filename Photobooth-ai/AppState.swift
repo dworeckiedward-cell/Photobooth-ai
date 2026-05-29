@@ -68,6 +68,34 @@ final class AppState {
         // Application Support; dead entries (local file gone) are dropped.
         // Non-blocking — uploads race in the background.
         Booth360UploadQueue.shared.replayPending(app: self)
+
+        // RA2 — restore last active event after crash / force-quit.
+        // Fetches recent events synchronously here (small payload, ≤8
+        // rows), then if the stashed id matches one of them, pushes
+        // straight into its EventHub. Deliberately doesn't restore past
+        // the hub — Recording / Settings stay one tap away.
+        await restoreLastActiveEvent()
+    }
+
+    /// RA2 — pull recent events, find the stashed event, push EventHub.
+    /// Safe no-op when:
+    /// - no session (anon launch path),
+    /// - no stashed id (never been into an event),
+    /// - stashed id no longer exists in the recents (event deleted /
+    ///   migrated to a different operator account).
+    private func restoreLastActiveEvent() async {
+        guard isAuthenticated, let stashed = CrashRestoreManager.lastActiveEventId() else { return }
+        await loadRecentEvents()
+        guard events.contains(where: { $0.id == stashed }) else {
+            // Stale stash — wipe so we don't keep re-attempting every launch.
+            CrashRestoreManager.clearActiveEvent()
+            return
+        }
+        // Push the hub. Use the generic event hub route since we don't
+        // remember whether the operator was in photo or 360 mode last —
+        // EventHubView handles photo; Booth360EventHubView handles 360.
+        // Default to photo (more common today); operator can swap if needed.
+        path.append(Route.eventHub(eventId: stashed))
     }
 
     /// Persist a freshly minted session (from Apple sign-in). Updates both

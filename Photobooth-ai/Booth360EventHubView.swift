@@ -61,6 +61,8 @@ struct Booth360EventHubView: View {
             }
         }
         .task(id: eventId) {
+            // RA2 — stash for crash-restore (cleared on intentional back).
+            CrashRestoreManager.setActiveEvent(eventId)
             if let slug = event?.slug {
                 await app.refreshEvent(slug: slug)
             }
