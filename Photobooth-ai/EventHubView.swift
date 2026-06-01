@@ -452,14 +452,20 @@ private struct RecentThumb: View {
                             switch phase {
                             case .empty: ProgressView().tint(BoothifyTheme.violet)
                             case .success(let img): img.resizable().scaledToFill()
-                            case .failure: Image(photo.style.previewAsset).resizable().scaledToFill()
+                            case .failure:
+                                if let asset = photo.style.previewAsset { Image(asset).resizable().scaledToFill() }
+                                else { photo.style.accentGradient }
                             @unknown default: Color.clear
                             }
                         }
                     } else {
-                        Image(photo.style.previewAsset)
-                            .resizable()
-                            .scaledToFill()
+                        Group {
+                            if let asset = photo.style.previewAsset {
+                                Image(asset).resizable().scaledToFill()
+                            } else {
+                                photo.style.accentGradient
+                            }
+                        }
                             .blur(radius: photo.status == .completed ? 0 : 6)
                             .opacity(photo.status == .completed ? 1 : 0.40)
                             .overlay {

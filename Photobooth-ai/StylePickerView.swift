@@ -9,6 +9,7 @@ struct StylePickerView: View {
 
     @State private var selecting: PhotoStyle? = nil
     @State private var uploadError: String? = nil
+    @State private var queuedOffline = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -44,7 +45,12 @@ struct StylePickerView: View {
                         ],
                         spacing: BoothifySpacing.sm
                     ) {
-                        ForEach(PhotoStyle.allCases) { style in
+                        let enabled = app.settings(for: eventId).aiPortraits.enabledStyles
+                        let ordered = app.settings(for: eventId).aiPortraits.styleOrder
+                            .filter { enabled.contains($0) }
+                        let styles = ordered.isEmpty ? Array(enabled).sorted { $0.label < $1.label } : ordered
+
+                        ForEach(styles) { style in
                             StyleTile(
                                 style: style,
                                 isSelecting: selecting == style,
@@ -125,13 +131,34 @@ struct StylePickerView: View {
         }
         .navigationTitle("Choose style")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Photo Queued", isPresented: $queuedOffline) {
+            Button("OK") { app.pop() }
+        } message: {
+            Text("No internet connection. Your photo will be uploaded automatically when WiFi returns.")
+        }
     }
 
     private func pick(style: PhotoStyle) {
         guard selecting == nil else { return }
         Haptics.tap(.medium)
-        selecting = style
         uploadError = nil
+
+        // Offline path — queue locally and show confirmation.
+        if !NetworkMonitor.shared.isConnected {
+            let job = PendingPhotoJob(
+                id: UUID(),
+                eventId: eventId,
+                style: style,
+                imageData: capturedImageData,
+                createdAt: .now
+            )
+            PhotoUploadQueue.shared.enqueue(job: job)
+            Haptics.notify(.success)
+            queuedOffline = true
+            return
+        }
+
+        selecting = style
 
         Task {
             do {

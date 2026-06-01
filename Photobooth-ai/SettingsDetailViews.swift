@@ -68,7 +68,7 @@ struct CaptureSettingsView: View {
                         value: app.binding(eventId: eventId, keyPath: \.capture.delayBetweenFrames),
                         in: 0.0...3.0,
                         step: 0.1,
-                        valueLabel: "\(app.settings(for: eventId).capture.delayBetweenFrames, specifier: "%.1f")s"
+                        valueLabel: String(format: "%.1fs", app.settings(for: eventId).capture.delayBetweenFrames)
                     )
                     SettingsDivider()
                     SettingsStepper(
@@ -136,7 +136,7 @@ struct CameraSettingsView: View {
                         value: app.binding(eventId: eventId, keyPath: \.camera.zoom),
                         in: 1.0...3.0,
                         step: 0.1,
-                        valueLabel: "\(app.settings(for: eventId).camera.zoom, specifier: "%.1f")×"
+                        valueLabel: String(format: "%.1f×", app.settings(for: eventId).camera.zoom)
                     )
                     SettingsDivider()
                     SettingsPicker("Rotation", selection: app.binding(eventId: eventId, keyPath: \.camera.rotation)) {
@@ -217,11 +217,21 @@ struct AIPortraitsSettingsView: View {
                         if idx > 0 { SettingsDivider() }
                         Toggle(isOn: isOn) {
                             HStack(spacing: BoothifySpacing.sm + 4) {
-                                Image(style.previewAsset)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
+                                        .fill(BoothifyTheme.surface2)
+                                    if let asset = style.previewAsset {
+                                        Image(asset)
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else {
+                                        Image(systemName: style.iconSymbol)
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(BoothifyTheme.violet)
+                                    }
+                                }
+                                .frame(width: 40, height: 40)
+                                .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(style.label)
                                         .font(.subheadline.weight(.medium))
@@ -277,7 +287,7 @@ struct AI360SettingsView: View {
                         value: app.binding(eventId: eventId, keyPath: \.ai360.recordingDurationSeconds),
                         in: 2.0...20.0,
                         step: 0.5,
-                        valueLabel: "\(app.settings(for: eventId).ai360.recordingDurationSeconds, specifier: "%.1f")s"
+                        valueLabel: String(format: "%.1fs", app.settings(for: eventId).ai360.recordingDurationSeconds)
                     )
                     SettingsDivider()
                     SettingsToggle("Save original video", isOn: app.binding(eventId: eventId, keyPath: \.ai360.saveOriginalVideo))
@@ -295,7 +305,7 @@ struct AI360SettingsView: View {
                         value: app.binding(eventId: eventId, keyPath: \.ai360.bitrateMbps),
                         in: 4.0...30.0,
                         step: 1.0,
-                        valueLabel: "\(app.settings(for: eventId).ai360.bitrateMbps, specifier: "%.0f") Mbps"
+                        valueLabel: String(format: "%.0f Mbps", app.settings(for: eventId).ai360.bitrateMbps)
                     )
                 }
 
@@ -347,7 +357,7 @@ struct AI360SettingsView: View {
                         value: app.binding(eventId: eventId, keyPath: \.ai360.clipSpeed),
                         in: 0.25...2.0,
                         step: 0.05,
-                        valueLabel: "\(app.settings(for: eventId).ai360.clipSpeed, specifier: "%.2f")×"
+                        valueLabel: String(format: "%.2f×", app.settings(for: eventId).ai360.clipSpeed)
                     )
                 }
 
@@ -907,6 +917,13 @@ private struct SettingsPicker<SelectionValue: Hashable, Content: View>: View {
     let title: String
     let selection: Binding<SelectionValue>
     @ViewBuilder let content: Content
+
+    init(_ title: String, selection: Binding<SelectionValue>, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.selection = selection
+        self.content = content()
+    }
+
     var body: some View {
         Picker(title, selection: selection) {
             content
@@ -922,6 +939,14 @@ private struct SettingsStepper<V: Strideable>: View where V.Stride: BinaryIntege
     var step: V.Stride = 1
     let valueLabel: String
 
+    init(_ title: String, value: Binding<V>, range: ClosedRange<V>, step: V.Stride = 1, valueLabel: String) {
+        self.title = title
+        self.value = value
+        self.range = range
+        self.step = step
+        self.valueLabel = valueLabel
+    }
+
     var body: some View {
         Stepper(value: value, in: range, step: step) {
             LabeledRow(title, value: valueLabel)
@@ -935,6 +960,14 @@ private struct SettingsSlider: View {
     let range: ClosedRange<Double>
     var step: Double = 0
     let valueLabel: String
+
+    init(_ title: String, value: Binding<Double>, in range: ClosedRange<Double>, step: Double = 0, valueLabel: String) {
+        self.title = title
+        self.value = value
+        self.range = range
+        self.step = step
+        self.valueLabel = valueLabel
+    }
 
     var body: some View {
         VStack(spacing: BoothifySpacing.xs) {

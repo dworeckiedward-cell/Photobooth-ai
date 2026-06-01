@@ -158,7 +158,11 @@ private struct GalleryThumbnail: View {
                         img.resizable().scaledToFill()
                     case .failure:
                         ZStack {
-                            Image(photo.style.previewAsset).resizable().scaledToFill()
+                            if let asset = photo.style.previewAsset {
+                                Image(asset).resizable().scaledToFill()
+                            } else {
+                                photo.style.accentGradient
+                            }
                             Color.black.opacity(0.3)
                             Image(systemName: "exclamationmark.triangle")
                                 .font(.caption.weight(.semibold))
@@ -169,9 +173,11 @@ private struct GalleryThumbnail: View {
                     }
                 }
             } else {
-                Image(photo.style.previewAsset)
-                    .resizable()
-                    .scaledToFill()
+                if let asset = photo.style.previewAsset {
+                    Image(asset).resizable().scaledToFill()
+                } else {
+                    photo.style.accentGradient
+                }
             }
         }
         .aspectRatio(1, contentMode: .fit)

@@ -117,8 +117,33 @@ struct CloudStatusPanel: View {
                     .padding(.top, BoothifySpacing.xs)
                 }
 
+                // Offline photo queue indicator
+                let offlineCount = PhotoUploadQueue.shared.pendingCount
+                if offlineCount > 0 {
+                    HStack(spacing: BoothifySpacing.xs) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(BoothifyTheme.violet)
+                        Text("\(offlineCount) photo\(offlineCount == 1 ? "" : "s") pending upload")
+                            .font(BoothifyType.caption)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                        Spacer()
+                        Text("Queued offline")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                    .padding(BoothifySpacing.sm)
+                    .background(BoothifyTheme.violet.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                            .stroke(BoothifyTheme.violet.opacity(0.20), lineWidth: 0.5)
+                    )
+                    .padding(.top, BoothifySpacing.xs)
+                }
+
                 // Empty hint
-                if isEmpty {
+                if isEmpty && offlineCount == 0 {
                     Text("No activity yet — start capturing to see counters update.")
                         .font(BoothifyType.caption)
                         .foregroundStyle(BoothifyTheme.textMuted)

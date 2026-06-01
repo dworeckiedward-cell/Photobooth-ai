@@ -1,8 +1,10 @@
 import SwiftUI
+import Combine
 
 @main
 struct Photobooth_aiApp: App {
     @State private var appState = AppState()
+    @State private var networkMonitor = NetworkMonitor.shared
 
     init() {
         // RA3 — boot Sentry before any other SDK or view work so we
@@ -19,6 +21,12 @@ struct Photobooth_aiApp: App {
                 .preferredColorScheme(.dark)
                 .tint(BoothifyTheme.violet)
                 .task { await appState.bootstrapAuth() }
+                .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
+                    // When network is restored, replay any photos queued while offline.
+                    if isConnected && !wasConnected {
+                        PhotoUploadQueue.shared.replayPending(app: appState)
+                    }
+                }
         }
     }
 }

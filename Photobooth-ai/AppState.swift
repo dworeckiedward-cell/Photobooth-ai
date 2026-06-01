@@ -64,6 +64,9 @@ final class AppState {
         }
         isAuthLoading = false
 
+        // Photo offline queue: replay any photos captured without network.
+        PhotoUploadQueue.shared.replayPending(app: self)
+
         // BM1: re-fire any 360 uploads that didn't make it to the cloud
         // before the app was killed. Persistent queue lives in
         // Application Support; dead entries (local file gone) are dropped.
