@@ -218,7 +218,7 @@ private struct ModeTile: View {
                     .stroke(Color.white.opacity(primary ? 0.14 : 0.10), lineWidth: 1)
             )
             // Subtle violet glow only on the primary card
-            .shadow(color: primary ? BoothifyTheme.violet.opacity(0.30) : .black.opacity(0.35), radius: primary ? 22 : 16, y: 12)
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 12)
     }
 }
 

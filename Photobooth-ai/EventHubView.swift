@@ -226,7 +226,7 @@ struct EventHubView: View {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color.white.opacity(0.14), lineWidth: 1)
             )
-            .shadow(color: BoothifyTheme.violet.opacity(0.32), radius: 22, y: 12)
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 12)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

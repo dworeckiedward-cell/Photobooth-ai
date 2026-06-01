@@ -43,7 +43,7 @@ struct LoginView: View {
 
                             Image(systemName: "slowmo")
                                 .font(.system(size: 28, weight: .semibold))
-                                .foregroundStyle(BoothifyTheme.fuchsia)
+                                .foregroundStyle(BoothifyTheme.violet)
                                 .frame(width: 52, height: 52)
                                 .background(BoothifyTheme.surface1)
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -118,7 +118,7 @@ struct LoginView: View {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.9))
+                            .foregroundStyle(BoothifyTheme.error)
                             .multilineTextAlignment(.center)
                     }
 

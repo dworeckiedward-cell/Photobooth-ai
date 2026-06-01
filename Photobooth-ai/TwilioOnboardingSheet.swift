@@ -117,7 +117,7 @@ struct TwilioOnboardingSheet: View {
                     if let resultMessage {
                         Text(resultMessage)
                             .font(.footnote)
-                            .foregroundStyle(resultIsError ? .red.opacity(0.9) : BoothifyTheme.emerald)
+                            .foregroundStyle(resultIsError ? BoothifyTheme.error : BoothifyTheme.emerald)
                     }
                 }
 

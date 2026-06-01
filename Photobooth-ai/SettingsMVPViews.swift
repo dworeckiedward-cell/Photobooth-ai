@@ -513,7 +513,7 @@ struct BrandOverlaySettingsView: View {
                     if let uploadError {
                         Text(uploadError)
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.9))
+                            .foregroundStyle(BoothifyTheme.error)
                     }
                     if uploadSuccess {
                         Label("Logo saved", systemImage: "checkmark.circle.fill")
@@ -855,7 +855,7 @@ struct VirtualAttendantPreview: View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(BoothifyTheme.primaryGradient)
+                    .fill(BoothifyTheme.violet)
                     .frame(width: 44, height: 44)
                 Image(systemName: "person.wave.2.fill")
                     .foregroundStyle(.white)
@@ -1725,7 +1725,7 @@ struct AccountSettingsView: View {
                     if let deleteError {
                         Text(deleteError)
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.9))
+                            .foregroundStyle(BoothifyTheme.error)
                     }
                 } footer: {
                     Text("Removes your Boothify account and all associated events, photos and 360 recordings from our servers. This cannot be undone.")

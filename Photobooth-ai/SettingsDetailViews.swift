@@ -406,7 +406,7 @@ struct SharingSettingsView: View {
                 if let saveShareModeError {
                     Text(saveShareModeError)
                         .font(.footnote)
-                        .foregroundStyle(.red.opacity(0.9))
+                        .foregroundStyle(BoothifyTheme.error)
                 }
             } header: {
                 Text("Album privacy")

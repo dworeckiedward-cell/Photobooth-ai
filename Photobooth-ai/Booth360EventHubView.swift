@@ -198,7 +198,7 @@ struct Booth360EventHubView: View {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color.white.opacity(0.14), lineWidth: 1)
             )
-            .shadow(color: BoothifyTheme.amber.opacity(0.30), radius: 22, y: 12)
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 12)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -287,10 +287,7 @@ struct Booth360EventHubView: View {
     private func jobThumb(job: Booth360Job) -> some View {
         VStack(spacing: 6) {
             ZStack {
-                LinearGradient(
-                    colors: [BoothifyTheme.amber.opacity(0.55), BoothifyTheme.fuchsia.opacity(0.45)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                )
+                BoothifyTheme.surface2
                 if !job.status.isTerminal {
                     ProgressView().tint(.white)
                 } else if job.status == .completed {

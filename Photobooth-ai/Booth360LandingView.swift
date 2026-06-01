@@ -119,7 +119,7 @@ struct Booth360LandingView: View {
             if let createError {
                 Text(createError)
                     .font(.footnote)
-                    .foregroundStyle(.red.opacity(0.9))
+                    .foregroundStyle(BoothifyTheme.error)
             }
         }
         .padding(18)

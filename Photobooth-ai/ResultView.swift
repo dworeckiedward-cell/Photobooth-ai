@@ -361,7 +361,7 @@ struct ResultView: View {
             case .replaceColor: "BG color \(bg.backgroundHex)"
             case .replaceImage: "BG: \(bg.backgroundImageName ?? "image")"
             }
-            out.append(MetadataChip(id: "bg", symbol: "person.crop.rectangle.badge.xmark", label: label, tint: BoothifyTheme.fuchsia))
+            out.append(MetadataChip(id: "bg", symbol: "person.crop.rectangle.badge.xmark", label: label, tint: BoothifyTheme.violet))
         }
         let brand = app.settings(for: eventId).brandOverlay
         if brand.rendersOnResults {
@@ -648,7 +648,7 @@ private struct EmailSheet: View {
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
-                        .foregroundStyle(.red.opacity(0.9))
+                        .foregroundStyle(BoothifyTheme.error)
                         .padding(.horizontal, 24)
                 }
 
@@ -723,7 +723,7 @@ private struct SMSSheet: View {
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
-                        .foregroundStyle(.red.opacity(0.9))
+                        .foregroundStyle(BoothifyTheme.error)
                         .padding(.horizontal, 24)
                 }
 

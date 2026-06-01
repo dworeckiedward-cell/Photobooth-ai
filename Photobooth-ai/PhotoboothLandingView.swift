@@ -137,7 +137,7 @@ struct PhotoboothLandingView: View {
             if let createError {
                 Text(createError)
                     .font(.footnote)
-                    .foregroundStyle(.red.opacity(0.9))
+                    .foregroundStyle(BoothifyTheme.error)
             }
         }
         .padding(18)
@@ -147,7 +147,7 @@ struct PhotoboothLandingView: View {
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
         // Premium subtle violet glow when the CTA is armed.
-        .shadow(color: BoothifyTheme.violet.opacity(isValidName ? 0.22 : 0), radius: 18, y: 8)
+        .shadow(color: Color.black.opacity(isValidName ? 0.35 : 0), radius: 18, y: 8)
         .animation(.easeOut(duration: 0.25), value: isValidName)
     }
 

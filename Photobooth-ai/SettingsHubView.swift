@@ -25,7 +25,7 @@ struct SettingsHubView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(BoothifyTheme.primaryGradient)
+                                .fill(BoothifyTheme.violet)
                                 .frame(width: 52, height: 52)
                             Image(systemName: "camera.aperture")
                                 .font(.title2.weight(.semibold))
@@ -322,7 +322,7 @@ struct AboutBoothifyView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100, height: 100)
-                    .shadow(color: BoothifyTheme.violet.opacity(0.5), radius: 22, y: 8)
+                    .shadow(color: Color.black.opacity(0.35), radius: 22, y: 8)
 
                 VStack(spacing: 6) {
                     Text("Boothify")

@@ -47,7 +47,7 @@ struct StylePickerView: View {
                     if let uploadError {
                         Text(uploadError)
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.9))
+                            .foregroundStyle(BoothifyTheme.error)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
                     }

@@ -25,11 +25,21 @@ import SwiftUI
 /// - Apple-Pay-style stylized hero brand wordmarks live inline because
 ///   they're brand, not type-system.
 enum BoothifyType {
-    static let display       = Font.system(.largeTitle, design: .default).weight(.bold)
-    static let displayMedium = Font.system(.title,      design: .default).weight(.bold)
-    static let title         = Font.system(.title2,     design: .default).weight(.semibold)
-    static let body          = Font.system(.body,       design: .default)
-    static let bodyEmphasis  = Font.system(.body,       design: .default).weight(.semibold)
-    static let caption       = Font.system(.caption,    design: .default)
-    static let mono          = Font.system(.body,       design: .default).weight(.semibold).monospacedDigit()
+    static let display       = Font.system(.largeTitle,  design: .default).weight(.bold)
+    static let displayMedium = Font.system(.title,       design: .default).weight(.bold)
+    /// Large icon-only decorative uses (hero cluster, onboarding).
+    static let displayIcon   = Font.system(size: 48, weight: .bold)
+    static let title         = Font.system(.title2,      design: .default).weight(.semibold)
+    static let headline      = Font.system(.headline,    design: .default)
+    static let body          = Font.system(.body,        design: .default)
+    static let bodyEmphasis  = Font.system(.body,        design: .default).weight(.semibold)
+    static let subheadline   = Font.system(.subheadline, design: .default)
+    static let caption       = Font.system(.caption,     design: .default)
+    static let captionBold   = Font.system(.caption,     design: .default).weight(.semibold)
+    static let caption2      = Font.system(.caption2,    design: .default)
+    static let caption2Bold  = Font.system(.caption2,    design: .default).weight(.bold)
+    /// Monospaced body numerals — prevents jitter on ticking values.
+    static let mono          = Font.system(.body,        design: .default).weight(.semibold).monospacedDigit()
+    /// Rounded title-scale timer (countdown, processing %).
+    static let monoTitle     = Font.system(.title,       design: .rounded, weight: .bold).monospacedDigit()
 }

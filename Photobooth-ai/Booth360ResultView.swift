@@ -159,7 +159,7 @@ struct Booth360ResultView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 chip(job.settingsSnapshot.videoQuality.label, symbol: "rectangle.compress.vertical", tint: BoothifyTheme.violet)
-                chip(job.settingsSnapshot.clipDirection.label, symbol: "arrow.left.arrow.right", tint: BoothifyTheme.fuchsia)
+                chip(job.settingsSnapshot.clipDirection.label, symbol: "arrow.left.arrow.right", tint: BoothifyTheme.violet)
                 if job.brandOverlay.rendersOnResults {
                     chip("Brand overlay", symbol: "rosette", tint: BoothifyTheme.emerald)
                 }
@@ -400,7 +400,7 @@ struct Booth360ResultView: View {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.body)
-                    .foregroundStyle(.red.opacity(0.9))
+                    .foregroundStyle(BoothifyTheme.error)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Upload failed")
                         .font(.footnote.weight(.semibold))
@@ -729,7 +729,7 @@ private struct Booth360SMSSheet: View {
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
-                        .foregroundStyle(.red.opacity(0.9))
+                        .foregroundStyle(BoothifyTheme.error)
                         .padding(.horizontal, 24)
                         .multilineTextAlignment(.center)
                 }
