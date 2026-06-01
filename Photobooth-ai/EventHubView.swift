@@ -26,6 +26,11 @@ struct EventHubView: View {
     @State private var qrPresented: Bool = false
     @State private var copiedLink: Bool = false
 
+    // PIN gate
+    @State private var pinGatePresented: Bool = false
+    @State private var settingsUnlocked: Bool = false
+    @State private var lastUnlockTime: Date? = nil
+
     private var event: Event? { app.event(id: eventId) }
     private var latestCompleted: Photo? {
         recentPhotos.first { $0.status == .completed }
@@ -74,7 +79,22 @@ struct EventHubView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Haptics.tap()
-                    app.push(.settingsHub(eventId: eventId))
+                    let lockSettings = app.settings(for: eventId).lockPin
+                    if lockSettings.enabled {
+                        // Check idle timeout reset
+                        if settingsUnlocked, lockSettings.idleTimeoutMinutes > 0,
+                           let last = lastUnlockTime,
+                           Date.now.timeIntervalSince(last) > Double(lockSettings.idleTimeoutMinutes) * 60 {
+                            settingsUnlocked = false
+                        }
+                        if settingsUnlocked {
+                            app.push(.settingsHub(eventId: eventId))
+                        } else {
+                            pinGatePresented = true
+                        }
+                    } else {
+                        app.push(.settingsHub(eventId: eventId))
+                    }
                 } label: {
                     Image(systemName: "gearshape.fill")
                         .foregroundStyle(BoothifyTheme.textSecondary)
@@ -91,6 +111,15 @@ struct EventHubView: View {
                 await app.refreshEvent(slug: slug)
                 await loadRecent(slug: slug)
             }
+        }
+        .sheet(isPresented: $pinGatePresented) {
+            PinGateView(eventId: eventId) {
+                settingsUnlocked = true
+                lastUnlockTime = .now
+                pinGatePresented = false
+                app.push(.settingsHub(eventId: eventId))
+            }
+            .interactiveDismissDisabled(true)
         }
         .sheet(isPresented: $sharePresented) {
             ShareSheet(items: shareSheetItems)

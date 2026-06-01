@@ -56,6 +56,7 @@ struct ResultView: View {
         .task(id: photoId) {
             await startPolling()
         }
+        .onAppear { NotificationManager.shared.cancelPhotoReadyNotifications() }
         .onDisappear { pollTask?.cancel() }
         .sheet(isPresented: $qrPresented) {
             QRSheet(url: publicURL.absoluteString)
@@ -426,6 +427,12 @@ struct ResultView: View {
                 photo = next
                 if next.status == .completed {
                     Haptics.notify(.success)
+                    if UIApplication.shared.applicationState != .active {
+                        NotificationManager.shared.notifyPhotoReady(
+                            eventName: "Event",
+                            styleName: next.style.label
+                        )
+                    }
                     return
                 } else if next.status == .failed {
                     Haptics.notify(.error)

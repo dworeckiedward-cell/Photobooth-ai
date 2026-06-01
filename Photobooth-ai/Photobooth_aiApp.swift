@@ -12,6 +12,7 @@ struct Photobooth_aiApp: App {
         // BOOTHIFY_SENTRY_DSN Info.plist key is unset (dev / first install).
         SentryClient.shared.start()
         SentryClient.shared.breadcrumb("app launched", category: "lifecycle")
+        NotificationManager.shared.requestAuthorization()
     }
 
     var body: some Scene {
