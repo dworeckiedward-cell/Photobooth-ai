@@ -189,35 +189,21 @@ struct Booth360ResultView: View {
     // QR is a dedicated tile that brings up the on-device generated code.
     // Save-to-Photos re-enabled because IM0 produces a real `finalVideoURL`.
 
-    @ViewBuilder
     private func actionGrid(job: Booth360Job) -> some View {
-        // RA0 — Mock Share URL Gate. `publicShareURL` is set optimistically
-        // to a `boothify.app/v/<short>` placeholder the moment FFmpeg renders
-        // a local file. The REAL URL only arrives after `Booth360CloudUploader`
-        // finishes (sign → PUT → confirm, 3-30s). Sending the placeholder
-        // to a guest = guest gets a 404 that "starts working in a minute".
-        // First impression of the whole product = "broken".
-        //
-        // So: share / QR / SMS / copy stay disabled until the cloud confirms
-        // and `cloudUploadStatus == .uploaded`. Local-only actions (Save to
-        // Photos, start New take) stay enabled — they don't need a cloud URL.
         let cloudReady = job.cloudUploadStatus == .uploaded && job.publicShareURL != nil
         let hasVideo = job.finalVideoURL != nil
 
-        HStack(spacing: 8) {
-            // Native ShareLink — only when cloud has the real URL.
+        return VStack(spacing: 10) {
+            // ── Primary: Share ──────────────────────────────────────────────
             if cloudReady, let url = job.publicShareURL {
                 ShareLink(item: url,
                           subject: Text("Your 360 video from Boothify"),
                           message: Text("Check out the 360 take →")) {
-                    actionTileLabel(symbol: "square.and.arrow.up", label: "Share", enabled: true)
+                    primaryShareLabel()
                 }
                 .buttonStyle(.plain)
                 .simultaneousGesture(TapGesture().onEnded {
                     Haptics.tap()
-                    // P4 — share-sheet open. URL itself is intentionally
-                    // not logged (PII-adjacent: encodes the short code
-                    // that identifies the take to anyone who has the URL).
                     SentryClient.shared.breadcrumb(
                         "share sheet opened",
                         category: "share",
@@ -225,64 +211,89 @@ struct Booth360ResultView: View {
                     )
                 })
             } else {
-                actionTile(symbol: "square.and.arrow.up", label: "Share", enabled: false) {}
+                // Disabled primary share button while upload is in progress
+                Button {} label: { primaryShareLabel(enabled: false) }
+                    .buttonStyle(.plain)
+                    .disabled(true)
             }
 
-            actionTile(symbol: "qrcode", label: "QR", enabled: cloudReady) {
-                Haptics.tap()
-                SentryClient.shared.breadcrumb(
-                    "qr opened",
-                    category: "share",
-                    data: ["job_id": String(job.id.uuidString.prefix(8))]
-                )
-                qrPresented = true
-            }
-
-            // BM2: SMS via operator's Twilio (M5). After successful send we
-            // ping POST /api/booth360/jobs/<id>/sms so the cloud status
-            // 'sent' counter (BM4 backend) is accurate.
-            actionTile(symbol: "message.fill", label: "SMS", enabled: cloudReady) {
-                Haptics.tap()
-                SentryClient.shared.breadcrumb(
-                    "sms sheet opened",
-                    category: "share",
-                    data: ["job_id": String(job.id.uuidString.prefix(8))]
-                )
-                smsPresented = true
-            }
-
-            actionTile(
-                symbol: copiedLink ? "checkmark" : "doc.on.doc",
-                label: copiedLink ? "Copied" : "Copy link",
-                enabled: cloudReady
-            ) {
-                Haptics.notify(.success)
-                if let url = job.publicShareURL {
-                    UIPasteboard.general.string = url.absoluteString
-                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }   // RA5
-                    Task {
-                        try? await Task.sleep(for: .seconds(1.4))
-                        withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
+            // ── Secondary: QR / SMS / Copy / Save ───────────────────────────
+            HStack(spacing: 8) {
+                actionTile(symbol: "qrcode", label: "QR", enabled: cloudReady) {
+                    Haptics.tap()
+                    SentryClient.shared.breadcrumb("qr opened", category: "share",
+                        data: ["job_id": String(job.id.uuidString.prefix(8))])
+                    qrPresented = true
+                }
+                actionTile(symbol: "message.fill", label: "SMS", enabled: cloudReady) {
+                    Haptics.tap()
+                    SentryClient.shared.breadcrumb("sms sheet opened", category: "share",
+                        data: ["job_id": String(job.id.uuidString.prefix(8))])
+                    smsPresented = true
+                }
+                actionTile(
+                    symbol: copiedLink ? "checkmark" : "doc.on.doc",
+                    label: copiedLink ? "Copied" : "Copy",
+                    enabled: cloudReady
+                ) {
+                    Haptics.notify(.success)
+                    if let url = job.publicShareURL {
+                        UIPasteboard.general.string = url.absoluteString
+                        withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
+                        Task {
+                            try? await Task.sleep(for: .seconds(1.4))
+                            withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
+                        }
                     }
+                }
+                actionTile(symbol: "arrow.down.to.line", label: "Save", enabled: hasVideo) {
+                    Haptics.tap()
+                    if let url = job.finalVideoURL { saveVideoToLibrary(url) }
                 }
             }
 
-            // Save and New don't need the cloud — local file is enough.
-            actionTile(symbol: "arrow.down.to.line", label: "Save", enabled: hasVideo) {
+            // ── Tertiary: New take ───────────────────────────────────────────
+            Button {
                 Haptics.tap()
-                if let url = job.finalVideoURL { saveVideoToLibrary(url) }
-            }
-
-            actionTile(symbol: "video.badge.plus", label: "New", enabled: true) {
-                Haptics.tap()
-                // Pop back to the 360 EventHub regardless of how many screens
-                // sit between us (Processing + Result, normally).
                 app.popUntil { route in
                     if case .booth360EventHub = route { return true }
                     return false
                 }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "video.badge.plus")
+                        .font(.subheadline.weight(.semibold))
+                    Text("New take")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(BoothifyTheme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(BoothifyTheme.surface1)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                )
             }
+            .buttonStyle(.plain)
         }
+    }
+
+    @ViewBuilder
+    private func primaryShareLabel(enabled: Bool = true) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "square.and.arrow.up")
+                .font(.body.weight(.bold))
+            Text("Share")
+                .font(.body.weight(.bold))
+        }
+        .foregroundStyle(enabled ? .black : BoothifyTheme.textMuted)
+        .frame(maxWidth: .infinity)
+        .frame(height: 54)
+        .background(enabled ? .white : BoothifyTheme.surface1)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .opacity(enabled ? 1.0 : 0.55)
     }
 
     /// Pull the label out so the ShareLink branch can render it identically
