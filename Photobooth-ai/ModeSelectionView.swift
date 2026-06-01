@@ -7,32 +7,40 @@ struct ModeSelectionView: View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 18) {
-                    headlineBlock
-                        .padding(.top, 4)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // ── Wordmark header ────────────────────────────────────
+                    wordmarkHeader
+                        .padding(.top, 8)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
 
-                    VStack(spacing: 14) {
+                    // ── Cards ──────────────────────────────────────────────
+                    VStack(spacing: 12) {
+                        // Primary: AI Photobooth — tall, dominant
                         ModeTile(
                             title: "AI Photobooth",
-                            description: "Capture guests and transform them into 10 cinematic AI styles.",
+                            tagline: "10 cinematic styles. Instant results.",
                             cta: "Start session",
-                            symbol: "camera.aperture",
+                            ctaSymbol: "arrow.right",
                             asset: "Mode_Photobooth",
-                            badge: .available,
+                            badge: .live,
+                            cardHeight: 320,
                             primary: true
                         ) {
                             Haptics.tap(.medium)
                             app.push(.photoboothLanding)
                         }
 
+                        // Secondary: 360 AI Booth — companion card
                         ModeTile(
                             title: "360 AI Booth",
-                            description: "Rotating 360° video with AI-powered cinematic effects.",
-                            cta: "Preview mode",
-                            symbol: "video.fill",
+                            tagline: "Rotating video. AI cinematic effects.",
+                            cta: "Preview",
+                            ctaSymbol: "play.fill",
                             asset: "Mode_360",
                             badge: .beta,
+                            cardHeight: 210,
                             primary: false
                         ) {
                             Haptics.tap()
@@ -41,53 +49,46 @@ struct ModeSelectionView: View {
                     }
                     .frame(maxWidth: 620)
                     .padding(.horizontal, 16)
-
-                    Text("Powered by Servify Labs")
-                        .font(.caption2)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                        .padding(.top, 2)
-                        .padding(.bottom, 28)
+                    .padding(.bottom, 32)
                 }
                 .frame(maxWidth: .infinity)
             }
         }
-        // Hide the entire nav bar (this view is the root, no back action needed) and
-        // mount a non-interactive wordmark in a thin safe-area inset, positioned
-        // visually between the left time area and the Dynamic Island. Decorative —
-        // no button, no container, no background, just a small text mark.
         .toolbar(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) { microBrand }
     }
 
+    // MARK: - Wordmark header
+
+    /// Clean editorial header — logo left, tagline right. No nav bar needed.
     @ViewBuilder
-    private var headlineBlock: some View {
-        VStack(spacing: 6) {
-            GradientHeading(text: "Choose your mode", font: BoothifyType.displayMedium)
-                .multilineTextAlignment(.center)
-            Text("Create cinematic AI portraits or launch a premium 360° booth experience.")
-                .font(.subheadline)
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 380)
-                .padding(.horizontal, 24)
+    private var wordmarkHeader: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Boothify")
+                    .font(.system(.title2, design: .default, weight: .bold))
+                    .foregroundStyle(.white)
+                    .kerning(-0.3)
+                Text("Choose your mode")
+                    .font(.system(.footnote, design: .default, weight: .regular))
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+            }
+            Spacer()
+            // Ambient live indicator — the event is "open for business"
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(BoothifyTheme.emerald)
+                    .frame(width: 6, height: 6)
+                Text("Ready")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(BoothifyTheme.surface1, in: Capsule())
+            .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
         }
-    }
-
-    /// Decorative top brand mark. Lives in a thin safeAreaInset strip below the
-    /// system status bar, offset horizontally so it visually sits to the left of
-    /// the Dynamic Island. No background, no container, no tap target.
-    @ViewBuilder
-    private var microBrand: some View {
-        Text("Boothify")
-            .font(BoothifyType.caption.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.80))
-            .kerning(0.3)
-            .padding(.leading, 130)   // pushes wordmark to x ≈ 130, ending at ~180
-            .padding(.top, 8)
-            .padding(.bottom, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement()
-            .accessibilityLabel("Boothify")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Boothify — Choose your mode")
     }
 }
 
@@ -95,165 +96,167 @@ struct ModeSelectionView: View {
 
 private struct ModeTile: View {
     enum TileBadge {
-        case available, beta
+        case live, beta
 
         var label: String {
-            switch self { case .available: "AVAILABLE"; case .beta: "BETA" }
-        }
-        var subLabel: String {
-            switch self { case .available: ""; case .beta: "Private preview" }
+            switch self { case .live: "LIVE"; case .beta: "BETA" }
         }
         var tint: Color {
-            switch self { case .available: BoothifyTheme.emerald; case .beta: BoothifyTheme.amber }
+            switch self { case .live: BoothifyTheme.emerald; case .beta: BoothifyTheme.amber }
         }
         var symbol: String {
-            switch self { case .available: "checkmark.seal.fill"; case .beta: "sparkles" }
+            switch self { case .live: "circle.fill"; case .beta: "sparkles" }
         }
     }
 
     let title: String
-    let description: String
+    let tagline: String
     let cta: String
-    let symbol: String
+    let ctaSymbol: String
     let asset: String
     let badge: TileBadge
+    let cardHeight: CGFloat
     let primary: Bool
     let action: () -> Void
 
     @State private var pressed: Bool = false
 
     var body: some View {
-        Button {
-            action()
-        } label: {
+        Button(action: action) {
             cardBody
         }
         .buttonStyle(.plain)
-        .scaleEffect(pressed ? 0.985 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: pressed)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: 30, perform: {}, onPressingChanged: { isPressing in
-            pressed = isPressing
-        })
+        .scaleEffect(pressed ? 0.982 : 1.0)
+        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: pressed)
+        .onLongPressGesture(
+            minimumDuration: 0,
+            maximumDistance: 30,
+            perform: {},
+            onPressingChanged: { pressing in pressed = pressing }
+        )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(description)")
-        .accessibilityHint("\(cta), \(badge.label)")
+        .accessibilityLabel("\(title). \(tagline)")
+        .accessibilityHint("Double-tap to \(cta.lowercased())")
     }
 
     private var cardBody: some View {
         Rectangle()
             .fill(Color.black)
+            // Photo background
             .overlay {
                 Image(asset)
                     .resizable()
                     .scaledToFill()
-                    .saturation(primary ? 1.0 : 0.85)
+                    .saturation(primary ? 1.0 : 0.80)
             }
-            // Dark legibility overlay
+            // Legibility gradient — bottom-heavy for text on top of photo
             .overlay {
                 LinearGradient(
-                    colors: primary
-                        ? [.black.opacity(0.40), .black.opacity(0.62), .black.opacity(0.92)]
-                        : [.black.opacity(0.55), .black.opacity(0.75), .black.opacity(0.95)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
+                    stops: [
+                        .init(color: .black.opacity(0.08), location: 0),
+                        .init(color: .black.opacity(0.55), location: 0.52),
+                        .init(color: .black.opacity(0.94), location: 1.0),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
             }
-            // Brand wash from bottom
+            // Subtle brand tint wash at very bottom (deepens depth)
             .overlay {
                 LinearGradient(
                     colors: [
-                        Color(red: 0.20, green: 0.08, blue: 0.38).opacity(primary ? 0.55 : 0.30),
-                        .clear
+                        (primary ? BoothifyTheme.violet : BoothifyTheme.amber).opacity(0.30),
+                        .clear,
                     ],
-                    startPoint: .bottom, endPoint: .center
+                    startPoint: .bottom,
+                    endPoint: .init(x: 0.5, y: 0.6)
                 )
             }
-            // Top row: icon badge + status badge
-            .overlay(alignment: .topLeading) {
-                HStack(alignment: .top) {
-                    Image(systemName: symbol)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 52, height: 52)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.30), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.45), radius: 10, y: 5)
-                        .accessibilityHidden(true)
-                    Spacer()
-                    StatusBadge(badge: badge)
-                }
-                .padding(20)
+            // ── Top-right status badge ──────────────────────────────────
+            .overlay(alignment: .topTrailing) {
+                BadgePill(badge: badge)
+                    .padding(18)
             }
-            // Bottom content
+            // ── Bottom content block ────────────────────────────────────
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(BoothifyType.displayMedium)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.55), radius: 8, y: 2)
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                    HStack(spacing: 6) {
-                        Text(cta)
-                            .font(.body.weight(.semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .foregroundStyle(primary ? .white : BoothifyTheme.amber)
-                    .shadow(color: .black.opacity(0.4), radius: 4, y: 1)
-                    .padding(.top, 6)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+                bottomContent
+                    .padding(22)
             }
-            .frame(height: primary ? 260 : 220)
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .frame(height: cardHeight)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white.opacity(primary ? 0.14 : 0.10), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(primary ? 0.13 : 0.08), lineWidth: 1)
             )
-            // Subtle violet glow only on the primary card
-            .shadow(color: .black.opacity(0.35), radius: 18, y: 12)
+            .shadow(color: .black.opacity(primary ? 0.45 : 0.30), radius: primary ? 24 : 14, y: primary ? 14 : 8)
+    }
+
+    private var bottomContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(primary
+                          ? .system(.largeTitle, design: .default, weight: .bold)
+                          : .system(.title2, design: .default, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+
+                Text(tagline)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .lineLimit(1)
+            }
+
+            // CTA capsule — solid white on primary, amber-tinted on secondary
+            ctaCapsule
+        }
+    }
+
+    @ViewBuilder
+    private var ctaCapsule: some View {
+        HStack(spacing: 6) {
+            Text(cta)
+                .font(.subheadline.weight(.semibold))
+            Image(systemName: ctaSymbol)
+                .font(.caption.weight(.bold))
+        }
+        .foregroundStyle(primary ? Color.black : BoothifyTheme.amber)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(primary ? Color.white : Color.black.opacity(0.55), in: Capsule())
+        .overlay(
+            Capsule().stroke(
+                primary ? Color.clear : BoothifyTheme.amber.opacity(0.60),
+                lineWidth: 1
+            )
+        )
     }
 }
 
-private struct StatusBadge: View {
+// MARK: - Badge pill
+
+private struct BadgePill: View {
     let badge: ModeTile.TileBadge
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: badge.symbol)
-                    .font(.caption2.weight(.bold))
-                Text(badge.label)
-                    .font(.caption2.weight(.bold))
-                    .kerning(0.6)
-            }
-            .foregroundStyle(badge.tint)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .background(badge.tint.opacity(0.18), in: Capsule())
-            .overlay(Capsule().stroke(badge.tint.opacity(0.55), lineWidth: 0.8))
-
-            if !badge.subLabel.isEmpty {
-                Text(badge.subLabel)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3)
-                    .background(.black.opacity(0.4), in: Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
-            }
+        HStack(spacing: 4) {
+            Image(systemName: badge.symbol)
+                .font(.system(size: 7, weight: .black))
+            Text(badge.label)
+                .font(.system(size: 10, weight: .bold))
+                .kerning(0.8)
         }
+        .foregroundStyle(badge.tint)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(.black.opacity(0.50), in: Capsule())
+        .overlay(Capsule().stroke(badge.tint.opacity(0.50), lineWidth: 0.8))
     }
 }
 
-// MARK: - Beta preview sheet
+// MARK: - Beta preview sheet (unchanged)
 
 struct BetaPreviewSheet: View {
     let title: String
