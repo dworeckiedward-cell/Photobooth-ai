@@ -57,25 +57,13 @@ struct StylePickerView: View {
                     .frame(maxWidth: 620)
                     .padding(.horizontal, BoothifySpacing.md)
 
-                    if let uploadError {
-                        HStack(spacing: BoothifySpacing.xs) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .font(.caption)
-                            Text(uploadError)
-                                .font(.footnote)
-                        }
-                        .foregroundStyle(BoothifyTheme.error)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, BoothifySpacing.xl)
-                    }
-
                     // Scroll clearance so content isn't hidden behind bottom bar
-                    Spacer(minLength: 96)
+                    Spacer(minLength: 120)
                 }
                 .padding(.bottom, BoothifySpacing.xl)
             }
 
-            // MARK: Sticky bottom CTA
+            // MARK: Sticky bottom bar
             VStack(spacing: 0) {
                 // Fade scrim above the bar
                 LinearGradient(
@@ -85,38 +73,54 @@ struct StylePickerView: View {
                 .frame(height: 32)
                 .allowsHitTesting(false)
 
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Choose a style above")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(BoothifyTheme.textSecondary)
+                VStack(spacing: 0) {
+                    // Error banner — shown prominently when upload/API fails
+                    if let uploadError {
+                        HStack(spacing: BoothifySpacing.xs) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption.weight(.bold))
+                            Text(uploadError)
+                                .font(.footnote.weight(.medium))
+                                .lineLimit(2)
+                        }
+                        .foregroundStyle(BoothifyTheme.error)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .padding(.vertical, BoothifySpacing.sm)
+                        .background(BoothifyTheme.error.opacity(0.12))
+                        .overlay(Rectangle().fill(BoothifyTheme.error.opacity(0.3)).frame(height: 1), alignment: .top)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            if selecting != nil {
+                                Text("Generating your portrait…")
+                                    .font(.footnote.weight(.medium))
+                                    .foregroundStyle(.white)
+                            } else {
+                                Text("Choose a style above")
+                                    .font(.footnote.weight(.medium))
+                                    .foregroundStyle(BoothifyTheme.textSecondary)
+                            }
+                        }
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: selecting != nil)
+
+                        Spacer()
+
                         if selecting != nil {
-                            Text("Generating your portrait…")
-                                .font(.caption)
-                                .foregroundStyle(BoothifyTheme.violet)
-                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(BoothifyTheme.violet)
+                                .scaleEffect(0.9)
                         }
                     }
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: selecting != nil)
-
-                    Spacer()
-
-                    if selecting != nil {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(BoothifyTheme.violet)
-                            .scaleEffect(0.9)
-                    }
+                    .padding(.horizontal, BoothifySpacing.lg)
+                    .padding(.vertical, BoothifySpacing.md)
                 }
-                .padding(.horizontal, BoothifySpacing.lg)
-                .padding(.vertical, BoothifySpacing.md)
                 .background(BoothifyTheme.surface1)
-                .overlay(
-                    Rectangle()
-                        .fill(BoothifyTheme.surfaceLine)
-                        .frame(height: 1),
-                    alignment: .top
-                )
+                .overlay(Rectangle().fill(BoothifyTheme.surfaceLine).frame(height: 1), alignment: .top)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: uploadError != nil)
             }
         }
         .navigationTitle("Choose style")
