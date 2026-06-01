@@ -35,7 +35,7 @@ struct EventHubView: View {
             BoothifyTheme.bg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: BoothifySpacing.md) {
                     if event != nil {
                         compactHeader
 
@@ -55,8 +55,8 @@ struct EventHubView: View {
                             .padding(.top, 40)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 36)
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.bottom, BoothifySpacing.xxl)
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
             }
@@ -76,8 +76,10 @@ struct EventHubView: View {
                     app.push(.settingsHub(eventId: eventId))
                 } label: {
                     Image(systemName: "gearshape.fill")
+                        .foregroundStyle(BoothifyTheme.textSecondary)
                 }
                 .accessibilityLabel("Settings")
+                .frame(width: 44, height: 44)
             }
         }
         .task(id: eventId) {
@@ -105,27 +107,25 @@ struct EventHubView: View {
     // MARK: - Compact header
 
     private var compactHeader: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
+        HStack(spacing: BoothifySpacing.sm) {
+            HStack(spacing: BoothifySpacing.sm) {
                 ZStack {
                     Circle()
-                        .fill(BoothifyTheme.emerald.opacity(0.4))
+                        .fill(BoothifyTheme.emerald.opacity(0.25))
                         .frame(width: 10, height: 10)
-                        .scaleEffect(1.2)
-                        .opacity(0.6)
                     Circle()
                         .fill(BoothifyTheme.emerald)
-                        .frame(width: 8, height: 8)
+                        .frame(width: 6, height: 6)
                 }
                 .accessibilityHidden(true)
                 Text("Event active")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .foregroundStyle(BoothifyTheme.emerald)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(BoothifyTheme.surface1, in: Capsule())
-            .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.vertical, BoothifySpacing.xs + 2)
+            .background(BoothifyTheme.emerald.opacity(0.10), in: Capsule())
+            .overlay(Capsule().stroke(BoothifyTheme.emerald.opacity(0.25), lineWidth: 1))
 
             Spacer()
 
@@ -150,6 +150,7 @@ struct EventHubView: View {
             app.push(.camera(eventId: event.id))
         } label: {
             ZStack(alignment: .bottomLeading) {
+                // Media background — gradient allowed on photo/video content
                 Rectangle().fill(Color.black)
                     .overlay {
                         Image("Mode_Photobooth")
@@ -158,13 +159,14 @@ struct EventHubView: View {
                     }
                     .overlay {
                         LinearGradient(
-                            colors: [.black.opacity(0.45), .black.opacity(0.65), .black.opacity(0.92)],
+                            colors: [.black.opacity(0.35), .black.opacity(0.60), .black.opacity(0.90)],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     }
                     .overlay {
+                        // Violet wash on media only — not chrome
                         LinearGradient(
-                            colors: [BoothifyTheme.violet.opacity(0.50), .clear],
+                            colors: [BoothifyTheme.violet.opacity(0.40), .clear],
                             startPoint: .bottom, endPoint: .center
                         )
                     }
@@ -173,60 +175,60 @@ struct EventHubView: View {
                             Image(systemName: "camera.aperture")
                                 .font(.title2.weight(.semibold))
                                 .foregroundStyle(.white)
-                                .frame(width: 48, height: 48)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .frame(width: 44, height: 44)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .stroke(Color.white.opacity(0.30), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
                                 )
-                                .shadow(color: .black.opacity(0.45), radius: 10, y: 5)
+                                .shadow(color: .black.opacity(0.40), radius: 8, y: 4)
                                 .accessibilityHidden(true)
                             Spacer()
-                            HStack(spacing: 4) {
+                            HStack(spacing: BoothifySpacing.xs) {
                                 Circle()
                                     .fill(BoothifyTheme.emerald)
-                                    .frame(width: 7, height: 7)
+                                    .frame(width: 6, height: 6)
                                 Text("LIVE")
                                     .font(.caption2.weight(.bold))
-                                    .kerning(0.6)
+                                    .kerning(0.8)
                             }
                             .foregroundStyle(BoothifyTheme.emerald)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
-                            .background(BoothifyTheme.emerald.opacity(0.18), in: Capsule())
-                            .overlay(Capsule().stroke(BoothifyTheme.emerald.opacity(0.55), lineWidth: 0.8))
+                            .padding(.horizontal, BoothifySpacing.sm + 2)
+                            .padding(.vertical, BoothifySpacing.xs)
+                            .background(BoothifyTheme.emerald.opacity(0.14), in: Capsule())
+                            .overlay(Capsule().stroke(BoothifyTheme.emerald.opacity(0.40), lineWidth: 0.8))
                         }
-                        .padding(18)
+                        .padding(BoothifySpacing.md + 2)
                     }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
                     Text("AI Photobooth")
-                        .font(BoothifyType.title)                       // RA6
+                        .font(BoothifyType.title)
                         .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.55), radius: 8, y: 2)
+                        .shadow(color: .black.opacity(0.60), radius: 6, y: 2)
                     Text("Capture a guest photo, choose a style, generate the result.")
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.88))
+                        .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
-                    HStack(spacing: 6) {
+                    HStack(spacing: BoothifySpacing.xs) {
                         Text("Start session")
-                            .font(.body.weight(.semibold))
+                            .font(.subheadline.weight(.bold))
                         Image(systemName: "arrow.right")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.subheadline.weight(.bold))
                     }
                     .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.4), radius: 4, y: 1)
-                    .padding(.top, 4)
+                    .shadow(color: .black.opacity(0.45), radius: 4, y: 1)
+                    .padding(.top, BoothifySpacing.xs)
                 }
-                .padding(18)
+                .padding(BoothifySpacing.md + 2)
             }
             .frame(height: 215)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.35), radius: 18, y: 12)
+            .shadow(color: .black.opacity(0.40), radius: 20, y: 10)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -241,34 +243,35 @@ struct EventHubView: View {
             Haptics.tap()
             app.push(.gallery(eventId: event.id))
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: BoothifySpacing.md) {
                 HStack {
                     Label("Recent captures", systemImage: "photo.stack")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
                     Spacer()
                     if !recentPhotos.isEmpty {
-                        HStack(spacing: 4) {
+                        HStack(spacing: BoothifySpacing.xs) {
                             Text("Open album")
                                 .font(.caption.weight(.semibold))
-                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.bold))
                         }
                         .foregroundStyle(BoothifyTheme.violet)
                     }
                 }
 
                 if recentPhotos.isEmpty {
-                    HStack(spacing: 12) {
+                    HStack(spacing: BoothifySpacing.md) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
                                 .fill(BoothifyTheme.surface2)
                                 .frame(width: 44, height: 44)
                             Image(systemName: "tray")
-                                .font(.body.weight(.semibold))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(BoothifyTheme.textMuted)
                         }
                         .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text("No captures yet")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
@@ -278,9 +281,9 @@ struct EventHubView: View {
                         }
                         Spacer()
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, BoothifySpacing.xs)
                 } else {
-                    HStack(spacing: 8) {
+                    HStack(spacing: BoothifySpacing.sm) {
                         ForEach(recentPhotos.prefix(3)) { photo in
                             RecentThumb(photo: photo)
                                 .frame(maxWidth: .infinity)
@@ -294,13 +297,9 @@ struct EventHubView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(BoothifySpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
+            .boothifySurface(radius: BoothifyRadius.section)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -311,12 +310,13 @@ struct EventHubView: View {
 
     private var statsRow: some View {
         let allZero = totalCaptures == 0 && totalCompleted == 0 && totalProcessing == 0
-        return HStack(spacing: 10) {
+        return HStack(spacing: BoothifySpacing.sm) {
             StatTile(label: "Captures", value: "\(totalCaptures)", tint: BoothifyTheme.violet, muted: allZero)
             StatTile(label: "Completed", value: "\(totalCompleted)", tint: BoothifyTheme.emerald, muted: allZero)
             StatTile(label: "Processing", value: "\(totalProcessing)", tint: BoothifyTheme.amber, muted: allZero)
         }
-        .opacity(allZero ? 0.65 : 1.0)
+        .opacity(allZero ? 0.55 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: allZero)
     }
 
     // MARK: - Share event
@@ -325,11 +325,12 @@ struct EventHubView: View {
         let url = guestShareURL()
         let hasUrl = url != nil
 
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
+        return VStack(alignment: .leading, spacing: BoothifySpacing.md) {
+            // Header row
+            HStack(spacing: BoothifySpacing.md) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(BoothifyTheme.surface2)
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                        .fill(hasUrl ? BoothifyTheme.violet.opacity(0.12) : BoothifyTheme.surface2)
                         .frame(width: 40, height: 40)
                     Image(systemName: "qrcode")
                         .font(.body.weight(.semibold))
@@ -337,9 +338,9 @@ struct EventHubView: View {
                 }
                 .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Share event")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
                     if let url {
                         Text(url.absoluteString)
@@ -356,7 +357,8 @@ struct EventHubView: View {
                 Spacer()
             }
 
-            HStack(spacing: 8) {
+            // Action row
+            HStack(spacing: BoothifySpacing.sm) {
                 Button {
                     Haptics.tap()
                     guard let url else { return }
@@ -366,6 +368,7 @@ struct EventHubView: View {
                     Label("Share", systemImage: "square.and.arrow.up")
                         .font(.caption.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 .disabled(!hasUrl)
@@ -374,7 +377,7 @@ struct EventHubView: View {
                     guard let url else { return }
                     Haptics.notify(.success)
                     UIPasteboard.general.string = url.absoluteString
-                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }     // RA5
+                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
                     Task {
                         try? await Task.sleep(for: .seconds(1.4))
                         withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
@@ -383,6 +386,7 @@ struct EventHubView: View {
                     Label(copiedLink ? "Copied" : "Copy", systemImage: copiedLink ? "checkmark" : "doc.on.doc")
                         .font(.caption.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 .disabled(!hasUrl)
@@ -394,18 +398,15 @@ struct EventHubView: View {
                     Label("QR", systemImage: "qrcode.viewfinder")
                         .font(.caption.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 .disabled(!hasUrl)
             }
         }
-        .padding(16)
+        .padding(BoothifySpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
+        .boothifySurface(radius: BoothifyRadius.section)
     }
 
     // MARK: - Data
@@ -441,7 +442,7 @@ private struct RecentThumb: View {
     let photo: Photo
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: BoothifySpacing.xs + 2) {
             Rectangle()
                 .fill(BoothifyTheme.surface2)
                 .overlay {
@@ -459,7 +460,7 @@ private struct RecentThumb: View {
                             .resizable()
                             .scaledToFill()
                             .blur(radius: photo.status == .completed ? 0 : 6)
-                            .opacity(photo.status == .completed ? 1 : 0.45)
+                            .opacity(photo.status == .completed ? 1 : 0.40)
                             .overlay {
                                 if photo.status == .generating || photo.status == .pending || photo.status == .uploaded {
                                     ProgressView().tint(.white)
@@ -469,13 +470,13 @@ private struct RecentThumb: View {
                 }
                 .aspectRatio(1, contentMode: .fit)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
                         .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
                 )
 
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 Circle()
                     .fill(statusTint)
                     .frame(width: 5, height: 5)
@@ -489,7 +490,7 @@ private struct RecentThumb: View {
 
     private var statusLabel: String {
         switch photo.status {
-        case .completed: "Completed"
+        case .completed: "Done"
         case .failed:    "Failed"
         default:         "Processing"
         }
@@ -498,7 +499,7 @@ private struct RecentThumb: View {
     private var statusTint: Color {
         switch photo.status {
         case .completed: BoothifyTheme.emerald
-        case .failed:    .red
+        case .failed:    BoothifyTheme.error
         default:         BoothifyTheme.amber
         }
     }
@@ -506,22 +507,22 @@ private struct RecentThumb: View {
 
 private struct EmptyThumb: View {
     var body: some View {
-        VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+        VStack(spacing: BoothifySpacing.xs + 2) {
+            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
                 .fill(BoothifyTheme.surface2)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                        .stroke(BoothifyTheme.surfaceLine.opacity(0.6), lineWidth: 1)
                 )
                 .overlay(
                     Image(systemName: "plus.viewfinder")
                         .font(.title3)
-                        .foregroundStyle(BoothifyTheme.textMuted)
+                        .foregroundStyle(BoothifyTheme.textMuted.opacity(0.6))
                 )
                 .aspectRatio(1, contentMode: .fit)
             Text("Open slot")
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.textMuted)
+                .foregroundStyle(BoothifyTheme.textMuted.opacity(0.5))
         }
     }
 }
@@ -535,22 +536,29 @@ private struct StatTile: View {
     var muted: Bool = false
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: BoothifySpacing.xs) {
             Text(label.uppercased())
-                .font(.caption2.weight(.semibold))
-                .kerning(0.6)
-                .foregroundStyle(BoothifyTheme.textTertiary)
+                .font(.caption2.weight(.bold))
+                .kerning(0.8)
+                .foregroundStyle(BoothifyTheme.textMuted)
             Text(value)
                 .font(.title2.bold())
                 .foregroundStyle(muted ? BoothifyTheme.textSecondary : .white)
+            Rectangle()
+                .fill(muted ? BoothifyTheme.surfaceLine : tint.opacity(0.55))
+                .frame(height: 2)
+                .clipShape(Capsule())
+                .padding(.horizontal, BoothifySpacing.lg)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.vertical, BoothifySpacing.md)
+        .padding(.horizontal, BoothifySpacing.xs)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(muted ? BoothifyTheme.surfaceLine : tint.opacity(0.30), lineWidth: 1)
+            RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                .stroke(muted ? BoothifyTheme.surfaceLine : tint.opacity(0.18), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
     }
 }
 

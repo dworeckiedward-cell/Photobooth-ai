@@ -21,7 +21,7 @@ struct PhotoboothLandingView: View {
             BoothifyTheme.bg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: BoothifySpacing.lg) {
                     headerBlock
                     newEventCard
 
@@ -30,24 +30,21 @@ struct PhotoboothLandingView: View {
                             .font(.footnote)
                             .foregroundStyle(BoothifyTheme.error)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, BoothifySpacing.md)
                     }
 
                     recentEventsSection
                 }
                 .frame(maxWidth: 620)
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 24)
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.top, BoothifySpacing.sm)
+                .padding(.bottom, BoothifySpacing.lg)
                 .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Photobooth")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            // RA2 — landing back at the picker means whichever event we
-            // had stashed is no longer "active". Clear so the next launch
-            // doesn't re-push us into a hub the operator just left.
             CrashRestoreManager.clearActiveEvent()
             await app.loadRecentEvents()
         }
@@ -57,22 +54,36 @@ struct PhotoboothLandingView: View {
     // MARK: - Header
 
     private var headerBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
+            HStack(spacing: BoothifySpacing.xs) {
+                Image(systemName: "bolt.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(BoothifyTheme.violet)
+                Text("AI PHOTOBOOTH")
+                    .font(.caption2.weight(.bold))
+                    .kerning(1.4)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+            }
+
             Text("Start a new event")
-                .font(BoothifyType.displayMedium)                       // RA6
+                .font(BoothifyType.displayMedium)
                 .foregroundStyle(.white)
+
             Text("Create an event and start capturing AI portraits instantly.")
                 .font(.subheadline)
                 .foregroundStyle(BoothifyTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, BoothifySpacing.xs)
     }
 
-    // MARK: - New event glass card
+    // MARK: - New event card
 
     private var newEventCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: BoothifySpacing.md) {
+            // Card eyebrow
+            HStack(spacing: BoothifySpacing.xs) {
                 Image(systemName: "plus.viewfinder")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.violet)
@@ -83,40 +94,50 @@ struct PhotoboothLandingView: View {
                 Spacer()
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            // Divider
+            Rectangle()
+                .fill(BoothifyTheme.surfaceLine)
+                .frame(height: 1)
+
+            // Input group
+            VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
                 Text("Event name")
-                    .font(.footnote.weight(.medium))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.textSecondary)
-                    .padding(.leading, 2)
 
                 TextField(
                     "",
                     text: $eventName,
                     prompt: Text("e.g. Anna & Tom's Wedding")
-                        .foregroundColor(.white.opacity(0.32))
+                        .foregroundColor(.white.opacity(0.28))
                 )
                 .font(.body)
                 .foregroundStyle(.white)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, BoothifySpacing.md)
                 .frame(minHeight: 52)
                 .background(BoothifyTheme.surface2)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(nameFocused ? BoothifyTheme.violet.opacity(0.55) : BoothifyTheme.surfaceLine, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                        .stroke(
+                            nameFocused ? BoothifyTheme.violet.opacity(0.6) : BoothifyTheme.surfaceLine,
+                            lineWidth: nameFocused ? 1.5 : 1
+                        )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                 .focused($nameFocused)
                 .submitLabel(.go)
                 .onSubmit { startSession() }
                 .textInputAutocapitalization(.words)
                 .disabled(creating)
                 .accessibilityLabel("Event name")
+                .animation(.easeInOut(duration: 0.18), value: nameFocused)
             }
 
+            // CTA
             Button {
                 startSession()
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: BoothifySpacing.sm) {
                     if creating {
                         ProgressView()
                             .progressViewStyle(.circular)
@@ -131,24 +152,26 @@ struct PhotoboothLandingView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(creating || !isValidName)
-            .opacity(isValidName ? 1.0 : 0.55)
-            .padding(.top, 2)
+            .opacity(isValidName ? 1.0 : 0.45)
+            .animation(.easeOut(duration: 0.2), value: isValidName)
 
             if let createError {
-                Text(createError)
-                    .font(.footnote)
-                    .foregroundStyle(BoothifyTheme.error)
+                HStack(spacing: BoothifySpacing.xs) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption)
+                    Text(createError)
+                        .font(.footnote)
+                }
+                .foregroundStyle(BoothifyTheme.error)
             }
         }
-        .padding(18)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(BoothifySpacing.lg)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
-        // Premium subtle violet glow when the CTA is armed.
-        .shadow(color: Color.black.opacity(isValidName ? 0.35 : 0), radius: 18, y: 8)
-        .animation(.easeOut(duration: 0.25), value: isValidName)
+        .shadow(color: Color.black.opacity(0.4), radius: 20, y: 8)
     }
 
     // MARK: - Recent events
@@ -159,11 +182,11 @@ struct PhotoboothLandingView: View {
             ProgressView()
                 .progressViewStyle(.circular)
                 .tint(BoothifyTheme.violet)
-                .padding(.top, 24)
+                .padding(.top, BoothifySpacing.lg)
         } else if app.events.isEmpty {
             emptyEventsState
         } else {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
                 HStack {
                     Text("RECENT EVENTS")
                         .font(.caption2.weight(.semibold))
@@ -176,7 +199,7 @@ struct PhotoboothLandingView: View {
                 }
                 .padding(.horizontal, 2)
 
-                VStack(spacing: 8) {
+                VStack(spacing: BoothifySpacing.sm) {
                     ForEach(app.events) { event in
                         RecentEventRow(event: event) {
                             Haptics.tap()
@@ -189,11 +212,11 @@ struct PhotoboothLandingView: View {
     }
 
     private var emptyEventsState: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: BoothifySpacing.md) {
             ZStack {
                 Circle()
                     .fill(BoothifyTheme.surface2)
-                    .frame(width: 68, height: 68)
+                    .frame(width: 72, height: 72)
                 ZStack {
                     Image(systemName: "sparkles")
                         .font(.caption.weight(.bold))
@@ -205,7 +228,8 @@ struct PhotoboothLandingView: View {
                 }
             }
             .accessibilityHidden(true)
-            VStack(spacing: 4) {
+
+            VStack(spacing: BoothifySpacing.xs) {
                 Text("No recent events yet")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
@@ -213,15 +237,15 @@ struct PhotoboothLandingView: View {
                     .font(.caption)
                     .foregroundStyle(BoothifyTheme.textTertiary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, BoothifySpacing.xl)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .padding(.horizontal, 16)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.vertical, BoothifySpacing.xl)
+        .padding(.horizontal, BoothifySpacing.md)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
     }
@@ -241,8 +265,6 @@ struct PhotoboothLandingView: View {
                 Haptics.notify(.success)
                 creating = false
                 eventName = ""
-                // Fast launcher: drop EventHub silently into the stack BEFORE
-                // CameraScreen so the back arrow from Camera lands on the hub.
                 app.push(.eventHub(eventId: event.id))
                 app.push(.camera(eventId: event.id))
             } catch {
@@ -291,12 +313,12 @@ private struct RecentEventRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: BoothifySpacing.md) {
                 thumbnail
                     .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                             .stroke(Color.white.opacity(0.08), lineWidth: 1)
                     )
 
@@ -311,7 +333,7 @@ private struct RecentEventRow: View {
                         .foregroundStyle(BoothifyTheme.textTertiary)
                         .lineLimit(1)
                 }
-                Spacer(minLength: 8)
+                Spacer(minLength: BoothifySpacing.sm)
                 statusPill
 
                 Image(systemName: "chevron.right")
@@ -319,11 +341,11 @@ private struct RecentEventRow: View {
                     .foregroundStyle(BoothifyTheme.textMuted)
                     .accessibilityHidden(true)
             }
-            .padding(12)
+            .padding(BoothifySpacing.md)
             .frame(maxWidth: .infinity)
-            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
                     .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
             )
         }
@@ -342,7 +364,7 @@ private struct RecentEventRow: View {
                 .kerning(0.6)
         }
         .foregroundStyle(tint)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, BoothifySpacing.sm)
         .padding(.vertical, 3)
         .background(tint.opacity(0.14), in: Capsule())
         .overlay(Capsule().stroke(tint.opacity(0.45), lineWidth: 0.8))
@@ -374,6 +396,7 @@ private struct RecentEventRow: View {
         }
     }
 
+    /// Gradient is on media/photo content — permitted by design system.
     private var gradientPlaceholder: some View {
         ZStack {
             LinearGradient(

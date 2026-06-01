@@ -17,7 +17,7 @@ struct Booth360LandingView: View {
             BoothifyTheme.bg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: BoothifySpacing.lg) {
                     headerBlock
 
                     newSessionCard
@@ -32,46 +32,73 @@ struct Booth360LandingView: View {
                     recentEventsSection
                 }
                 .frame(maxWidth: 620)
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 24)
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.top, BoothifySpacing.xs)
+                .padding(.bottom, BoothifySpacing.lg)
                 .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("360 AI Booth")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            // RA2 — wipe crash-restore stash on the picker (operator
-            // intentionally backed out of an event hub).
             CrashRestoreManager.clearActiveEvent()
             await app.loadRecentEvents()
         }
         .refreshable { await app.loadRecentEvents() }
     }
 
+    // MARK: - Header
+
     private var headerBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+            // Mode badge
             HStack(spacing: 6) {
-                Text("Start a new 360 session")
-                    .font(BoothifyType.displayMedium)                  // RA6
-                    .foregroundStyle(.white)
+                ZStack {
+                    Circle()
+                        .fill(BoothifyTheme.amber.opacity(0.25))
+                        .frame(width: 8, height: 8)
+                    Circle()
+                        .fill(BoothifyTheme.amber)
+                        .frame(width: 5, height: 5)
+                }
+                .accessibilityHidden(true)
+                Text("360 mode")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.amber)
+                Spacer()
                 Text("BETA")
-                    .font(.caption2.weight(.bold))                      // RA6 — Dynamic-Type-aware badge
+                    .font(.caption2.weight(.bold))
                     .kerning(0.6)
                     .foregroundStyle(BoothifyTheme.amber)
-                    .padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(BoothifyTheme.amber.opacity(0.18), in: Capsule())
-                    .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.5), lineWidth: 0.8))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(BoothifyTheme.amber.opacity(0.14), in: Capsule())
+                    .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.40), lineWidth: 0.8))
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(BoothifyTheme.amber.opacity(0.08), in: RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
+                    .stroke(BoothifyTheme.amber.opacity(0.20), lineWidth: 1)
+            )
+
+            Text("Start a new 360 session")
+                .font(BoothifyType.displayMedium)
+                .foregroundStyle(.white)
+
             Text("Capture rotating 360° clips and let AI turn them into cinematic shareable videos.")
                 .font(.subheadline)
                 .foregroundStyle(BoothifyTheme.textSecondary)
+                .lineSpacing(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    // MARK: - New session card
+
     private var newSessionCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
             Text("NEW 360 EVENT")
                 .font(.caption2.weight(.semibold))
                 .kerning(1.2)
@@ -81,18 +108,21 @@ struct Booth360LandingView: View {
                 "",
                 text: $eventName,
                 prompt: Text("e.g. Anna & Tom — 360 Highlights")
-                    .foregroundColor(.white.opacity(0.32))
+                    .foregroundColor(BoothifyTheme.textMuted)
             )
             .font(.body)
             .foregroundStyle(.white)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, BoothifySpacing.md)
             .frame(minHeight: 54)
-            .background(BoothifyTheme.surface2)
+            .background(BoothifyTheme.surface2, in: RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(nameFocused ? BoothifyTheme.amber.opacity(0.55) : BoothifyTheme.surfaceLine, lineWidth: 1)
+                RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                    .stroke(
+                        nameFocused ? BoothifyTheme.amber.opacity(0.60) : BoothifyTheme.surfaceLine,
+                        lineWidth: nameFocused ? 1.5 : 1
+                    )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .animation(.easeOut(duration: 0.18), value: nameFocused)
             .focused($nameFocused)
             .submitLabel(.go)
             .onSubmit { startSession() }
@@ -114,43 +144,50 @@ struct Booth360LandingView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(creating || eventName.trimmingCharacters(in: .whitespaces).count < 2)
-            .opacity(eventName.trimmingCharacters(in: .whitespaces).count < 2 ? 0.55 : 1)
+            .opacity(eventName.trimmingCharacters(in: .whitespaces).count < 2 ? 0.50 : 1)
 
             if let createError {
-                Text(createError)
-                    .font(.footnote)
-                    .foregroundStyle(BoothifyTheme.error)
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                    Text(createError)
+                        .font(.footnote)
+                }
+                .foregroundStyle(BoothifyTheme.error)
             }
         }
-        .padding(18)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(BoothifySpacing.md)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
-        .shadow(color: BoothifyTheme.amber.opacity(eventName.trimmingCharacters(in: .whitespaces).count >= 2 ? 0.18 : 0), radius: 14, y: 6)
-        .animation(.easeOut(duration: 0.25), value: eventName.trimmingCharacters(in: .whitespaces).count >= 2)
+        .shadow(color: .black.opacity(0.20), radius: 12, y: 6)
     }
+
+    // MARK: - Recent events
 
     @ViewBuilder
     private var recentEventsSection: some View {
         if app.isLoadingEvents && app.events.isEmpty {
-            ProgressView().tint(BoothifyTheme.violet).padding(.top, 20)
+            ProgressView().tint(BoothifyTheme.amber).padding(.top, 20)
         } else if app.events.isEmpty {
             Booth360EmptyState()
         } else {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
                 HStack {
                     Text("RECENT EVENTS")
-                        .font(.caption2.weight(.semibold)).kerning(1.4)
+                        .font(.caption2.weight(.semibold))
+                        .kerning(1.4)
                         .foregroundStyle(BoothifyTheme.textTertiary)
                     Spacer()
                     Text("\(app.events.count) \(app.events.count == 1 ? "event" : "events")")
-                        .font(.caption2).foregroundStyle(BoothifyTheme.textMuted)
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textMuted)
                 }
                 .padding(.horizontal, 2)
 
-                VStack(spacing: 8) {
+                VStack(spacing: BoothifySpacing.sm) {
                     ForEach(app.events) { event in
                         Booth360EventRow(event: event, jobs: app.jobs(for: event.id)) {
                             Haptics.tap()
@@ -161,6 +198,8 @@ struct Booth360LandingView: View {
             }
         }
     }
+
+    // MARK: - Actions
 
     private func startSession() {
         let trimmed = eventName.trimmingCharacters(in: .whitespaces)
@@ -175,9 +214,6 @@ struct Booth360LandingView: View {
                 Haptics.notify(.success)
                 creating = false
                 eventName = ""
-                // New 360 event: drop EventHub silently into the stack BEFORE the
-                // recording screen so the back arrow from Recording lands on the
-                // session hub, not on Landing.
                 app.push(.booth360EventHub(eventId: event.id))
                 app.push(.booth360Recording(eventId: event.id))
             } catch {
@@ -198,13 +234,13 @@ struct Booth360EventRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: BoothifySpacing.sm) {
                 thumbnail
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(.white.opacity(0.08), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -217,17 +253,18 @@ struct Booth360EventRow: View {
                         .foregroundStyle(BoothifyTheme.textTertiary)
                         .lineLimit(1)
                 }
-                Spacer(minLength: 8)
+                Spacer(minLength: BoothifySpacing.sm)
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.textMuted)
             }
-            .padding(12)
-            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(BoothifySpacing.sm + 4)
+            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
                     .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
             )
+            .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -242,27 +279,24 @@ struct Booth360EventRow: View {
     @ViewBuilder
     private var thumbnail: some View {
         ZStack {
-            LinearGradient(
-                colors: [BoothifyTheme.amber.opacity(0.55), BoothifyTheme.fuchsia.opacity(0.45)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
+            BoothifyTheme.surface2
             Image(systemName: "video.fill")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(BoothifyTheme.amber.opacity(0.80))
         }
     }
 }
 
 struct Booth360EmptyState: View {
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: BoothifySpacing.sm) {
             ZStack {
-                Circle()
+                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                     .fill(BoothifyTheme.surface2)
                     .frame(width: 60, height: 60)
                 Image(systemName: "video.badge.plus")
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .foregroundStyle(BoothifyTheme.amber.opacity(0.70))
             }
             .accessibilityHidden(true)
             Text("No 360 sessions yet")
@@ -274,7 +308,7 @@ struct Booth360EmptyState: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
+        .padding(.vertical, BoothifySpacing.xl)
     }
 }
 

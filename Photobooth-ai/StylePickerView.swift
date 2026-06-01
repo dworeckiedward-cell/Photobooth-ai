@@ -10,27 +10,38 @@ struct StylePickerView: View {
     @State private var uploadError: String? = nil
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             BoothifyTheme.bg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 20) {
-                    VStack(spacing: 10) {
+                VStack(spacing: BoothifySpacing.xl) {
+                    // MARK: Header
+                    VStack(spacing: BoothifySpacing.sm) {
                         Text("STEP 2 OF 3")
-                            .font(.caption2.weight(.semibold))
+                            .font(.caption2.weight(.bold))
                             .kerning(1.6)
                             .foregroundStyle(BoothifyTheme.violet)
-                        GradientHeading(text: "Who do you want to be?", font: .title.bold())
+
+                        Text("Who do you want\nto be?")
+                            .font(BoothifyType.displayMedium)
+                            .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
+
                         Text("Pick a style — we'll handle the rest")
                             .font(.subheadline)
                             .foregroundStyle(BoothifyTheme.textSecondary)
+                            .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, BoothifySpacing.sm)
+                    .padding(.horizontal, BoothifySpacing.md)
 
+                    // MARK: Style grid
                     LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                        spacing: 10
+                        columns: [
+                            GridItem(.flexible(), spacing: BoothifySpacing.sm),
+                            GridItem(.flexible(), spacing: BoothifySpacing.sm)
+                        ],
+                        spacing: BoothifySpacing.sm
                     ) {
                         ForEach(PhotoStyle.allCases) { style in
                             StyleTile(
@@ -43,19 +54,68 @@ struct StylePickerView: View {
                         }
                     }
                     .frame(maxWidth: 620)
+                    .padding(.horizontal, BoothifySpacing.md)
 
                     if let uploadError {
-                        Text(uploadError)
-                            .font(.footnote)
-                            .foregroundStyle(BoothifyTheme.error)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
+                        HStack(spacing: BoothifySpacing.xs) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.caption)
+                            Text(uploadError)
+                                .font(.footnote)
+                        }
+                        .foregroundStyle(BoothifyTheme.error)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, BoothifySpacing.xl)
                     }
 
-                    Spacer(minLength: 20)
+                    // Scroll clearance so content isn't hidden behind bottom bar
+                    Spacer(minLength: 96)
                 }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 40)
+                .padding(.bottom, BoothifySpacing.xl)
+            }
+
+            // MARK: Sticky bottom CTA
+            VStack(spacing: 0) {
+                // Fade scrim above the bar
+                LinearGradient(
+                    colors: [BoothifyTheme.bg.opacity(0), BoothifyTheme.bg],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 32)
+                .allowsHitTesting(false)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Choose a style above")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                        if selecting != nil {
+                            Text("Generating your portrait…")
+                                .font(.caption)
+                                .foregroundStyle(BoothifyTheme.violet)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
+                    }
+                    .animation(.easeOut(duration: 0.2), value: selecting != nil)
+
+                    Spacer()
+
+                    if selecting != nil {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(BoothifyTheme.violet)
+                            .scaleEffect(0.9)
+                    }
+                }
+                .padding(.horizontal, BoothifySpacing.lg)
+                .padding(.vertical, BoothifySpacing.md)
+                .background(BoothifyTheme.surface1)
+                .overlay(
+                    Rectangle()
+                        .fill(BoothifyTheme.surfaceLine)
+                        .frame(height: 1),
+                    alignment: .top
+                )
             }
         }
         .navigationTitle("Choose style")
@@ -83,7 +143,6 @@ struct StylePickerView: View {
                         _ = try await BoothifyAPI.shared.generatePhoto(photoId: photoId, style: style)
                     } catch {
                         // Generation errors surface through the polling response (status=failed).
-                        // No need to handle here.
                     }
                 }
 
@@ -107,37 +166,39 @@ private struct StyleTile: View {
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
-                // Real AI sample photo as backdrop
+                // Real AI sample photo as backdrop — gradient on media is permitted
                 Image(style.previewAsset)
                     .resizable()
                     .scaledToFill()
 
-                // Bottom gradient for legible caption
+                // Scrim for caption legibility — this is on photo media content
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.4), .black.opacity(0.85)],
-                    startPoint: .top, endPoint: .bottom
+                    colors: [.clear, .black.opacity(0.3), .black.opacity(0.88)],
+                    startPoint: .center, endPoint: .bottom
                 )
 
-                VStack(alignment: .leading, spacing: 2) {
+                // Caption overlay
+                VStack(alignment: .leading, spacing: 3) {
                     Text(style.label)
-                        .font(.title3.bold())
+                        .font(.headline.bold())
                         .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
+                        .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
                     Text(style.descriptionText)
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.white.opacity(0.80))
                         .lineLimit(1)
                 }
-                .padding(14)
+                .padding(BoothifySpacing.md)
 
+                // Generating overlay
                 if isSelecting {
                     ZStack {
-                        Rectangle().fill(.ultraThinMaterial)
-                        VStack(spacing: 12) {
+                        Rectangle().fill(.black.opacity(0.55))
+                        VStack(spacing: BoothifySpacing.sm) {
                             ProgressView()
                                 .progressViewStyle(.circular)
                                 .tint(.white)
-                                .scaleEffect(1.4)
+                                .scaleEffect(1.3)
                             Text("Generating…")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
@@ -146,15 +207,27 @@ private struct StyleTile: View {
                     .transition(.opacity)
                     .accessibilityLabel("Generating \(style.label)")
                 }
+
+                // Selected border highlight
+                if isSelecting {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+                        .stroke(BoothifyTheme.violet, lineWidth: 2)
+                        .transition(.opacity)
+                }
             }
-            .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .aspectRatio(3/4, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+                    .stroke(
+                        isSelecting ? BoothifyTheme.violet : Color.white.opacity(0.10),
+                        lineWidth: isSelecting ? 2 : 1
+                    )
             )
-            .opacity(isDisabled ? 0.35 : 1)
-            .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+            .opacity(isDisabled ? 0.30 : 1)
+            .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
+            .animation(.easeOut(duration: 0.18), value: isSelecting)
+            .animation(.easeOut(duration: 0.18), value: isDisabled)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled || isSelecting)

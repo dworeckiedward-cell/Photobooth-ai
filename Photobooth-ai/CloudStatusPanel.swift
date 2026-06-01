@@ -16,13 +16,14 @@ struct CloudStatusPanel: View {
     private var isEmpty: Bool { status.queued == 0 && status.uploading == 0 && status.done == 0 && status.sent == 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+            // Header
+            HStack(spacing: BoothifySpacing.xs) {
                 Image(systemName: "icloud.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.violet)
                 Text("Cloud status")
-                    .font(.caption.weight(.semibold))
+                    .font(BoothifyType.captionEmphasis)
                     .foregroundStyle(BoothifyTheme.textSecondary)
                 Spacer()
                 Button {
@@ -34,54 +35,103 @@ struct CloudStatusPanel: View {
                         refreshing = false
                     }
                 } label: {
-                    Image(systemName: refreshing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                    Image(systemName: "arrow.clockwise")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .foregroundStyle(refreshing ? BoothifyTheme.violet : BoothifyTheme.textTertiary)
                         .rotationEffect(refreshing ? .degrees(360) : .zero)
-                        .animation(refreshing
-                                   ? .linear(duration: 0.8).repeatForever(autoreverses: false)
-                                   : .default,
-                                   value: refreshing)
+                        .animation(
+                            refreshing
+                                ? .linear(duration: 0.8).repeatForever(autoreverses: false)
+                                : .default,
+                            value: refreshing
+                        )
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Refresh cloud status")
             }
 
-            if initialLoading {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.9, anchor: .center)
-                    Text("Fetching cloud status...")
-                        .font(.caption2)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
-                }
-                .frame(height: 60)
-                .frame(maxWidth: .infinity, alignment: .center)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        counter("In queue", count: status.queued, tint: BoothifyTheme.textTertiary, symbol: "clock")
-                        counter("Uploading", count: status.uploading, tint: BoothifyTheme.amber, symbol: "icloud.and.arrow.up.fill")
-                        counter("Done", count: status.done, tint: BoothifyTheme.emerald, symbol: "checkmark.seal.fill")
-                        counter("Sent", count: status.sent, tint: BoothifyTheme.violet, symbol: "paperplane.fill")
-                    }
+            Divider()
+                .overlay(BoothifyTheme.surfaceLine)
 
-                    if isEmpty {
-                        Text("No activity yet — start capturing to see counters update.")
-                            .font(.caption2)
-                            .foregroundStyle(BoothifyTheme.textMuted)
+            // Content
+            if initialLoading {
+                // Loading skeleton
+                HStack(spacing: BoothifySpacing.sm) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        VStack(spacing: BoothifySpacing.xs) {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(BoothifyTheme.surface2)
+                                .frame(height: 22)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(BoothifyTheme.surface2)
+                                .frame(height: 10)
+                                .padding(.horizontal, BoothifySpacing.sm)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, BoothifySpacing.sm)
+                        .background(BoothifyTheme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                     }
+                }
+                .redacted(reason: .placeholder)
+            } else {
+                // Counter grid
+                HStack(spacing: BoothifySpacing.xs) {
+                    counter("Queued", count: status.queued, tint: BoothifyTheme.textTertiary, symbol: "clock.fill")
+                    counter("Uploading", count: status.uploading, tint: BoothifyTheme.violet, symbol: "icloud.and.arrow.up.fill")
+                    counter("Done", count: status.done, tint: BoothifyTheme.emerald, symbol: "checkmark.seal.fill")
+                    counter("Sent", count: status.sent, tint: BoothifyTheme.emerald, symbol: "paperplane.fill")
+                }
+
+                // Uploading progress bar
+                if status.uploading > 0 {
+                    let total = status.queued + status.uploading + status.done + status.sent
+                    let progress = total > 0 ? Double(status.done + status.sent) / Double(total) : 0
+
+                    VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
+                        HStack {
+                            Text("Upload progress")
+                                .font(BoothifyType.caption)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                            Spacer()
+                            Text("\(Int(progress * 100))%")
+                                .font(BoothifyType.captionEmphasis)
+                                .foregroundStyle(BoothifyTheme.textSecondary)
+                        }
+
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(BoothifyTheme.surface2)
+                                    .frame(height: 6)
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(BoothifyTheme.violet)
+                                    .frame(width: geo.size.width * progress, height: 6)
+                                    .animation(.spring(response: 0.5), value: progress)
+                            }
+                        }
+                        .frame(height: 6)
+                    }
+                    .padding(.top, BoothifySpacing.xs)
+                }
+
+                // Empty hint
+                if isEmpty {
+                    Text("No activity yet — start capturing to see counters update.")
+                        .font(BoothifyType.caption)
+                        .foregroundStyle(BoothifyTheme.textMuted)
+                        .padding(.top, BoothifySpacing.xs)
                 }
             }
         }
-        .padding(14)
+        .padding(BoothifySpacing.md)
         .background(BoothifyTheme.surface1)
+        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .task(id: eventId) {
-            // Initial fetch — uses local snapshot first then races a backend call.
             defer { initialLoading = false }
             await app.refreshCloudStatus(for: eventId)
         }
@@ -91,33 +141,32 @@ struct CloudStatusPanel: View {
 
     @ViewBuilder
     private func counter(_ label: String, count: Int, tint: Color, symbol: String) -> some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: symbol)
-                    // QW8 — semantic font so Dynamic Type scales the icon
-                    // alongside the count. Hardcoded size: 10 broke at the
-                    // largest accessibility text sizes.
-                    .font(.caption2.weight(.bold))
-                Text("\(count)")
-                    .font(.title3.weight(.bold).monospacedDigit())
-                    .contentTransition(.numericText())
-            }
-            .foregroundStyle(tint)
+        VStack(spacing: BoothifySpacing.xs) {
+            Image(systemName: symbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(count > 0 ? tint : BoothifyTheme.textMuted)
+
+            Text("\(count)")
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(count > 0 ? tint : BoothifyTheme.textMuted)
+                .contentTransition(.numericText())
+
             Text(label)
-                // QW8 — same fix: semantic .caption2 instead of .system(size: 10).
-                .font(.caption2.weight(.medium))
+                .font(.system(size: 9, weight: .semibold))
                 .kerning(0.4)
                 .foregroundStyle(BoothifyTheme.textTertiary)
                 .textCase(.uppercase)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(tint.opacity(0.10))
+        .padding(.vertical, BoothifySpacing.sm)
+        .background(count > 0 ? tint.opacity(0.08) : BoothifyTheme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(tint.opacity(0.25), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                .stroke(count > 0 ? tint.opacity(0.20) : BoothifyTheme.surfaceLine, lineWidth: 0.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .animation(.easeInOut(duration: 0.25), value: count)
     }
 }
 

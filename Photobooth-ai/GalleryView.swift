@@ -10,71 +10,83 @@ struct GalleryView: View {
 
     private var event: Event? { app.event(id: eventId) }
 
+    private let columns = [
+        GridItem(.flexible(), spacing: 3),
+        GridItem(.flexible(), spacing: 3),
+        GridItem(.flexible(), spacing: 3),
+    ]
+
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 16) {
-                    Text("\(photos.count) \(photos.count == 1 ? "photo" : "photos")")
-                        .font(.footnote)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
-                        .padding(.top, 8)
-
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(BoothifyTheme.error)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
+                VStack(spacing: 0) {
+                    // Metadata bar
+                    if !photos.isEmpty {
+                        HStack {
+                            Text("\(photos.count) \(photos.count == 1 ? "photo" : "photos")")
+                                .font(BoothifyType.captionEmphasis)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .padding(.vertical, BoothifySpacing.sm)
                     }
 
-                    if isLoading && photos.isEmpty {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(BoothifyTheme.violet)
-                            .padding(.top, 80)
-                    } else if photos.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: "photo.stack")
-                                .font(.system(size: 56, weight: .bold))
-                                .foregroundStyle(BoothifyTheme.textMuted)
-                                .accessibilityHidden(true)
-                            Text("No photos yet")
-                                .font(.body)
-                                .foregroundStyle(BoothifyTheme.textSecondary)
-                            Text("Take photos via the kiosk and they'll appear here.")
-                                .font(.footnote)
-                                .foregroundStyle(BoothifyTheme.textTertiary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 40)
+                    // Error banner
+                    if let errorMessage {
+                        HStack(spacing: BoothifySpacing.sm) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.error)
+                            Text(errorMessage)
+                                .font(BoothifyType.caption)
+                                .foregroundStyle(BoothifyTheme.error)
+                            Spacer()
+                        }
+                        .padding(BoothifySpacing.md)
+                        .background(BoothifyTheme.error.opacity(0.08))
+                        .overlay(
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundStyle(BoothifyTheme.error.opacity(0.25)),
+                            alignment: .bottom
+                        )
+                        .padding(.bottom, BoothifySpacing.sm)
+                    }
 
-                            Button {
+                    // Loading skeleton
+                    if isLoading && photos.isEmpty {
+                        LazyVGrid(columns: columns, spacing: 3) {
+                            ForEach(0..<12, id: \.self) { _ in
+                                Rectangle()
+                                    .fill(BoothifyTheme.surface2)
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+                                    .shimmering()
+                            }
+                        }
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .padding(.top, BoothifySpacing.xs)
+
+                    // Empty state
+                    } else if photos.isEmpty {
+                        BoothifyEmptyState(
+                            icon: "photo.stack",
+                            title: "No photos yet",
+                            subtitle: "Take photos via the kiosk and they'll appear here.",
+                            action: {
                                 Haptics.tap(.medium)
                                 app.push(.camera(eventId: eventId))
-                            } label: {
-                                Text("Start capturing")
-                                    .font(.callout.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(BoothifyTheme.violet)
-                                    .clipShape(.capsule)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Start capturing photos")
-                            .padding(.top, 8)
-                        }
-                        .padding(.top, 60)
+                            },
+                            actionLabel: "Start capturing"
+                        )
+                        .padding(.top, BoothifySpacing.xxl)
+
+                    // Photo grid
                     } else {
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 4),
-                                GridItem(.flexible(), spacing: 4),
-                                GridItem(.flexible(), spacing: 4),
-                            ],
-                            spacing: 4
-                        ) {
+                        LazyVGrid(columns: columns, spacing: 3) {
                             ForEach(photos) { photo in
                                 Button {
                                     Haptics.tap()
@@ -86,9 +98,11 @@ struct GalleryView: View {
                                 .accessibilityLabel("\(photo.style.label) photo")
                             }
                         }
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .padding(.top, BoothifySpacing.xs)
                     }
                 }
-                .padding(.bottom, 40)
+                .padding(.bottom, BoothifySpacing.xxl)
             }
             .refreshable {
                 await loadPhotos()
@@ -96,6 +110,9 @@ struct GalleryView: View {
         }
         .navigationTitle(event?.name ?? "Gallery")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(BoothifyTheme.bg, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .task(id: eventId) {
             await loadPhotos()
         }
@@ -119,6 +136,8 @@ struct GalleryView: View {
     }
 }
 
+// MARK: - Thumbnail
+
 private struct GalleryThumbnail: View {
     let photo: Photo
 
@@ -128,13 +147,25 @@ private struct GalleryThumbnail: View {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
-                        Rectangle().fill(BoothifyTheme.surface1)
+                        Rectangle()
+                            .fill(BoothifyTheme.surface2)
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .tint(BoothifyTheme.textMuted)
+                            )
                     case .success(let img):
                         img.resizable().scaledToFill()
                     case .failure:
-                        Image(photo.style.previewAsset).resizable().scaledToFill()
+                        ZStack {
+                            Image(photo.style.previewAsset).resizable().scaledToFill()
+                            Color.black.opacity(0.3)
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.error)
+                        }
                     @unknown default:
-                        Rectangle().fill(BoothifyTheme.surface1)
+                        Rectangle().fill(BoothifyTheme.surface2)
                     }
                 }
             } else {
@@ -144,7 +175,50 @@ private struct GalleryThumbnail: View {
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                .stroke(BoothifyTheme.surfaceLine, lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Shimmer modifier
+
+private struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                GeometryReader { geo in
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .white.opacity(0.06), location: 0.4),
+                            .init(color: .white.opacity(0.12), location: 0.5),
+                            .init(color: .white.opacity(0.06), location: 0.6),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .init(x: phase, y: 0),
+                        endPoint: .init(x: phase + 1, y: 0)
+                    )
+                    .frame(width: geo.size.width * 2)
+                    .offset(x: geo.size.width * phase)
+                }
+                .allowsHitTesting(false)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+private extension View {
+    func shimmering() -> some View {
+        modifier(ShimmerModifier())
     }
 }
 
