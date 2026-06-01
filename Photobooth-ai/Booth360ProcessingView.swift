@@ -7,6 +7,7 @@ import SwiftUI
 /// already polls the job model.
 struct Booth360ProcessingView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let jobId: UUID
 
     @State private var pipelineTask: Task<Void, Never>?
@@ -84,7 +85,7 @@ struct Booth360ProcessingView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(BoothifyTheme.amber)
                 .multilineTextAlignment(.center)
-                .animation(BoothifyMotion.gentle, value: job?.currentStep)
+                .animation(reduceMotion ? nil : BoothifyMotion.gentle, value: job?.currentStep)
         }
     }
 
@@ -112,7 +113,7 @@ struct Booth360ProcessingView: View {
                 )
                 .rotationEffect(.degrees(-90))
                 .frame(width: 160, height: 160)
-                .animation(BoothifyMotion.gentle, value: progressFraction)
+                .animation(reduceMotion ? nil : BoothifyMotion.gentle, value: progressFraction)
             VStack(spacing: 2) {
                 Text("\(Int(progressFraction * 100))%")
                     // monospacedDigit so the % counter doesn't jitter

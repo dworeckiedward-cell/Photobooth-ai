@@ -115,6 +115,7 @@ enum OnboardingStore {
 
 struct OnboardingQuizSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: Int = 0
     @State private var answers = OnboardingAnswers()
 
@@ -167,7 +168,7 @@ struct OnboardingQuizSheet: View {
                 Capsule()
                     .fill(i <= step ? BoothifyTheme.violet : BoothifyTheme.surface2)
                     .frame(width: i == step ? 22 : 8, height: 6)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: step)
+                    .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: step)
             }
         }
     }
@@ -388,7 +389,7 @@ struct OnboardingQuizSheet: View {
             if step > 0 {
                 Button {
                     Haptics.tap(.light)
-                    withAnimation { step -= 1 }
+                    withAnimation(reduceMotion ? nil : .default) { step -= 1 }
                 } label: {
                     Label("Back", systemImage: "chevron.left")
                         .font(.subheadline.weight(.semibold))
@@ -398,7 +399,7 @@ struct OnboardingQuizSheet: View {
             Button {
                 Haptics.tap()
                 if step < totalSteps {
-                    withAnimation { step += 1 }
+                    withAnimation(reduceMotion ? nil : .default) { step += 1 }
                 } else {
                     finish(saving: true)
                 }

@@ -10,6 +10,7 @@ import UniformTypeIdentifiers
 /// pipeline.
 struct Booth360RecordingView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let eventId: UUID
 
     @State private var controller = CameraController()
@@ -307,7 +308,7 @@ struct Booth360RecordingView: View {
                         .stroke(BoothifyTheme.amber, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .frame(width: 92, height: 92)
-                        .animation(.linear(duration: 0.1), value: recordingElapsed)
+                        .animation(reduceMotion ? nil : .linear(duration: 0.1), value: recordingElapsed)
                 }
                 Circle()
                     .stroke(.white, lineWidth: 4)
@@ -405,13 +406,13 @@ struct Booth360RecordingView: View {
         countdown = countdownStart
         Task {
             for value in stride(from: countdownStart, through: 1, by: -1) {
-                withAnimation(BoothifyMotion.quickTap) { countdown = value }   // RA5
+                withAnimation(reduceMotion ? nil : BoothifyMotion.quickTap) { countdown = value }   // RA5
                 Haptics.tap(.light)
                 // System beep — short audio cue per countdown tick
                 AudioServicesPlaySystemSound(SystemSoundID(1306))
                 try? await Task.sleep(for: .seconds(1))
             }
-            withAnimation(BoothifyMotion.quickTap) { countdown = nil }     // RA5
+            withAnimation(reduceMotion ? nil : BoothifyMotion.quickTap) { countdown = nil }     // RA5
             startRecording()
         }
     }
