@@ -98,6 +98,12 @@ struct ResultView: View {
                 }
             }
         }
+        .onChange(of: photo?.status) { _, status in
+            guard status == .completed,
+                  app.settings(for: eventId).print.enabled,
+                  app.settings(for: eventId).print.autoPrintAfterCapture else { return }
+            Task { await printPhoto() }
+        }
     }
 
     // MARK: - States
@@ -268,6 +274,11 @@ struct ResultView: View {
                     Haptics.tap()
                     qrPresented = true
                 }
+                ShareActionButton(symbol: "printer.fill", label: "Print") {
+                    Haptics.tap()
+                    Task { await printPhoto() }
+                }
+                .opacity(app.settings(for: eventId).print.enabled ? 1 : 0.3)
                 // IM1: native AirDrop / system share
                 ShareLink(item: publicURL,
                           subject: Text("Your photo from Boothify"),
@@ -480,6 +491,21 @@ struct ResultView: View {
         var items: [Any] = [publicURL]
         if let img = loadedImage { items.insert(img, at: 0) }
         return items
+    }
+
+    @MainActor
+    private func printPhoto() async {
+        guard let url = photo?.generatedURL,
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let image = UIImage(data: data) else { return }
+
+        let settings = app.settings(for: eventId).print
+        let eventName = app.event(id: eventId)?.name
+        let qrURL: URL? = settings.includeQRCode
+            ? BoothifyAPI.shared.publicResultURL(photoId: photoId)
+            : nil
+
+        PrintEngine.print(image: image, settings: settings, eventName: eventName, qrURL: qrURL)
     }
 
     private func saveToPhotos() {
