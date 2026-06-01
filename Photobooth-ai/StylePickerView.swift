@@ -173,10 +173,20 @@ private struct StyleTile: View {
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
-                // Real AI sample photo as backdrop — gradient on media is permitted
-                Image(style.previewAsset)
-                    .resizable()
-                    .scaledToFill()
+                // Backdrop — real sample photo when available, gradient placeholder otherwise.
+                // New styles ship with nil previewAsset until sample images are generated.
+                if let asset = style.previewAsset {
+                    Image(asset)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    // Placeholder: accent gradient + large icon — looks intentional, not broken
+                    style.accentGradient
+                    Image(systemName: style.iconSymbol)
+                        .font(.system(size: 52, weight: .light))
+                        .foregroundStyle(.white.opacity(0.25))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
 
                 // Scrim for caption legibility — this is on photo media content
                 LinearGradient(
