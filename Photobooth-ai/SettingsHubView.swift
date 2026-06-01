@@ -22,9 +22,9 @@ struct SettingsHubView: View {
             // Identity block
             if let event {
                 Section {
-                    HStack(spacing: 14) {
+                    HStack(spacing: BoothifySpacing.md) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                                 .fill(BoothifyTheme.violet)
                                 .frame(width: 52, height: 52)
                             Image(systemName: "camera.aperture")
@@ -32,18 +32,24 @@ struct SettingsHubView: View {
                                 .foregroundStyle(.white)
                         }
                         .accessibilityHidden(true)
+                        .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
 
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(event.name)
                                 .font(.headline)
                                 .foregroundStyle(.white)
-                            Text("\(event.completedPhotos) of \(event.totalPhotos) photos")
-                                .font(.subheadline)
-                                .foregroundStyle(BoothifyTheme.textSecondary)
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(BoothifyTheme.emerald)
+                                    .frame(width: 6, height: 6)
+                                Text("\(event.completedPhotos) of \(event.totalPhotos) photos")
+                                    .font(.subheadline)
+                                    .foregroundStyle(BoothifyTheme.textSecondary)
+                            }
                         }
                         Spacer()
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, BoothifySpacing.sm)
                     .listRowBackground(BoothifyTheme.surface1)
                 }
             }
@@ -285,19 +291,30 @@ struct ComingSoonView: View {
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
-            VStack(spacing: 18) {
-                Image(systemName: "clock.badge.questionmark")
-                    .font(.system(size: 56, weight: .light))
-                    .foregroundStyle(BoothifyTheme.violet)
-                    .accessibilityHidden(true)
-                Text("Coming soon")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-                Text(blurb)
-                    .font(.subheadline)
-                    .foregroundStyle(BoothifyTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+            VStack(spacing: BoothifySpacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                        .fill(BoothifyTheme.surface1)
+                        .frame(width: 72, height: 72)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                        )
+                    Image(systemName: "clock.badge.questionmark")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(BoothifyTheme.violet)
+                        .accessibilityHidden(true)
+                }
+                VStack(spacing: BoothifySpacing.xs) {
+                    Text("Coming soon")
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                    Text(blurb)
+                        .font(.subheadline)
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, BoothifySpacing.xxl)
+                }
             }
         }
         .navigationTitle(title)
@@ -317,14 +334,25 @@ struct AboutBoothifyView: View {
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
-            VStack(spacing: 24) {
-                Image("BoothifyLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .shadow(color: Color.black.opacity(0.35), radius: 22, y: 8)
+            VStack(spacing: BoothifySpacing.lg) {
+                // Logo with surface card
+                ZStack {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
+                        .fill(BoothifyTheme.surface1)
+                        .frame(width: 100, height: 100)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
+                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.4), radius: 16, y: 6)
+                    Image("BoothifyLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 64, height: 64)
+                }
+                .padding(.top, BoothifySpacing.xl)
 
-                VStack(spacing: 6) {
+                VStack(spacing: BoothifySpacing.xs) {
                     Text("Boothify")
                         .font(.largeTitle.bold())
                         .foregroundStyle(.white)
@@ -337,11 +365,10 @@ struct AboutBoothifyView: View {
                     .font(.callout)
                     .foregroundStyle(BoothifyTheme.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, BoothifySpacing.xxl)
 
                 Spacer()
             }
-            .padding(.top, 32)
         }
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)

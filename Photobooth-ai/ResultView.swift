@@ -103,26 +103,23 @@ struct ResultView: View {
     // MARK: - States
 
     private var generatingState: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: BoothifySpacing.lg) {
             ZStack {
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [BoothifyTheme.violet.opacity(0.5), .clear],
-                        center: .center, startRadius: 10, endRadius: 100
-                    ))
-                    .frame(width: 160, height: 160)
-                    .blur(radius: 16)
-                Circle()
-                    .stroke(BoothifyTheme.violet.opacity(0.4), lineWidth: 1)
-                    .frame(width: 130, height: 130)
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                    .fill(BoothifyTheme.surface1)
+                    .frame(width: 80, height: 80)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    )
                 Image(systemName: "sparkles")
-                    .font(.largeTitle.bold())
+                    .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(BoothifyTheme.violet)
                     .symbolEffect(.pulse, options: .repeating)
                     .accessibilityHidden(true)
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: BoothifySpacing.xs) {
                 Text("Generating photo")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
@@ -131,15 +128,19 @@ struct ResultView: View {
                     .foregroundStyle(BoothifyTheme.textSecondary)
                     .id(messageIndex)
                     .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.4), value: messageIndex)
             }
 
-            ProgressView().progressViewStyle(.linear).tint(BoothifyTheme.violet).frame(maxWidth: 220)
+            ProgressView()
+                .progressViewStyle(.linear)
+                .tint(BoothifyTheme.violet)
+                .frame(maxWidth: 200)
 
             Text("Average time: ~10 seconds")
                 .font(.caption2)
                 .foregroundStyle(BoothifyTheme.textMuted)
         }
-        .padding(40)
+        .padding(BoothifySpacing.xl)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Generating your photo")
     }
@@ -154,33 +155,43 @@ struct ResultView: View {
 
     @ViewBuilder
     private func failedView(photo: Photo) -> some View {
-        VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.orange)
-                .accessibilityHidden(true)
-            Text("Generation failed")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-            Text(photo.errorMessage ?? "Something went wrong. Try a different style or retake.")
-                .font(.subheadline)
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-
-            HStack(spacing: 12) {
-                Button {
-                    Haptics.tap()
-                    app.pop() // back to style picker
-                } label: {
-                    Label("Try another style", systemImage: "arrow.triangle.2.circlepath")
-                }
-                .buttonStyle(SecondaryButtonStyle())
-                .frame(maxWidth: 220)
+        VStack(spacing: BoothifySpacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                    .fill(BoothifyTheme.error.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                            .stroke(BoothifyTheme.error.opacity(0.35), lineWidth: 1)
+                    )
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(BoothifyTheme.error)
+                    .accessibilityHidden(true)
             }
-            .padding(.top, 12)
+
+            VStack(spacing: BoothifySpacing.xs) {
+                Text("Generation failed")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Text(photo.errorMessage ?? "Something went wrong. Try a different style or retake.")
+                    .font(.subheadline)
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, BoothifySpacing.xl)
+            }
+
+            Button {
+                Haptics.tap()
+                app.pop()
+            } label: {
+                Label("Try another style", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .buttonStyle(SecondaryButtonStyle())
+            .frame(maxWidth: 260)
+            .padding(.top, BoothifySpacing.sm)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, BoothifySpacing.lg)
     }
 
     // MARK: - Subviews
@@ -213,20 +224,21 @@ struct ResultView: View {
                 BrandOverlayLayer(settings: brand, eventId: eventId)
             }
         }
-        .shadow(color: BoothifyTheme.violet.opacity(glow), radius: 40)
+        .shadow(color: Color.black.opacity(glow * 0.6), radius: 40)
         .opacity(revealOpacity)
         .scaleEffect(0.98 + 0.02 * revealOpacity)
         .onAppear { playRevealAnimation() }
     }
 
     private func actionsBar(photo: Photo) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: BoothifySpacing.sm) {
             metadataStrip(photo: photo)
 
+            // Primary CTA
             Button {
                 saveToPhotos()
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: BoothifySpacing.sm) {
                     Image(systemName: "square.and.arrow.down").font(.body.weight(.semibold))
                     Text("Save to Photos")
                 }
@@ -235,7 +247,8 @@ struct ResultView: View {
             .disabled(loadedImage == nil)
             .accessibilityHint("Saves the generated image to your Photos library")
 
-            HStack(spacing: 8) {
+            // Secondary share actions
+            HStack(spacing: BoothifySpacing.xs) {
                 ShareActionButton(symbol: "message.fill", label: "SMS") {
                     Haptics.tap()
                     smsPresented = true
@@ -255,8 +268,7 @@ struct ResultView: View {
                     Haptics.tap()
                     qrPresented = true
                 }
-                // IM1: native AirDrop / system share — covers everything we
-                // don't bake a dedicated button for (Messages, Notes, Files…).
+                // IM1: native AirDrop / system share
                 ShareLink(item: publicURL,
                           subject: Text("Your photo from Boothify"),
                           message: Text("Tap to open →")) {
@@ -268,20 +280,21 @@ struct ResultView: View {
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .background(BoothifyTheme.surface1)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                             .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
                 .accessibilityLabel("Open native share sheet — AirDrop, Messages, Mail")
             }
 
-            HStack(spacing: 8) {
+            // Tertiary navigation row
+            HStack(spacing: BoothifySpacing.xs) {
                 Button {
                     Haptics.tap()
-                    app.pop() // back to style picker
+                    app.pop()
                 } label: {
                     Label("Another style", systemImage: "arrow.triangle.2.circlepath")
                         .font(.caption.weight(.semibold))
@@ -313,14 +326,16 @@ struct ResultView: View {
                 .buttonStyle(SecondaryButtonStyle())
             }
         }
-        .padding(14)
+        .padding(BoothifySpacing.md)
+        .background(BoothifyTheme.bg.opacity(0.92))
         .background(.ultraThinMaterial)
         .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 0.5)
+            Rectangle().fill(BoothifyTheme.surfaceLine).frame(height: 0.5)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .padding(.horizontal, 10)
-        .padding(.bottom, 12)
+        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous))
+        .shadow(color: .black.opacity(0.4), radius: 20, y: -4)
+        .padding(.horizontal, BoothifySpacing.sm)
+        .padding(.bottom, BoothifySpacing.sm)
     }
 
     // MARK: - Metadata strip (background removal, stickers, etc.)
@@ -620,51 +635,67 @@ private struct EmailSheet: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text(sent ? "Email sent" : "Send to email")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-                .padding(.top, 24)
-
-            if sent {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(BoothifyTheme.emerald)
-                Spacer()
-            } else {
-                TextField("you@example.com", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .textContentType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 52)
-                    .background(BoothifyTheme.surface1)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .padding(.horizontal, 24)
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(spacing: BoothifySpacing.md) {
+                Text(sent ? "Email sent" : "Send to email")
+                    .font(.title2.bold())
                     .foregroundStyle(.white)
+                    .padding(.top, BoothifySpacing.lg)
 
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
+                if sent {
+                    Spacer()
+                    VStack(spacing: BoothifySpacing.md) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 56))
+                            .foregroundStyle(BoothifyTheme.emerald)
+                        Text("Check your inbox")
+                            .font(.subheadline)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                    }
+                    Spacer()
+                } else {
+                    TextField("you@example.com", text: $email)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .textContentType(.emailAddress)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .frame(minHeight: 52)
+                        .background(BoothifyTheme.surface1)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .foregroundStyle(.white)
+
+                    if let errorMessage {
+                        HStack(spacing: BoothifySpacing.xs) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.caption)
+                            Text(errorMessage)
+                                .font(.footnote)
+                        }
                         .foregroundStyle(BoothifyTheme.error)
-                        .padding(.horizontal, 24)
-                }
+                        .padding(.horizontal, BoothifySpacing.lg)
+                    }
 
-                Button {
-                    send()
-                } label: {
-                    Text(sending ? "Sending…" : "Send")
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(sending || !email.contains("@"))
-                .padding(.horizontal, 24)
+                    Button {
+                        send()
+                    } label: {
+                        Text(sending ? "Sending…" : "Send")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(sending || !email.contains("@"))
+                    .padding(.horizontal, BoothifySpacing.lg)
 
-                Spacer()
+                    Spacer()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func send() {
@@ -697,49 +728,65 @@ private struct SMSSheet: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text(sent ? "SMS sent" : "Send via SMS")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-                .padding(.top, 24)
-
-            if sent {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(BoothifyTheme.emerald)
-                Spacer()
-            } else {
-                TextField("+48 500 111 222", text: $phone)
-                    .keyboardType(.phonePad)
-                    .textContentType(.telephoneNumber)
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 52)
-                    .background(BoothifyTheme.surface1)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .padding(.horizontal, 24)
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(spacing: BoothifySpacing.md) {
+                Text(sent ? "SMS sent" : "Send via SMS")
+                    .font(.title2.bold())
                     .foregroundStyle(.white)
+                    .padding(.top, BoothifySpacing.lg)
 
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
+                if sent {
+                    Spacer()
+                    VStack(spacing: BoothifySpacing.md) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 56))
+                            .foregroundStyle(BoothifyTheme.emerald)
+                        Text("Message on its way")
+                            .font(.subheadline)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                    }
+                    Spacer()
+                } else {
+                    TextField("+48 500 111 222", text: $phone)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .frame(minHeight: 52)
+                        .background(BoothifyTheme.surface1)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .foregroundStyle(.white)
+
+                    if let errorMessage {
+                        HStack(spacing: BoothifySpacing.xs) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.caption)
+                            Text(errorMessage)
+                                .font(.footnote)
+                        }
                         .foregroundStyle(BoothifyTheme.error)
-                        .padding(.horizontal, 24)
-                }
+                        .padding(.horizontal, BoothifySpacing.lg)
+                    }
 
-                Button {
-                    send()
-                } label: {
-                    Text(sending ? "Sending…" : "Send")
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(sending || phone.filter(\.isNumber).count < 7)
-                .padding(.horizontal, 24)
+                    Button {
+                        send()
+                    } label: {
+                        Text(sending ? "Sending…" : "Send")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(sending || phone.filter(\.isNumber).count < 7)
+                    .padding(.horizontal, BoothifySpacing.lg)
 
-                Spacer()
+                    Spacer()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func send() {
@@ -801,33 +848,37 @@ struct QRSheet: View {
     let url: String
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Scan with your phone")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-                .padding(.top, 24)
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
+            VStack(spacing: BoothifySpacing.md) {
+                Text("Scan with your phone")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.top, BoothifySpacing.lg)
 
-            Text("Opens your photo on the device's browser")
-                .font(.footnote)
-                .foregroundStyle(BoothifyTheme.textSecondary)
+                Text("Opens your photo on the device's browser")
+                    .font(.footnote)
+                    .foregroundStyle(BoothifyTheme.textSecondary)
 
-            qrCode
-                .frame(width: 240, height: 240)
-                .background(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .padding(.top, 6)
-                .accessibilityLabel("QR code for \(url)")
+                qrCode
+                    .frame(width: 240, height: 240)
+                    .background(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+                    .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
+                    .padding(.top, BoothifySpacing.xs)
+                    .accessibilityLabel("QR code for \(url)")
 
-            Text(url)
-                .font(.caption2.monospaced())
-                .foregroundStyle(BoothifyTheme.textTertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-                .textSelection(.enabled)
+                Text(url)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, BoothifySpacing.lg)
+                    .textSelection(.enabled)
 
-            Spacer()
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder

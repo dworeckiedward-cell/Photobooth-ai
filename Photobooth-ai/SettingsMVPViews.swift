@@ -30,6 +30,7 @@ private extension View {
         self
             .scrollContentBackground(.hidden)
             .background(BoothifyTheme.bg.ignoresSafeArea())
+            .tint(BoothifyTheme.violet)
     }
 }
 
@@ -1078,6 +1079,7 @@ struct DisclaimerConsentSheet: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white)
                 }
+                .tint(BoothifyTheme.violet)
 
                 Spacer(minLength: 4)
 
@@ -1292,9 +1294,15 @@ struct PostResultSurveySheet: View {
                 case .text:
                     TextField("Type here…", text: $text, axis: .vertical)
                         .lineLimit(3...6)
-                        .padding(12)
-                        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .padding(.horizontal, 24)
+                        .foregroundStyle(.white)
+                        .padding(BoothifySpacing.md)
+                        .background(BoothifyTheme.surface1)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
+                        .padding(.horizontal, BoothifySpacing.lg)
                 case .yesNo:
                     HStack(spacing: 12) {
                         Button("Yes") { Haptics.selection(); yes = true }
@@ -1390,7 +1398,7 @@ struct SharingStatusView: View {
             switch self {
             case .sending: BoothifyTheme.amber
             case .sent: BoothifyTheme.emerald
-            case .failed: .red
+            case .failed: BoothifyTheme.error
             }
         }
     }
@@ -1450,6 +1458,7 @@ struct SharingStatusView: View {
         }
         .scrollContentBackground(.hidden)
         .background(BoothifyTheme.bg.ignoresSafeArea())
+        .tint(BoothifyTheme.violet)
         .navigationTitle("Delivery Status")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: eventId) {
@@ -1714,7 +1723,7 @@ struct AccountSettingsView: View {
                     } label: {
                         if deleting {
                             HStack(spacing: 8) {
-                                ProgressView().tint(.red)
+                                ProgressView().tint(BoothifyTheme.error)
                                 Text("Deleting…")
                             }
                         } else {
@@ -1735,6 +1744,7 @@ struct AccountSettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(BoothifyTheme.bg.ignoresSafeArea())
+        .tint(BoothifyTheme.violet)
         .navigationTitle("Account")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Reset settings?", isPresented: $confirmReset) {

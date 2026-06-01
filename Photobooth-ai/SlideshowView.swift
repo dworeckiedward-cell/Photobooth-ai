@@ -34,7 +34,10 @@ struct SlideshowView: View {
             timerTask?.cancel()
             refreshTask?.cancel()
         }
+        .ignoresSafeArea()
     }
+
+    // MARK: - Slides
 
     private var slidesStack: some View {
         ZStack {
@@ -55,72 +58,130 @@ struct SlideshowView: View {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:
-                        ProgressView().tint(.white)
+                        Color.black
+                            .overlay(ProgressView().tint(.white))
                     case .success(let img):
-                        img.resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+                        img
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipped()
                     case .failure:
-                        photo.style.accentGradient.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        photo.style.accentGradient
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     @unknown default:
-                        photo.style.accentGradient.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        photo.style.accentGradient
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
             } else {
-                photo.style.accentGradient.frame(maxWidth: .infinity, maxHeight: .infinity)
+                photo.style.accentGradient
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .accessibilityLabel("Slide: \(photo.style.label) photo")
     }
 
+    // MARK: - Overlay controls
+
     private var overlayControls: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Top bar: close + counter
             HStack {
-                Button {
-                    Haptics.tap()
-                    timerTask?.cancel()
-                    refreshTask?.cancel()
-                    app.pop()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(.black.opacity(0.45))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: 1))
-                }
-                .accessibilityLabel("Close slideshow")
+                closeButton
                 Spacer()
-                Text("\((currentIndex % max(photos.count, 1)) + 1) / \(photos.count)")
-                    // QW6 — monospacedDigit so the counter doesn't jiggle
-                    // as the index ticks; plus a VoiceOver label so
-                    // screen-reader users hear position context.
-                    .font(.caption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.black.opacity(0.45))
-                    .clipShape(Capsule())
-                    .accessibilityLabel("Slide \((currentIndex % max(photos.count, 1)) + 1) of \(photos.count)")
+                slideCounter
             }
-            .padding(20)
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.top, BoothifySpacing.md)
+            .background(
+                LinearGradient(
+                    colors: [.black.opacity(0.55), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .top)
+            )
+
             Spacer()
+
+            // Bottom progress dots
+            progressDots
+                .padding(.bottom, BoothifySpacing.lg)
+                .background(
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.45)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
         }
     }
 
+    private var closeButton: some View {
+        Button {
+            Haptics.tap()
+            timerTask?.cancel()
+            refreshTask?.cancel()
+            app.pop()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.body.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.black.opacity(0.40))
+                .clipShape(Circle())
+                .overlay(
+                    Circle().stroke(.white.opacity(0.12), lineWidth: 1)
+                )
+        }
+        .accessibilityLabel("Close slideshow")
+    }
+
+    private var slideCounter: some View {
+        Text("\((currentIndex % max(photos.count, 1)) + 1) / \(photos.count)")
+            .font(.caption.weight(.semibold).monospacedDigit())
+            .foregroundStyle(.white.opacity(0.85))
+            .padding(.horizontal, BoothifySpacing.sm + 4)
+            .padding(.vertical, BoothifySpacing.xs + 2)
+            .background(.black.opacity(0.40))
+            .clipShape(Capsule())
+            .accessibilityLabel("Slide \((currentIndex % max(photos.count, 1)) + 1) of \(photos.count)")
+    }
+
+    private var progressDots: some View {
+        HStack(spacing: 6) {
+            ForEach(photos.indices, id: \.self) { idx in
+                let isCurrent = idx == currentIndex % max(photos.count, 1)
+                Capsule()
+                    .fill(isCurrent ? Color.white : Color.white.opacity(0.30))
+                    .frame(width: isCurrent ? 20 : 6, height: 4)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentIndex)
+            }
+        }
+        .padding(.horizontal, BoothifySpacing.lg)
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Empty state
+
     private var emptyState: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: BoothifySpacing.md) {
             Image(systemName: "tv")
-                .font(.system(size: 48, weight: .bold))
+                .font(.system(size: 52, weight: .bold))
                 .foregroundStyle(BoothifyTheme.violet)
                 .accessibilityHidden(true)
-            Text("Slideshow is empty")
-                .font(.headline)
-                .foregroundStyle(.white)
-            Text("Take photos via the kiosk — they appear here automatically.")
-                .font(.footnote)
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+
+            VStack(spacing: BoothifySpacing.xs) {
+                Text("Slideshow is empty")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                Text("Take photos via the kiosk — they appear here automatically.")
+                    .font(.footnote)
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, BoothifySpacing.xl)
+            }
 
             Button("Back") {
                 Haptics.tap()
@@ -128,9 +189,11 @@ struct SlideshowView: View {
             }
             .buttonStyle(SecondaryButtonStyle())
             .frame(maxWidth: 200)
-            .padding(.top, 8)
+            .padding(.top, BoothifySpacing.xs)
         }
     }
+
+    // MARK: - Data
 
     private func loadPhotos() async {
         guard let slug = event?.slug else {

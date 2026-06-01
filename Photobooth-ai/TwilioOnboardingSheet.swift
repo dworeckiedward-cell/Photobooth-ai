@@ -33,102 +33,30 @@ struct TwilioOnboardingSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Picker("Credential type", selection: $kind) {
-                        Text("API Key (recommended)").tag(TwilioCredentials.CredentialKind.apiKey)
-                        Text("Account SID + Auth Token").tag(TwilioCredentials.CredentialKind.accountToken)
-                    }
-                    .pickerStyle(.segmented)
-                } footer: {
-                    Text(kind == .apiKey
-                         ? "API Keys (SK…) are scoped and can be revoked without resetting your whole Twilio account."
-                         : "Auth Tokens grant full Twilio account access. Use only for quick testing.")
-                        .font(.caption2)
-                }
+            ZStack {
+                BoothifyTheme.bg.ignoresSafeArea()
 
-                Section("Twilio credentials") {
-                    TextField("Account SID (AC…)", text: $accountSid)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .font(.system(.body, design: .monospaced))
-                    if kind == .apiKey {
-                        TextField("API Key SID (SK…)", text: $authSid)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                            .font(.system(.body, design: .monospaced))
-                        SecureField("API Key Secret", text: $authSecret)
-                    } else {
-                        SecureField("Auth Token", text: $authSecret)
-                            .onChange(of: authSecret) { _, _ in
-                                // Account-token flow uses Account SID as the auth SID too.
-                                authSid = accountSid
-                            }
-                            .onChange(of: accountSid) { _, _ in
-                                authSid = accountSid
-                            }
-                    }
-                    TextField("From number (E.164, e.g. +15555550100)", text: $fromNumber)
-                        .keyboardType(.phonePad)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
+                ScrollView {
+                    VStack(spacing: BoothifySpacing.md) {
+                        // Credential type picker
+                        credentialTypeCard
 
-                Section {
-                    Button {
-                        save()
-                    } label: {
-                        if sending && resultMessage == nil {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                Text("Saving…")
-                            }
-                        } else {
-                            Label("Save credentials", systemImage: "checkmark.seal.fill")
+                        // Credentials
+                        credentialsCard
+
+                        // Save + email
+                        actionsCard
+
+                        // Test SMS
+                        testCard
+
+                        // Disconnect
+                        if KeychainStore.loadTwilioCredentials() != nil {
+                            disconnectCard
                         }
                     }
-                    .disabled(!canSave || sending)
-
-                    Button {
-                        emailMeInstructions()
-                    } label: {
-                        Label("Email me the setup steps", systemImage: "envelope.fill")
-                    }
-                }
-
-                Section("Test SMS") {
-                    TextField("Send test to (E.164)", text: $testNumber)
-                        .keyboardType(.phonePad)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button {
-                        sendTest()
-                    } label: {
-                        if sending {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                Text("Sending…")
-                            }
-                        } else {
-                            Label("Send test SMS", systemImage: "paperplane.fill")
-                        }
-                    }
-                    .disabled(sending || testNumber.isEmpty || !canSave)
-                    if let resultMessage {
-                        Text(resultMessage)
-                            .font(.footnote)
-                            .foregroundStyle(resultIsError ? BoothifyTheme.error : BoothifyTheme.emerald)
-                    }
-                }
-
-                if KeychainStore.loadTwilioCredentials() != nil {
-                    Section {
-                        Button(role: .destructive) {
-                            confirmDisconnect = true
-                        } label: {
-                            Label("Disconnect Twilio", systemImage: "antenna.radiowaves.left.and.right.slash")
-                        }
-                    }
+                    .padding(.horizontal, BoothifySpacing.md)
+                    .padding(.vertical, BoothifySpacing.md)
                 }
             }
             .navigationTitle("Connect Twilio")
@@ -136,6 +64,8 @@ struct TwilioOnboardingSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
+                        .foregroundStyle(BoothifyTheme.violet)
+                        .font(.subheadline.weight(.semibold))
                 }
             }
             .alert("Disconnect Twilio?", isPresented: $confirmDisconnect) {
@@ -162,6 +92,142 @@ struct TwilioOnboardingSheet: View {
         }
     }
 
+    // MARK: - Cards
+
+    private var credentialTypeCard: some View {
+        TwilioCard(title: "Credential type") {
+            Picker("Credential type", selection: $kind) {
+                Text("API Key (recommended)").tag(TwilioCredentials.CredentialKind.apiKey)
+                Text("Account SID + Auth Token").tag(TwilioCredentials.CredentialKind.accountToken)
+            }
+            .pickerStyle(.segmented)
+            .padding(.bottom, BoothifySpacing.xs)
+
+            Text(kind == .apiKey
+                 ? "API Keys (SK…) are scoped and can be revoked without resetting your whole Twilio account."
+                 : "Auth Tokens grant full Twilio account access. Use only for quick testing.")
+                .font(.caption)
+                .foregroundStyle(BoothifyTheme.textMuted)
+        }
+    }
+
+    private var credentialsCard: some View {
+        TwilioCard(title: "Twilio credentials") {
+            TwilioField(placeholder: "Account SID (AC…)", text: $accountSid)
+            TwilioDivider()
+            if kind == .apiKey {
+                TwilioField(placeholder: "API Key SID (SK…)", text: $authSid)
+                TwilioDivider()
+                TwilioSecureField(placeholder: "API Key Secret", text: $authSecret)
+            } else {
+                TwilioSecureField(placeholder: "Auth Token", text: $authSecret)
+                    .onChange(of: authSecret) { _, _ in authSid = accountSid }
+                    .onChange(of: accountSid) { _, _ in authSid = accountSid }
+            }
+            TwilioDivider()
+            TwilioField(
+                placeholder: "From number (E.164, e.g. +15555550100)",
+                text: $fromNumber,
+                keyboardType: .phonePad
+            )
+        }
+    }
+
+    private var actionsCard: some View {
+        TwilioCard {
+            Button {
+                save()
+            } label: {
+                if sending && resultMessage == nil {
+                    HStack(spacing: BoothifySpacing.sm) {
+                        ProgressView().tint(.white)
+                        Text("Saving…")
+                    }
+                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: BoothifySpacing.xs) {
+                        Image(systemName: "checkmark.seal.fill")
+                        Text("Save credentials")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(!canSave || sending)
+
+            Button {
+                emailMeInstructions()
+            } label: {
+                HStack(spacing: BoothifySpacing.xs) {
+                    Image(systemName: "envelope.fill")
+                    Text("Email me the setup steps")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(SecondaryButtonStyle())
+        }
+    }
+
+    private var testCard: some View {
+        TwilioCard(
+            title: "Test SMS",
+            subtitle: "Confirm your Twilio number can actually send before going live."
+        ) {
+            TwilioField(
+                placeholder: "Send test to (E.164, e.g. +15555550100)",
+                text: $testNumber,
+                keyboardType: .phonePad
+            )
+            TwilioDivider()
+            Button {
+                sendTest()
+            } label: {
+                if sending {
+                    HStack(spacing: BoothifySpacing.sm) {
+                        ProgressView().tint(.white)
+                        Text("Sending…")
+                    }
+                    .frame(maxWidth: .infinity)
+                } else {
+                    HStack(spacing: BoothifySpacing.xs) {
+                        Image(systemName: "paperplane.fill")
+                        Text("Send test SMS")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(sending || testNumber.isEmpty || !canSave)
+
+            if let resultMessage {
+                HStack(spacing: BoothifySpacing.xs) {
+                    Image(systemName: resultIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                        .font(.caption)
+                    Text(resultMessage)
+                        .font(.footnote)
+                }
+                .foregroundStyle(resultIsError ? BoothifyTheme.error : BoothifyTheme.emerald)
+                .padding(.top, BoothifySpacing.xs)
+            }
+        }
+    }
+
+    private var disconnectCard: some View {
+        TwilioCard {
+            Button(role: .destructive) {
+                confirmDisconnect = true
+            } label: {
+                HStack(spacing: BoothifySpacing.sm) {
+                    Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                    Text("Disconnect Twilio")
+                }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(BoothifyTheme.error)
+            }
+            .buttonStyle(SecondaryButtonStyle())
+        }
+    }
+
     // MARK: - Actions
 
     private func save() {
@@ -185,9 +251,6 @@ struct TwilioOnboardingSheet: View {
     }
 
     private func sendTest() {
-        // Save first if not yet — operator might want to test before deciding
-        // to keep credentials. We always persist so a successful test confirms
-        // they're stored.
         save()
         guard let creds = TwilioClient.shared.currentCredentials() else { return }
 
@@ -211,9 +274,6 @@ struct TwilioOnboardingSheet: View {
         }
     }
 
-    /// Open the system mail compose via `mailto:` — universal, doesn't require
-    /// MFMailComposeViewController which silently fails when Mail.app is
-    /// unconfigured.
     private func emailMeInstructions() {
         let subject = "Boothify — set up your Twilio for SMS"
         let body = """
@@ -239,6 +299,71 @@ struct TwilioOnboardingSheet: View {
         if let url = URL(string: "mailto:?subject=\(encodedSubject)&body=\(encodedBody)") {
             UIApplication.shared.open(url)
         }
+    }
+}
+
+// MARK: - Reusable sub-components
+
+private struct TwilioCard<Content: View>: View {
+    var title: String? = nil
+    var subtitle: String? = nil
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
+                VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
+                    Text(title.uppercased())
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.textMuted)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                }
+                .padding(.bottom, BoothifySpacing.xs)
+            }
+            VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+                content
+            }
+            .padding(BoothifySpacing.md)
+            .boothifySurface(radius: BoothifyRadius.card)
+        }
+    }
+}
+
+private struct TwilioDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(BoothifyTheme.surfaceLine)
+            .frame(height: 1)
+    }
+}
+
+private struct TwilioField: View {
+    let placeholder: String
+    let text: Binding<String>
+    var keyboardType: UIKeyboardType = .default
+
+    var body: some View {
+        TextField(placeholder, text: text)
+            .foregroundStyle(.white)
+            .font(.system(.subheadline, design: .monospaced))
+            .keyboardType(keyboardType)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+    }
+}
+
+private struct TwilioSecureField: View {
+    let placeholder: String
+    let text: Binding<String>
+
+    var body: some View {
+        SecureField(placeholder, text: text)
+            .foregroundStyle(.white)
+            .font(.system(.subheadline, design: .monospaced))
     }
 }
 

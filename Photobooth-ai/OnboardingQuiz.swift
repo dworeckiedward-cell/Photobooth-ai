@@ -127,10 +127,20 @@ struct OnboardingQuizSheet: View {
         NavigationStack {
             ZStack {
                 BoothifyTheme.bg.ignoresSafeArea()
-                VStack(spacing: 24) {
-                    progressDots
-                        .padding(.top, 12)
 
+                VStack(spacing: 0) {
+                    // Progress bar
+                    progressBar
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .padding(.top, BoothifySpacing.md)
+
+                    // Step counter
+                    Text("Step \(min(step + 1, totalSteps)) of \(totalSteps)")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(BoothifyTheme.textMuted)
+                        .padding(.top, BoothifySpacing.sm)
+
+                    // Step content
                     Group {
                         switch step {
                         case 0: categoryStep
@@ -141,11 +151,15 @@ struct OnboardingQuizSheet: View {
                         }
                     }
                     .frame(maxHeight: .infinity)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, BoothifySpacing.lg)
+                    .padding(.top, BoothifySpacing.lg)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: step)
 
+                    // Bottom bar
                     bottomBar
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 16)
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .padding(.bottom, BoothifySpacing.lg)
+                        .padding(.top, BoothifySpacing.md)
                 }
             }
             .navigationTitle("Welcome")
@@ -155,6 +169,8 @@ struct OnboardingQuizSheet: View {
                     Button("Skip") {
                         finish(saving: false)
                     }
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .font(.subheadline)
                 }
             }
         }
@@ -162,22 +178,28 @@ struct OnboardingQuizSheet: View {
 
     private var totalSteps: Int { 4 }
 
-    private var progressDots: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<totalSteps, id: \.self) { i in
+    // MARK: - Progress bar
+
+    private var progressBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(i <= step ? BoothifyTheme.violet : BoothifyTheme.surface2)
-                    .frame(width: i == step ? 22 : 8, height: 6)
-                    .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: step)
+                    .fill(BoothifyTheme.surface2)
+                    .frame(height: 4)
+                Capsule()
+                    .fill(BoothifyTheme.violet)
+                    .frame(width: geo.size.width * CGFloat(min(step + 1, totalSteps)) / CGFloat(totalSteps), height: 4)
+                    .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: step)
             }
         }
+        .frame(height: 4)
     }
 
     // MARK: - Steps
 
     @ViewBuilder
     private var categoryStep: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: BoothifySpacing.lg) {
             stepHeader(
                 title: "What events do you run?",
                 subtitle: "We'll preload styles + branding that fit."
@@ -191,7 +213,7 @@ struct OnboardingQuizSheet: View {
 
     @ViewBuilder
     private var modeStep: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: BoothifySpacing.lg) {
             stepHeader(
                 title: "Primary booth mode?",
                 subtitle: "Sets your default after Sign In."
@@ -205,7 +227,7 @@ struct OnboardingQuizSheet: View {
 
     @ViewBuilder
     private var brandingStep: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: BoothifySpacing.lg) {
             stepHeader(
                 title: "Branding on every result?",
                 subtitle: "You can always change this per event."
@@ -219,14 +241,14 @@ struct OnboardingQuizSheet: View {
 
     @ViewBuilder
     private var templateStep: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: BoothifySpacing.lg) {
             stepHeader(
                 title: "Default 360 montage length?",
                 subtitle: "Drives the recording duration + speed ramp."
             )
-            VStack(spacing: 10) {
-                templateChoice(label: "Quick · 4s",   raw: 4)
-                templateChoice(label: "Standard · 9s (recommended)", raw: 9)
+            VStack(spacing: BoothifySpacing.sm) {
+                templateChoice(label: "Quick · 4s", raw: 4)
+                templateChoice(label: "Standard · 9s", badge: "Recommended", raw: 9)
                 templateChoice(label: "Epic · 15s", raw: 15)
             }
         }
@@ -234,25 +256,33 @@ struct OnboardingQuizSheet: View {
 
     @ViewBuilder
     private var summaryStep: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 48, weight: .bold))
-                .foregroundStyle(BoothifyTheme.emerald)
-            Text("All set.")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-            Text("You can change everything in Settings later.")
-                .font(.subheadline)
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: BoothifySpacing.md) {
+            ZStack {
+                Circle()
+                    .fill(BoothifyTheme.emerald.opacity(0.12))
+                    .frame(width: 88, height: 88)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 40, weight: .bold))
+                    .foregroundStyle(BoothifyTheme.emerald)
+            }
+            VStack(spacing: BoothifySpacing.xs) {
+                Text("All set.")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Text("You can change everything in Settings later.")
+                    .font(.subheadline)
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Helpers
 
     @ViewBuilder
     private func stepHeader(title: String, subtitle: String) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: BoothifySpacing.xs) {
             Text(title)
                 .font(.title3.bold())
                 .foregroundStyle(.white)
@@ -272,8 +302,8 @@ struct OnboardingQuizSheet: View {
         symbolFor: ((O) -> String)? = nil,
         choose: @escaping (O) -> Void
     ) -> some View where O: CaseIterable {
-        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-        LazyVGrid(columns: columns, spacing: 10) {
+        let columns = [GridItem(.flexible(), spacing: BoothifySpacing.sm), GridItem(.flexible(), spacing: BoothifySpacing.sm)]
+        LazyVGrid(columns: columns, spacing: BoothifySpacing.sm) {
             ForEach(options) { option in
                 let (label, symbol) = labelAndSymbol(for: option, labelFor: labelFor, symbolFor: symbolFor)
                 optionCard(label: label, symbol: symbol, isSelected: selected == option) {
@@ -292,7 +322,7 @@ struct OnboardingQuizSheet: View {
         symbolFor: ((O) -> String)? = nil,
         choose: @escaping (O) -> Void
     ) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: BoothifySpacing.sm) {
             ForEach(options) { option in
                 let (label, symbol) = labelAndSymbol(for: option, labelFor: labelFor, symbolFor: symbolFor)
                 optionCard(label: label, symbol: symbol, isSelected: selected == option, wide: true) {
@@ -303,8 +333,6 @@ struct OnboardingQuizSheet: View {
         }
     }
 
-    /// Pulls a label + SF symbol off an option using the enum's own `label`
-    /// and `symbol` properties via reflection-friendly defaults.
     private func labelAndSymbol<O>(
         for option: O,
         labelFor: ((O) -> String)?,
@@ -313,7 +341,6 @@ struct OnboardingQuizSheet: View {
         if let labelFor, let symbolFor {
             return (labelFor(option), symbolFor(option))
         }
-        // Type-erased switch over the three enums we actually use here.
         if let opt = option as? EventCategory { return (opt.label, opt.symbol) }
         if let opt = option as? PrimaryBoothMode { return (opt.label, opt.symbol) }
         if let opt = option as? BrandingPreference { return (opt.label, opt.symbol) }
@@ -323,60 +350,81 @@ struct OnboardingQuizSheet: View {
     @ViewBuilder
     private func optionCard(label: String, symbol: String, isSelected: Bool, wide: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: symbol)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(isSelected ? BoothifyTheme.violet : .white)
-                    .frame(width: 28, alignment: .center)
+            HStack(spacing: BoothifySpacing.sm) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
+                        .fill(isSelected ? BoothifyTheme.violet.opacity(0.20) : BoothifyTheme.surface2)
+                        .frame(width: 32, height: 32)
+                    Image(systemName: symbol)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(isSelected ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
+                }
                 Text(label)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.leading)
                 if wide { Spacer() }
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.subheadline.weight(.bold))
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.subheadline)
                         .foregroundStyle(BoothifyTheme.violet)
                 }
             }
-            .padding(14)
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.vertical, BoothifySpacing.sm + 4)
             .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
-            .background(isSelected ? BoothifyTheme.violet.opacity(0.15) : BoothifyTheme.surface1)
+            .background(isSelected ? BoothifyTheme.violet.opacity(0.10) : BoothifyTheme.surface1)
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? BoothifyTheme.violet : BoothifyTheme.surfaceLine, lineWidth: 1)
+                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                    .stroke(isSelected ? BoothifyTheme.violet : BoothifyTheme.surfaceLine, lineWidth: isSelected ? 1.5 : 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
         .buttonStyle(.plain)
     }
 
     @ViewBuilder
-    private func templateChoice(label: String, raw: Double) -> some View {
+    private func templateChoice(label: String, badge: String? = nil, raw: Double) -> some View {
         let isSel = answers.preferredTemplateRawDuration == raw
         Button {
             Haptics.selection()
             answers.preferredTemplateRawDuration = raw
         } label: {
-            HStack {
-                Image(systemName: "slowmo")
-                    .foregroundStyle(isSel ? BoothifyTheme.violet : .white)
+            HStack(spacing: BoothifySpacing.sm) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
+                        .fill(isSel ? BoothifyTheme.violet.opacity(0.20) : BoothifyTheme.surface2)
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "slowmo")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(isSel ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
+                }
                 Text(label)
                     .foregroundStyle(.white)
                     .font(.subheadline.weight(.medium))
+                if let badge {
+                    Text(badge)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.violet)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(BoothifyTheme.violet.opacity(0.15))
+                        .clipShape(Capsule())
+                }
                 Spacer()
                 if isSel {
-                    Image(systemName: "checkmark")
+                    Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(BoothifyTheme.violet)
                 }
             }
-            .padding(14)
-            .background(isSel ? BoothifyTheme.violet.opacity(0.15) : BoothifyTheme.surface1)
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.vertical, BoothifySpacing.sm + 4)
+            .background(isSel ? BoothifyTheme.violet.opacity(0.10) : BoothifyTheme.surface1)
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSel ? BoothifyTheme.violet : BoothifyTheme.surfaceLine, lineWidth: 1)
+                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                    .stroke(isSel ? BoothifyTheme.violet : BoothifyTheme.surfaceLine, lineWidth: isSel ? 1.5 : 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -385,11 +433,11 @@ struct OnboardingQuizSheet: View {
 
     @ViewBuilder
     private var bottomBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: BoothifySpacing.sm) {
             if step > 0 {
                 Button {
                     Haptics.tap(.light)
-                    withAnimation(reduceMotion ? nil : .default) { step -= 1 }
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step -= 1 }
                 } label: {
                     Label("Back", systemImage: "chevron.left")
                         .font(.subheadline.weight(.semibold))
@@ -399,12 +447,12 @@ struct OnboardingQuizSheet: View {
             Button {
                 Haptics.tap()
                 if step < totalSteps {
-                    withAnimation(reduceMotion ? nil : .default) { step += 1 }
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step += 1 }
                 } else {
                     finish(saving: true)
                 }
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: BoothifySpacing.xs) {
                     Text(step == totalSteps ? "Finish" : "Next")
                     Image(systemName: step == totalSteps ? "checkmark" : "chevron.right")
                 }
