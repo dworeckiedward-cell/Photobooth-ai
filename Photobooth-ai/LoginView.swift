@@ -26,7 +26,7 @@ struct LoginView: View {
                         .accessibilityHidden(true)
 
                     Text("Boothify")
-                        .font(.system(size: 36, weight: .bold))
+                        .font(BoothifyType.displayMedium)
                         .foregroundStyle(.white)
 
                     Text("Run AI photobooth & 360 events for your guests.")

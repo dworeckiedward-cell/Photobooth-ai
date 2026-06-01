@@ -338,7 +338,7 @@ private struct RecentEventRow: View {
         return HStack(spacing: 4) {
             Circle().fill(tint).frame(width: 6, height: 6)
             Text(lifecycle.label)
-                .font(.system(size: 10, weight: .bold))
+                .font(.caption2.weight(.bold))
                 .kerning(0.6)
         }
         .foregroundStyle(tint)

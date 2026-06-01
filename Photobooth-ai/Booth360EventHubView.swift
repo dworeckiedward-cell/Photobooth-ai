@@ -157,9 +157,9 @@ struct Booth360EventHubView: View {
                             Spacer()
                             HStack(spacing: 4) {
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.caption2.weight(.bold))
                                 Text("BETA")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.caption2.weight(.bold))
                                     .kerning(0.6)
                             }
                             .foregroundStyle(BoothifyTheme.amber)
@@ -309,7 +309,7 @@ struct Booth360EventHubView: View {
             HStack(spacing: 4) {
                 Circle().fill(statusTint(job: job)).frame(width: 5, height: 5)
                 Text(statusLabel(job: job))
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(statusTint(job: job))
                     .lineLimit(1)
             }
@@ -452,7 +452,7 @@ private struct EmptyThumb: View {
                 )
                 .aspectRatio(1, contentMode: .fit)
             Text("Open slot")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.textMuted)
         }
     }
@@ -467,7 +467,7 @@ private struct StatTile: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .kerning(0.6)
                 .foregroundStyle(BoothifyTheme.textTertiary)
             Text(value)

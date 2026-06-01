@@ -62,7 +62,7 @@ struct ModeSelectionView: View {
     @ViewBuilder
     private var headlineBlock: some View {
         VStack(spacing: 6) {
-            GradientHeading(text: "Choose your mode", font: .system(size: 32, weight: .bold))
+            GradientHeading(text: "Choose your mode", font: BoothifyType.displayMedium)
                 .multilineTextAlignment(.center)
             Text("Create cinematic AI portraits or launch a premium 360° booth experience.")
                 .font(.subheadline)
@@ -79,7 +79,7 @@ struct ModeSelectionView: View {
     @ViewBuilder
     private var microBrand: some View {
         Text("Boothify")
-            .font(.system(size: 12, weight: .semibold))
+            .font(BoothifyType.caption.weight(.semibold))
             .foregroundStyle(.white.opacity(0.80))
             .kerning(0.3)
             .padding(.leading, 130)   // pushes wordmark to x ≈ 130, ending at ~180
@@ -190,7 +190,7 @@ private struct ModeTile: View {
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
-                        .font(.system(size: 30, weight: .bold))
+                        .font(BoothifyType.displayMedium)
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.55), radius: 8, y: 2)
                     Text(description)
@@ -229,9 +229,9 @@ private struct StatusBadge: View {
         VStack(alignment: .trailing, spacing: 4) {
             HStack(spacing: 4) {
                 Image(systemName: badge.symbol)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2.weight(.bold))
                 Text(badge.label)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2.weight(.bold))
                     .kerning(0.6)
             }
             .foregroundStyle(badge.tint)
@@ -274,7 +274,7 @@ struct BetaPreviewSheet: View {
                         .frame(width: 140, height: 140)
                         .blur(radius: 14)
                     Image(systemName: "sparkles")
-                        .font(.system(size: 44, weight: .semibold))
+                        .font(BoothifyType.display)
                         .foregroundStyle(BoothifyTheme.amber)
                         .symbolEffect(.pulse, options: .repeating)
                 }

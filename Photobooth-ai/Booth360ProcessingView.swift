@@ -119,7 +119,7 @@ struct Booth360ProcessingView: View {
                     // monospacedDigit so the % counter doesn't jitter
                     // left/right by 1-2pt as digits flip during render —
                     // the operator stares at this for 10s every recording.
-                    .font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit())
+                    .font(.system(.largeTitle, design: .rounded).weight(.bold).monospacedDigit())
                     .foregroundStyle(.white)
                 Text(job?.status.label ?? "—")
                     .font(.caption2.weight(.semibold))

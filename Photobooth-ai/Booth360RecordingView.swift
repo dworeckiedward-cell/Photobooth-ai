@@ -280,7 +280,7 @@ struct Booth360RecordingView: View {
                 .fill(.red)
                 .frame(width: 8, height: 8)
             Text("REC")
-                .font(.system(size: 11, weight: .bold))
+                .font(.caption2.weight(.bold))
                 .kerning(1.0)
                 .foregroundStyle(.white)
             Text(timeString)

@@ -187,7 +187,7 @@ struct EventHubView: View {
                                     .fill(BoothifyTheme.emerald)
                                     .frame(width: 7, height: 7)
                                 Text("LIVE")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.caption2.weight(.bold))
                                     .kerning(0.6)
                             }
                             .foregroundStyle(BoothifyTheme.emerald)
@@ -480,7 +480,7 @@ private struct RecentThumb: View {
                     .fill(statusTint)
                     .frame(width: 5, height: 5)
                 Text(statusLabel)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(statusTint)
                     .lineLimit(1)
             }
@@ -520,7 +520,7 @@ private struct EmptyThumb: View {
                 )
                 .aspectRatio(1, contentMode: .fit)
             Text("Open slot")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.textMuted)
         }
     }
@@ -537,7 +537,7 @@ private struct StatTile: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .kerning(0.6)
                 .foregroundStyle(BoothifyTheme.textTertiary)
             Text(value)
