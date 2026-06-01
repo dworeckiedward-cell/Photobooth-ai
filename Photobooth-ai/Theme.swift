@@ -182,29 +182,13 @@ struct GradientHeading: View {
 }
 
 // MARK: - Shared components
-
-/// Reusable stat tile (metrics grid on hub screens).
-struct StatTile: View {
-    let value: String
-    let label: String
-    var accent: Color = BoothifyTheme.violet
-    var body: some View {
-        VStack(spacing: BoothifySpacing.xs) {
-            Text(value)
-                .font(BoothifyType.monoTitle)
-                .foregroundStyle(accent)
-            Text(label)
-                .font(BoothifyType.caption2Bold)
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, minHeight: 72)
-        .boothifySurface(radius: BoothifyRadius.card)
-    }
-}
+//
+// Note: StatTile has per-file private implementations in EventHubView and
+// Booth360EventHubView with a different signature — do not add a global
+// StatTile here to avoid redeclaration errors.
 
 /// Reusable empty-state view used across gallery, cloud panel, etc.
-struct EmptyStateView: View {
+struct BoothifyEmptyState: View {
     let icon: String
     let title: String
     let subtitle: String
