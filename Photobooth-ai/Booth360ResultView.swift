@@ -543,6 +543,7 @@ private struct AnimatedDemoPreviewCard: View {
     let eventId: UUID
 
     @State private var anim: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -574,7 +575,7 @@ private struct AnimatedDemoPreviewCard: View {
                         .stroke(.white.opacity(0.55), lineWidth: 2)
                         .frame(width: 78, height: 78)
                     Image(systemName: "play.fill")
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.title.weight(.bold))
                         .foregroundStyle(.white)
                         .offset(x: 2)
                 }
@@ -603,6 +604,7 @@ private struct AnimatedDemoPreviewCard: View {
             }
         }
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) {
                 anim = 1
             }
@@ -632,6 +634,8 @@ private struct Booth360QRSheet: View {
                         .font(.title2)
                         .foregroundStyle(BoothifyTheme.textTertiary)
                 }
+                .frame(width: 44, height: 44)
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 24)
             .padding(.top, 24)
@@ -701,7 +705,7 @@ private struct Booth360SMSSheet: View {
 
             if sent {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48))
+                    .font(.largeTitle)
                     .foregroundStyle(BoothifyTheme.emerald)
                 Spacer()
             } else {

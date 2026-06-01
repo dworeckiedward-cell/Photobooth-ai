@@ -252,7 +252,7 @@ struct SettingsRow: View {
                             .foregroundStyle(disabled ? BoothifyTheme.textTertiary : .white)
                         if let badge {
                             Text(badge.label)
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.caption2.weight(.bold))
                                 .kerning(0.5)
                                 .foregroundStyle(badge.tint)
                                 .padding(.horizontal, 5)
@@ -301,7 +301,7 @@ struct ComingSoonView: View {
                                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
                         )
                     Image(systemName: "clock.badge.questionmark")
-                        .font(.system(size: 30, weight: .semibold))
+                        .font(.title2.weight(.semibold))
                         .foregroundStyle(BoothifyTheme.violet)
                         .accessibilityHidden(true)
                 }

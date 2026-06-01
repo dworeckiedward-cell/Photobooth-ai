@@ -36,6 +36,8 @@ enum BoothifyType {
     static let subheadline   = Font.system(.subheadline, design: .default)
     static let caption       = Font.system(.caption,     design: .default)
     static let captionBold   = Font.system(.caption,     design: .default).weight(.semibold)
+    /// Alias for captionBold — caption with semibold weight.
+    static let captionEmphasis = Font.system(.caption,   design: .default).weight(.semibold)
     static let caption2      = Font.system(.caption2,    design: .default)
     static let caption2Bold  = Font.system(.caption2,    design: .default).weight(.bold)
     /// Monospaced body numerals — prevents jitter on ticking values.

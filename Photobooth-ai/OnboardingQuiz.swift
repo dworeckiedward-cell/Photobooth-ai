@@ -262,7 +262,7 @@ struct OnboardingQuizSheet: View {
                     .fill(BoothifyTheme.emerald.opacity(0.12))
                     .frame(width: 88, height: 88)
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 40, weight: .bold))
+                    .font(.largeTitle.weight(.bold))
                     .foregroundStyle(BoothifyTheme.emerald)
             }
             VStack(spacing: BoothifySpacing.xs) {

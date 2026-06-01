@@ -6,6 +6,7 @@ import SwiftUI
 /// all of their events regardless of which mode they were created in.
 struct Booth360LandingView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var eventName: String = ""
     @State private var creating: Bool = false
@@ -122,7 +123,7 @@ struct Booth360LandingView: View {
                         lineWidth: nameFocused ? 1.5 : 1
                     )
             )
-            .animation(.easeOut(duration: 0.18), value: nameFocused)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: nameFocused)
             .focused($nameFocused)
             .submitLabel(.go)
             .onSubmit { startSession() }

@@ -56,7 +56,9 @@ struct Booth360EventHubView: View {
                     app.push(.settings360Hub(eventId: eventId))
                 } label: {
                     Image(systemName: "gearshape.fill")
+                        .foregroundStyle(BoothifyTheme.textSecondary)
                 }
+                .frame(width: 44, height: 44)
                 .accessibilityLabel("360 settings")
             }
         }
@@ -385,6 +387,7 @@ struct Booth360EventHubView: View {
                     Label("Share", systemImage: "square.and.arrow.up")
                         .font(.caption.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 .disabled(!hasUrl)
@@ -402,6 +405,7 @@ struct Booth360EventHubView: View {
                     Label(copiedLink ? "Copied" : "Copy", systemImage: copiedLink ? "checkmark" : "doc.on.doc")
                         .font(.caption.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 .disabled(!hasUrl)

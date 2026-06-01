@@ -120,6 +120,7 @@ private struct ModeTile: View {
     let action: () -> Void
 
     @State private var pressed: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -127,7 +128,7 @@ private struct ModeTile: View {
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed ? 0.982 : 1.0)
-        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: pressed)
+        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: pressed)
         .onLongPressGesture(
             minimumDuration: 0,
             maximumDistance: 30,
@@ -243,9 +244,9 @@ private struct BadgePill: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: badge.symbol)
-                .font(.system(size: 7, weight: .black))
+                .font(.caption2.weight(.black))
             Text(badge.label)
-                .font(.system(size: 10, weight: .bold))
+                .font(.caption2.weight(.bold))
                 .kerning(0.8)
         }
         .foregroundStyle(badge.tint)

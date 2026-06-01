@@ -34,7 +34,7 @@ struct LoginView: View {
 
                         HStack(spacing: -8) {
                             Image(systemName: "camera.aperture")
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.title2.weight(.semibold))
                                 .foregroundStyle(BoothifyTheme.violet)
                                 .frame(width: 52, height: 52)
                                 .background(BoothifyTheme.surface1)
@@ -42,7 +42,7 @@ struct LoginView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
 
                             Image(systemName: "slowmo")
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.title2.weight(.semibold))
                                 .foregroundStyle(BoothifyTheme.violet)
                                 .frame(width: 52, height: 52)
                                 .background(BoothifyTheme.surface1)
@@ -51,7 +51,7 @@ struct LoginView: View {
                                 .offset(y: 12)
 
                             Image(systemName: "wand.and.stars")
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.title2.weight(.semibold))
                                 .foregroundStyle(BoothifyTheme.amber)
                                 .frame(width: 52, height: 52)
                                 .background(BoothifyTheme.surface1)

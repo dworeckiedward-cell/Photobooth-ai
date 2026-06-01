@@ -6,6 +6,7 @@ import SwiftUI
 /// when the input is valid. Recent events list below uses status-aware rows.
 struct PhotoboothLandingView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var eventName: String = ""
     @State private var creating: Bool = false
@@ -130,7 +131,7 @@ struct PhotoboothLandingView: View {
                 .textInputAutocapitalization(.words)
                 .disabled(creating)
                 .accessibilityLabel("Event name")
-                .animation(.easeInOut(duration: 0.18), value: nameFocused)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: nameFocused)
             }
 
             // CTA
@@ -153,7 +154,7 @@ struct PhotoboothLandingView: View {
             .buttonStyle(PrimaryButtonStyle())
             .disabled(creating || !isValidName)
             .opacity(isValidName ? 1.0 : 0.45)
-            .animation(.easeOut(duration: 0.2), value: isValidName)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: isValidName)
 
             if let createError {
                 HStack(spacing: BoothifySpacing.xs) {

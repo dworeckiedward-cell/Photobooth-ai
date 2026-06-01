@@ -14,6 +14,7 @@ import UIKit
 /// reached via the Recent captures section — not as primary cards on this screen.
 struct EventHubView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let eventId: UUID
 
     @State private var recentPhotos: [Photo] = []
@@ -316,7 +317,7 @@ struct EventHubView: View {
             StatTile(label: "Processing", value: "\(totalProcessing)", tint: BoothifyTheme.amber, muted: allZero)
         }
         .opacity(allZero ? 0.55 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: allZero)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: allZero)
     }
 
     // MARK: - Share event

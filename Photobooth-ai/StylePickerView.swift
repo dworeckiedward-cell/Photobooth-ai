@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StylePickerView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let eventId: UUID
     let capturedImageData: Data
@@ -96,7 +97,7 @@ struct StylePickerView: View {
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
                     }
-                    .animation(.easeOut(duration: 0.2), value: selecting != nil)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: selecting != nil)
 
                     Spacer()
 
@@ -163,6 +164,8 @@ private struct StyleTile: View {
     let isDisabled: Bool
     let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
@@ -226,8 +229,8 @@ private struct StyleTile: View {
             )
             .opacity(isDisabled ? 0.30 : 1)
             .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
-            .animation(.easeOut(duration: 0.18), value: isSelecting)
-            .animation(.easeOut(duration: 0.18), value: isDisabled)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isSelecting)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isDisabled)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled || isSelecting)

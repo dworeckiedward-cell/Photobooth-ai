@@ -7,6 +7,7 @@ import SwiftUI
 /// Tap-anywhere on the row triggers a refresh. Counters animate.
 struct CloudStatusPanel: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let eventId: UUID
 
     @State private var refreshing: Bool = false
@@ -40,12 +41,13 @@ struct CloudStatusPanel: View {
                         .foregroundStyle(refreshing ? BoothifyTheme.violet : BoothifyTheme.textTertiary)
                         .rotationEffect(refreshing ? .degrees(360) : .zero)
                         .animation(
-                            refreshing
+                            reduceMotion ? nil : (refreshing
                                 ? .linear(duration: 0.8).repeatForever(autoreverses: false)
-                                : .default,
+                                : .default),
                             value: refreshing
                         )
                 }
+                .frame(width: 44, height: 44)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Refresh cloud status")
             }
@@ -152,7 +154,7 @@ struct CloudStatusPanel: View {
                 .contentTransition(.numericText())
 
             Text(label)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .kerning(0.4)
                 .foregroundStyle(BoothifyTheme.textTertiary)
                 .textCase(.uppercase)
@@ -166,7 +168,7 @@ struct CloudStatusPanel: View {
             RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
                 .stroke(count > 0 ? tint.opacity(0.20) : BoothifyTheme.surfaceLine, lineWidth: 0.5)
         )
-        .animation(.easeInOut(duration: 0.25), value: count)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: count)
     }
 }
 

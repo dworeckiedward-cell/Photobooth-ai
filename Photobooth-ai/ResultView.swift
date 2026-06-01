@@ -113,7 +113,7 @@ struct ResultView: View {
                             .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
                     )
                 Image(systemName: "sparkles")
-                    .font(.system(size: 34, weight: .semibold))
+                    .font(.title.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.violet)
                     .symbolEffect(.pulse, options: .repeating)
                     .accessibilityHidden(true)
@@ -128,7 +128,7 @@ struct ResultView: View {
                     .foregroundStyle(BoothifyTheme.textSecondary)
                     .id(messageIndex)
                     .transition(.opacity)
-                    .animation(.easeInOut(duration: 0.4), value: messageIndex)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: messageIndex)
             }
 
             ProgressView()
@@ -165,7 +165,7 @@ struct ResultView: View {
                             .stroke(BoothifyTheme.error.opacity(0.35), lineWidth: 1)
                     )
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 32, weight: .semibold))
+                    .font(.title.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.error)
                     .accessibilityHidden(true)
             }
@@ -647,7 +647,7 @@ private struct EmailSheet: View {
                     Spacer()
                     VStack(spacing: BoothifySpacing.md) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 56))
+                            .font(.largeTitle)
                             .foregroundStyle(BoothifyTheme.emerald)
                         Text("Check your inbox")
                             .font(.subheadline)
@@ -740,7 +740,7 @@ private struct SMSSheet: View {
                     Spacer()
                     VStack(spacing: BoothifySpacing.md) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 56))
+                            .font(.largeTitle)
                             .foregroundStyle(BoothifyTheme.emerald)
                         Text("Message on its way")
                             .font(.subheadline)

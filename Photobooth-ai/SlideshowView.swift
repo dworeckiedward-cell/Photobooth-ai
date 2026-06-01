@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SlideshowView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let eventId: UUID
 
     @State private var currentIndex: Int = 0
@@ -49,7 +50,7 @@ struct SlideshowView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.6), value: currentIndex)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: currentIndex)
     }
 
     private func photoSlide(_ photo: Photo) -> some View {
@@ -156,7 +157,7 @@ struct SlideshowView: View {
                 Capsule()
                     .fill(isCurrent ? Color.white : Color.white.opacity(0.30))
                     .frame(width: isCurrent ? 20 : 6, height: 4)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentIndex)
+                    .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: currentIndex)
             }
         }
         .padding(.horizontal, BoothifySpacing.lg)
@@ -168,7 +169,7 @@ struct SlideshowView: View {
     private var emptyState: some View {
         VStack(spacing: BoothifySpacing.md) {
             Image(systemName: "tv")
-                .font(.system(size: 52, weight: .bold))
+                .font(.largeTitle.weight(.bold))
                 .foregroundStyle(BoothifyTheme.violet)
                 .accessibilityHidden(true)
 
