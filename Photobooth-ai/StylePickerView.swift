@@ -10,6 +10,7 @@ struct StylePickerView: View {
     @State private var selecting: PhotoStyle? = nil
     @State private var uploadError: String? = nil
     @State private var queuedOffline = false
+    @State private var tilesAppeared: Bool = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -50,7 +51,7 @@ struct StylePickerView: View {
                             .filter { enabled.contains($0) }
                         let styles = ordered.isEmpty ? Array(enabled).sorted { $0.label < $1.label } : ordered
 
-                        ForEach(styles) { style in
+                        ForEach(Array(styles.enumerated()), id: \.element.id) { index, style in
                             StyleTile(
                                 style: style,
                                 isSelecting: selecting == style,
@@ -58,10 +59,18 @@ struct StylePickerView: View {
                             ) {
                                 pick(style: style)
                             }
+                            .opacity(tilesAppeared ? 1 : 0)
+                            .offset(y: tilesAppeared ? 0 : 28)
+                            .animation(
+                                reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.78)
+                                    .delay(min(Double(index), 10) * 0.055),
+                                value: tilesAppeared
+                            )
                         }
                     }
                     .frame(maxWidth: 620)
                     .padding(.horizontal, BoothifySpacing.md)
+                    .onAppear { tilesAppeared = true }
 
                     // Scroll clearance so content isn't hidden behind bottom bar
                     Spacer(minLength: 120)

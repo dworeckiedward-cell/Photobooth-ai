@@ -78,14 +78,40 @@ struct CameraScreen: View {
             // Countdown overlay
             if let countdown {
                 ZStack {
-                    Color.black.opacity(0.3).ignoresSafeArea()
-                    Text("\(countdown)")
-                        .font(.system(size: 220, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.6), radius: 20)
-                        .transition(.scale.combined(with: .opacity))
-                        .id(countdown)
+                    // Dark vignette
+                    RadialGradient(
+                        colors: [.clear, .black.opacity(0.55)],
+                        center: .center,
+                        startRadius: 80,
+                        endRadius: 300
+                    )
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+
+                    VStack(spacing: 12) {
+                        Text("\(countdown)")
+                            .font(.system(size: 200, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: BoothifyTheme.violet.opacity(0.8), radius: 30, y: 0)
+                            .shadow(color: .black.opacity(0.5), radius: 10)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .scale(scale: 1.4).combined(with: .opacity),
+                                    removal: .scale(scale: 0.6).combined(with: .opacity)
+                                )
+                            )
+                            .id(countdown)
+
+                        Text(countdown == 1 ? "SMILE!" : "Get ready")
+                            .font(.headline.weight(.bold))
+                            .kerning(1.5)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .textCase(.uppercase)
+                            .transition(.opacity)
+                            .id("label-\(countdown)")
+                    }
                 }
+                .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.65), value: countdown)
             }
 
             // Top + bottom chrome
@@ -522,8 +548,9 @@ struct CameraScreen: View {
         countdown = 3
         Task {
             for value in stride(from: 3, through: 1, by: -1) {
-                withAnimation(.easeOut(duration: 0.2)) { countdown = value }
-                Haptics.tap(.light)
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { countdown = value }
+                let style: UIImpactFeedbackGenerator.FeedbackStyle = value == 1 ? .heavy : .medium
+                Haptics.tap(style)
                 try? await Task.sleep(for: .seconds(1))
             }
             withAnimation { countdown = nil }

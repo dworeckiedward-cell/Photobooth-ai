@@ -18,8 +18,12 @@ struct ResultView: View {
     @State private var pollTask: Task<Void, Never>?
     @State private var loadedImage: UIImage?
     @State private var messageIndex: Int = 0
+    @State private var particlePhase: Bool = false
+    @State private var haloPulse: Bool = false
+    @State private var dotPhase: Bool = false
     @State private var revealOpacity: Double = 0
     @State private var glow: Double = 0
+    @State private var showConfetti: Bool = false
     @State private var sharePresented: Bool = false
     @State private var qrPresented: Bool = false
     @State private var emailPresented: Bool = false
@@ -109,45 +113,146 @@ struct ResultView: View {
 
     // MARK: - States
 
+    // Fixed particle data — built once at type load, never re-shuffled on render.
+    private static let particles: [GeneratingParticle] = {
+        let seeds: [(dx: CGFloat, dy: CGFloat, sz: CGFloat, op: Double, dur: Double, del: Double, accent: Bool)] = [
+            (-95,  -80, 5, 0.7, 3.2, 0.0, true),
+            ( 80,  -60, 4, 0.5, 2.8, 0.4, false),
+            (-40,  110, 6, 0.6, 3.6, 0.9, true),
+            ( 110, -30, 4, 0.4, 2.6, 1.5, false),
+            (-70,   50, 5, 0.7, 3.0, 0.2, true),
+            (  20, -115, 4, 0.5, 3.8, 1.1, false),
+            ( 115,  70, 6, 0.6, 2.9, 0.7, true),
+            (-115,  10, 4, 0.4, 3.4, 1.8, false),
+            (  55,  95, 5, 0.7, 2.7, 0.3, true),
+            (  -5, -105, 4, 0.5, 3.1, 1.3, false),
+            ( -90,  -50, 6, 0.6, 3.5, 0.6, true),
+            (  60,  -90, 4, 0.4, 2.5, 1.9, false),
+        ]
+        return seeds.map {
+            GeneratingParticle(
+                offset: CGSize(width: $0.dx, height: $0.dy),
+                size: $0.sz,
+                opacity: $0.op,
+                duration: $0.dur,
+                delay: $0.del,
+                isAccent: $0.accent
+            )
+        }
+    }()
+
     private var generatingState: some View {
-        VStack(spacing: BoothifySpacing.lg) {
+        ZStack {
+            // 1. Particle field
             ZStack {
-                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                    .fill(BoothifyTheme.surface1)
-                    .frame(width: 80, height: 80)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                    )
-                Image(systemName: "sparkles")
-                    .font(.title.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
-                    .symbolEffect(.pulse, options: .repeating)
-                    .accessibilityHidden(true)
+                ForEach(Array(Self.particles.enumerated()), id: \.offset) { _, p in
+                    Circle()
+                        .fill(p.isAccent
+                              ? BoothifyTheme.violet.opacity(0.5)
+                              : BoothifyTheme.violet.opacity(0.25))
+                        .frame(width: p.size, height: p.size)
+                        .offset(
+                            x: p.offset.width,
+                            y: particlePhase ? p.offset.height - 40 : p.offset.height + 10
+                        )
+                        .opacity(particlePhase ? p.opacity : 0)
+                        .animation(
+                            reduceMotion ? nil :
+                                .linear(duration: p.duration)
+                                .repeatForever(autoreverses: false)
+                                .delay(p.delay),
+                            value: particlePhase
+                        )
+                }
             }
 
-            VStack(spacing: BoothifySpacing.xs) {
-                Text("Generating photo")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-                Text(funnyMessage(index: messageIndex))
-                    .font(.subheadline)
-                    .foregroundStyle(BoothifyTheme.textSecondary)
-                    .id(messageIndex)
-                    .transition(.opacity)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: messageIndex)
+            // 2. Content column
+            VStack(spacing: BoothifySpacing.lg) {
+
+                // Icon + halo
+                ZStack {
+                    // 3. Pulsing violet halo (behind icon)
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [BoothifyTheme.violet.opacity(0.18), .clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 90
+                            )
+                        )
+                        .frame(width: 180, height: 180)
+                        .scaleEffect(haloPulse ? 1.15 : 0.85)
+                        .animation(
+                            reduceMotion ? nil :
+                                .easeInOut(duration: 1.8).repeatForever(autoreverses: true),
+                            value: haloPulse
+                        )
+
+                    // Central icon block
+                    RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+                        .fill(BoothifyTheme.surface1)
+                        .frame(width: 96, height: 96)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                        )
+                    Image(systemName: "wand.and.stars")
+                        .font(.title.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.violet)
+                        .symbolEffect(.variableColor.iterative.reversing, options: .repeating)
+                        .accessibilityHidden(true)
+                }
+
+                // 4. Copy block
+                VStack(spacing: BoothifySpacing.xs) {
+                    Text("Crafting your portrait")
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                    Text(funnyMessage(index: messageIndex))
+                        .font(.subheadline)
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                        .id(messageIndex)
+                        .transition(.opacity)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: messageIndex)
+                }
+
+                // 5. Three-dot pulse indicator
+                HStack(spacing: 6) {
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(BoothifyTheme.violet)
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(dotPhase ? 1.0 : 0.6)
+                            .animation(
+                                reduceMotion ? nil :
+                                    .easeInOut(duration: 0.6)
+                                    .repeatForever()
+                                    .delay(Double(i) * 0.2),
+                                value: dotPhase
+                            )
+                    }
+                }
+
+                // 6. Footer
+                Text("Usually ready in ~15 seconds")
+                    .font(.caption)
+                    .foregroundStyle(BoothifyTheme.textMuted)
             }
-
-            ProgressView()
-                .progressViewStyle(.linear)
-                .tint(BoothifyTheme.violet)
-                .frame(maxWidth: 200)
-
-            Text("Average time: ~10 seconds")
-                .font(.caption2)
-                .foregroundStyle(BoothifyTheme.textMuted)
         }
         .padding(BoothifySpacing.xl)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) {
+                particlePhase = true
+            }
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                haloPulse = true
+            }
+            withAnimation(.easeInOut(duration: 0.6).repeatForever()) {
+                dotPhase = true
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Generating your photo")
     }
@@ -156,6 +261,11 @@ struct ResultView: View {
     private func completedView(photo: Photo) -> some View {
         ZStack(alignment: .bottom) {
             photoCard(photo: photo).ignoresSafeArea(edges: .bottom)
+            if showConfetti {
+                ConfettiView()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
             actionsBar(photo: photo)
         }
     }
@@ -233,7 +343,7 @@ struct ResultView: View {
         }
         .shadow(color: Color.black.opacity(glow * 0.6), radius: 40)
         .opacity(revealOpacity)
-        .scaleEffect(0.98 + 0.02 * revealOpacity)
+        .scaleEffect(revealOpacity < 1 ? 0.94 : 1.0)
         .onAppear { playRevealAnimation() }
     }
 
@@ -483,15 +593,23 @@ struct ResultView: View {
     private func playRevealAnimation() {
         guard revealOpacity == 0 else { return }
         // QW3 — Reduce Motion honors the user's accessibility setting.
-        // Snap to final values without easing/glow when ON.
+        // Snap to final values without easing/glow/confetti when ON.
         if reduceMotion {
             revealOpacity = 1
             glow = 0
             return
         }
-        withAnimation(.easeOut(duration: 0.7)) { revealOpacity = 1 }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.72).delay(0.05)) { revealOpacity = 1 }
         withAnimation(.easeOut(duration: 0.75)) { glow = 0.55 }
         withAnimation(.easeIn(duration: 0.75).delay(0.75)) { glow = 0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            Haptics.notify(.success)
+        }
+        showConfetti = true
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            showConfetti = false
+        }
     }
 
     private var shareItems: [Any] {
@@ -626,6 +744,78 @@ struct ResultView: View {
         ]
         return messages[index % messages.count]
     }
+}
+
+// MARK: - Confetti
+
+private struct ConfettiView: View {
+    private struct Piece: Identifiable {
+        let id = UUID()
+        let color: Color
+        let angle: Double
+        let speed: Double
+        let rotationSpeed: Double
+        let delay: Double
+    }
+
+    private let pieces: [Piece]
+    @State private var animating = false
+
+    private static let palette: [Color] = [
+        Color(red: 0.545, green: 0.361, blue: 0.965), // violet
+        .white,
+        Color(red: 0.063, green: 0.725, blue: 0.506), // emerald
+        Color(red: 0.960, green: 0.620, blue: 0.043), // amber
+        Color(red: 0.851, green: 0.275, blue: 0.937), // fuchsia
+    ]
+
+    init() {
+        var built: [Piece] = []
+        built.reserveCapacity(24)
+        for i in 0..<24 {
+            let color: Color = Self.palette[i % Self.palette.count]
+            let angle: Double = Double(i) / 24.0 * .pi * 2
+            let speed: Double = 200.0 + Double(i % 6) * 22.0
+            let rotationSpeed: Double = 180.0 + Double(i % 5) * 36.0
+            let delay: Double = Double(i % 4) * 0.04
+            built.append(Piece(color: color, angle: angle, speed: speed, rotationSpeed: rotationSpeed, delay: delay))
+        }
+        pieces = built
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let cx = geo.size.width / 2
+            let cy = geo.size.height * 0.45
+            ZStack {
+                ForEach(pieces) { p in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(p.color)
+                        .frame(width: 6, height: 12)
+                        .rotationEffect(.degrees(animating ? p.rotationSpeed : 0))
+                        .offset(
+                            x: animating ? cos(p.angle) * p.speed : 0,
+                            y: animating ? sin(p.angle) * p.speed - 60 : 0
+                        )
+                        .opacity(animating ? 0 : 1)
+                        .position(x: cx, y: cy)
+                        .animation(.easeOut(duration: 1.1).delay(p.delay), value: animating)
+                }
+            }
+        }
+        .onAppear { animating = true }
+    }
+}
+
+// MARK: - Generating particle model
+
+private struct GeneratingParticle {
+    let offset: CGSize
+    let size: CGFloat
+    let opacity: Double
+    let duration: Double
+    let delay: Double
+    let isAccent: Bool
 }
 
 // MARK: - Share buttons & sheets
