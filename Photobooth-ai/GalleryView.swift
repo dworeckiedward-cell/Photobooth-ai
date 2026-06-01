@@ -48,6 +48,22 @@ struct GalleryView: View {
                                 .foregroundStyle(BoothifyTheme.textTertiary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
+
+                            Button {
+                                Haptics.tap(.medium)
+                                app.push(.camera(eventId: eventId))
+                            } label: {
+                                Text("Start capturing")
+                                    .font(.callout.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                                    .background(BoothifyTheme.violet)
+                                    .clipShape(.capsule)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Start capturing photos")
+                            .padding(.top, 8)
                         }
                         .padding(.top, 60)
                     } else {
