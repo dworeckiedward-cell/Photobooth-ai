@@ -19,21 +19,68 @@ struct LoginView: View {
             VStack(spacing: 28) {
                 Spacer()
 
-                VStack(spacing: 12) {
-                    Image(systemName: "camera.aperture")
-                        .font(.system(size: 56, weight: .semibold))
-                        .foregroundStyle(BoothifyTheme.violet)
+                VStack(spacing: 0) {
+                    // Animated gradient icon cluster
+                    ZStack {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [BoothifyTheme.violet.opacity(0.35), .clear],
+                                    center: .center,
+                                    startRadius: 0, endRadius: 70
+                                )
+                            )
+                            .frame(width: 140, height: 140)
+
+                        HStack(spacing: -8) {
+                            Image(systemName: "camera.aperture")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(BoothifyTheme.violet)
+                                .frame(width: 52, height: 52)
+                                .background(BoothifyTheme.surface1)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+
+                            Image(systemName: "slowmo")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(BoothifyTheme.fuchsia)
+                                .frame(width: 52, height: 52)
+                                .background(BoothifyTheme.surface1)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+                                .offset(y: 12)
+
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(BoothifyTheme.amber)
+                                .frame(width: 52, height: 52)
+                                .background(BoothifyTheme.surface1)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+                        }
                         .accessibilityHidden(true)
+                    }
+                    .padding(.bottom, 24)
 
                     Text("Boothify")
-                        .font(BoothifyType.displayMedium)
+                        .font(BoothifyType.display)
                         .foregroundStyle(.white)
 
-                    Text("Run AI photobooth & 360 events for your guests.")
+                    Text("AI photobooth & 360 video for your events.")
                         .font(.subheadline)
                         .foregroundStyle(BoothifyTheme.textSecondary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 6)
+
+                    // Feature pills
+                    HStack(spacing: 8) {
+                        featurePill(icon: "camera.fill", label: "AI Photos")
+                        featurePill(icon: "video.fill", label: "360 Video")
+                        featurePill(icon: "icloud.fill", label: "Instant Share")
+                    }
+                    .padding(.top, 20)
+                    .padding(.horizontal, 16)
                 }
 
                 Spacer()
@@ -143,6 +190,22 @@ struct LoginView: View {
         let f = PersonNameComponentsFormatter()
         f.style = .default
         return f.string(from: components)
+    }
+
+    @ViewBuilder
+    private func featurePill(icon: String, label: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.semibold))
+            Text(label)
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(BoothifyTheme.textSecondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(BoothifyTheme.surface1)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
     }
 }
 
