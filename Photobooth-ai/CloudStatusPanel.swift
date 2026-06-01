@@ -10,8 +10,10 @@ struct CloudStatusPanel: View {
     let eventId: UUID
 
     @State private var refreshing: Bool = false
+    @State private var initialLoading: Bool = true
 
     private var status: EventCloudStatus { app.cloudStatus(for: eventId) }
+    private var isEmpty: Bool { status.queued == 0 && status.uploading == 0 && status.done == 0 && status.sent == 0 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -44,11 +46,31 @@ struct CloudStatusPanel: View {
                 .accessibilityLabel("Refresh cloud status")
             }
 
-            HStack(spacing: 8) {
-                counter("In queue", count: status.queued, tint: BoothifyTheme.textTertiary, symbol: "clock")
-                counter("Uploading", count: status.uploading, tint: BoothifyTheme.amber, symbol: "icloud.and.arrow.up.fill")
-                counter("Done", count: status.done, tint: BoothifyTheme.emerald, symbol: "checkmark.seal.fill")
-                counter("Sent", count: status.sent, tint: BoothifyTheme.violet, symbol: "paperplane.fill")
+            if initialLoading {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.9, anchor: .center)
+                    Text("Fetching cloud status...")
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                .frame(height: 60)
+                .frame(maxWidth: .infinity, alignment: .center)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        counter("In queue", count: status.queued, tint: BoothifyTheme.textTertiary, symbol: "clock")
+                        counter("Uploading", count: status.uploading, tint: BoothifyTheme.amber, symbol: "icloud.and.arrow.up.fill")
+                        counter("Done", count: status.done, tint: BoothifyTheme.emerald, symbol: "checkmark.seal.fill")
+                        counter("Sent", count: status.sent, tint: BoothifyTheme.violet, symbol: "paperplane.fill")
+                    }
+
+                    if isEmpty {
+                        Text("No activity yet — start capturing to see counters update.")
+                            .font(.caption2)
+                            .foregroundStyle(BoothifyTheme.textMuted)
+                    }
+                }
             }
         }
         .padding(14)
@@ -60,6 +82,7 @@ struct CloudStatusPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .task(id: eventId) {
             // Initial fetch — uses local snapshot first then races a backend call.
+            defer { initialLoading = false }
             await app.refreshCloudStatus(for: eventId)
         }
         .accessibilityElement(children: .contain)
