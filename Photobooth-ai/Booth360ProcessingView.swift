@@ -12,10 +12,21 @@ struct Booth360ProcessingView: View {
 
     @State private var pipelineTask: Task<Void, Never>?
     @State private var didNavigate: Bool = false
+    @State private var tipIndex: Int = 0
+    @State private var tipTimer: Timer? = nil
 
     private var job: Booth360Job? { app.job(id: jobId) }
 
     private let steps: [Booth360ProcessingStep] = Booth360ProcessingStep.allCases
+
+    private let processingTips: [(symbol: String, text: String)] = [
+        ("wand.and.stars", "AI is color-grading your 360 footage"),
+        ("film.stack", "Stitching frames for smooth playback"),
+        ("gauge.with.dots.needle.67percent", "Optimizing for mobile streaming"),
+        ("music.note", "Syncing your soundtrack to the video"),
+        ("arrow.triangle.2.circlepath", "Applying stabilization passes"),
+        ("sparkles", "Final quality check before delivery"),
+    ]
 
     var body: some View {
         ZStack {
@@ -26,6 +37,9 @@ struct Booth360ProcessingView: View {
                 VStack(spacing: 26) {
                     titleBlock
                     progressRing
+                    if job?.status != .completed && job?.status != .failed {
+                        tipBlock
+                    }
                     stepsList
 
                     if job?.status == .failed {
@@ -57,10 +71,19 @@ struct Booth360ProcessingView: View {
                 }
             }
         }
+        .onAppear {
+            tipTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
+                    tipIndex = (tipIndex + 1) % processingTips.count
+                }
+            }
+        }
         .onDisappear {
             // Once we've navigated forward, leave the task to finish naturally.
             // If the user backs out, cancel it.
             if !didNavigate { pipelineTask?.cancel() }
+            tipTimer?.invalidate()
+            tipTimer = nil
         }
         .onChange(of: job?.status) { _, newValue in
             guard let newValue, newValue == .completed, !didNavigate else { return }
@@ -133,6 +156,32 @@ struct Booth360ProcessingView: View {
         guard let job else { return 0 }
         if job.status == .completed { return 1.0 }
         return job.progress
+    }
+
+    // MARK: - Processing tips
+
+    private var tipBlock: some View {
+        HStack(spacing: 10) {
+            Image(systemName: processingTips[tipIndex].symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.amber)
+                .frame(width: 20)
+            Text(processingTips[tipIndex].text)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(BoothifyTheme.textSecondary)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(BoothifyTheme.surface1)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+        )
+        .id(tipIndex)  // forces fade transition
+        .transition(.opacity)
     }
 
     // MARK: - Steps list
