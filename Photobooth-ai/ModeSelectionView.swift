@@ -20,7 +20,7 @@ struct ModeSelectionView: View {
                         // Primary: AI Photobooth — tall, dominant
                         ModeTile(
                             title: "AI Photobooth",
-                            tagline: "10 cinematic styles. Instant results.",
+                            tagline: "22 cinematic styles. Instant results.",
                             cta: "Start session",
                             ctaSymbol: "arrow.right",
                             asset: "Mode_Photobooth",
@@ -65,11 +65,11 @@ struct ModeSelectionView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Boothify")
-                    .font(.system(.title2, design: .default, weight: .bold))
+                    .font(BoothifyType.title)
                     .foregroundStyle(.white)
                     .kerning(-0.3)
                 Text("Choose your mode")
-                    .font(.system(.footnote, design: .default, weight: .regular))
+                    .font(BoothifyType.caption)
                     .foregroundStyle(BoothifyTheme.textTertiary)
             }
             Spacer()

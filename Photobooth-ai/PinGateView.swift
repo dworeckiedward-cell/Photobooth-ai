@@ -44,7 +44,7 @@ struct PinGateView: View {
                 // Lock icon + title
                 VStack(spacing: BoothifySpacing.sm) {
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 36, weight: .semibold))
+                        .font(BoothifyType.displayIcon)
                         .foregroundStyle(BoothifyTheme.textSecondary)
 
                     Text("Operator Settings")

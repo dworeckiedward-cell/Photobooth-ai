@@ -274,6 +274,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Boothify;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots and record 360 videos.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Boothify uses Face ID to unlock operator settings without entering a PIN.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos and 360 videos to your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Boothify needs photo library access to import existing photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -313,6 +314,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Boothify;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots and record 360 videos.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Boothify uses Face ID to unlock operator settings without entering a PIN.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos and 360 videos to your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Boothify needs photo library access to import existing photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -326,6 +328,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				INFOPLIST_KEY_BOOTHIFY_API_BASE_URL = "https://ai-photobooth-rust.vercel.app";
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.servify.Photobooth-ai";
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -2,6 +2,7 @@ import SwiftUI
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import UIKit
+import Photos
 
 struct ResultView: View {
     @Environment(AppState.self) private var app
@@ -30,6 +31,9 @@ struct ResultView: View {
     @State private var smsPresented: Bool = false
     @State private var surveyPresented: Bool = false
     @State private var surveyDone: Bool = false
+    @State private var saveToPhotosErrorMessage: String? = nil
+    @State private var saveToPhotosErrorPresented: Bool = false
+    @State private var whatsAppUnavailablePresented: Bool = false
 
     private var publicURL: URL {
         BoothifyAPI.shared.publicResultURL(photoId: photoId)
@@ -91,23 +95,35 @@ struct ResultView: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .alert("Cannot Save Photo", isPresented: $saveToPhotosErrorPresented) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(saveToPhotosErrorMessage ?? "An unknown error occurred.")
+        }
+        .alert("WhatsApp Not Installed", isPresented: $whatsAppUnavailablePresented) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("WhatsApp is not installed on this device. Share the photo link via SMS, Email, or QR Code instead.")
+        }
+        // Single merged onChange for .completed — handles both survey trigger and auto-print.
         .onChange(of: photo?.status) { _, newStatus in
-            // Trigger the post-result survey once we land on `.completed`.
-            guard newStatus == .completed, !surveyDone else { return }
+            guard newStatus == .completed else { return }
+
+            // Auto-print when enabled in settings.
+            if app.settings(for: eventId).print.enabled,
+               app.settings(for: eventId).print.autoPrintAfterCapture {
+                Task { await printPhoto() }
+            }
+
+            // Post-result survey — delayed slightly so the reveal animation lands first.
+            guard !surveyDone else { return }
             let s = app.settings(for: eventId).survey
             if s.enabled {
-                // Brief delay so the reveal animation gets a beat first.
                 Task {
                     try? await Task.sleep(for: .seconds(0.8))
                     surveyPresented = true
                 }
             }
-        }
-        .onChange(of: photo?.status) { _, status in
-            guard status == .completed,
-                  app.settings(for: eventId).print.enabled,
-                  app.settings(for: eventId).print.autoPrintAfterCapture else { return }
-            Task { await printPhoto() }
         }
     }
 
@@ -351,52 +367,59 @@ struct ResultView: View {
         VStack(spacing: BoothifySpacing.sm) {
             metadataStrip(photo: photo)
 
-            // Primary CTA
+            // Primary CTA — guest delivery. SMS is the fastest path to the guest's
+            // own device; it should be the prominent, full-width action.
             Button {
-                saveToPhotos()
+                Haptics.tap()
+                smsPresented = true
             } label: {
                 HStack(spacing: BoothifySpacing.sm) {
-                    Image(systemName: "square.and.arrow.down").font(.body.weight(.semibold))
-                    Text("Save to Photos")
+                    Image(systemName: "message.fill").font(.body.weight(.semibold))
+                    Text("Send to Guest (SMS)")
                 }
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(loadedImage == nil)
-            .accessibilityHint("Saves the generated image to your Photos library")
+            .accessibilityHint("Send the photo link to the guest's phone via SMS")
 
             // Secondary share actions
             HStack(spacing: BoothifySpacing.xs) {
-                ShareActionButton(symbol: "message.fill", label: "SMS") {
+                ShareActionButton(symbol: "qrcode", label: "QR Code") {
                     Haptics.tap()
-                    smsPresented = true
-                }
-                ShareActionButton(symbol: "phone.bubble.fill", label: "WhatsApp") {
-                    Haptics.tap()
-                    let text = "Your photo is ready: \(publicURL.absoluteString)"
-                    if let url = URL(string: "https://wa.me/?text=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-                        UIApplication.shared.open(url)
-                    }
+                    qrPresented = true
                 }
                 ShareActionButton(symbol: "envelope.fill", label: "Email") {
                     Haptics.tap()
                     emailPresented = true
                 }
-                ShareActionButton(symbol: "qrcode", label: "QR Code") {
+                ShareActionButton(symbol: "phone.bubble.fill", label: "WhatsApp") {
                     Haptics.tap()
-                    qrPresented = true
+                    let text = "Your photo is ready: \(publicURL.absoluteString)"
+                    let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    guard let whatsAppURL = URL(string: "https://wa.me/?text=\(encoded)") else { return }
+                    if UIApplication.shared.canOpenURL(URL(string: "whatsapp://")!) {
+                        UIApplication.shared.open(whatsAppURL)
+                    } else {
+                        whatsAppUnavailablePresented = true
+                    }
                 }
                 ShareActionButton(symbol: "printer.fill", label: "Print") {
                     Haptics.tap()
                     Task { await printPhoto() }
                 }
                 .opacity(app.settings(for: eventId).print.enabled ? 1 : 0.3)
-                // IM1: native AirDrop / system share
+                // Operator save — secondary, not the primary guest action
+                ShareActionButton(symbol: "square.and.arrow.down", label: "Save") {
+                    saveToPhotos()
+                }
+                .opacity(loadedImage == nil ? 0.4 : 1)
+                .accessibilityHint("Saves the generated image to your Photos library")
+                // IM1: native system share sheet (AirDrop, Messages, etc.)
                 ShareLink(item: publicURL,
                           subject: Text("Your photo from Boothify"),
                           message: Text("Tap to open →")) {
                     VStack(spacing: 4) {
-                        Image(systemName: "airplayaudio").font(.title3)
-                        Text("AirDrop").font(.caption2.weight(.medium))
+                        Image(systemName: "square.and.arrow.up").font(.title3)
+                        Text("Share").font(.caption2.weight(.medium))
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 56)
@@ -642,8 +665,41 @@ struct ResultView: View {
         let img = brand.rendersOnResults
             ? bakeBrandOverlay(into: raw, settings: brand, eventId: eventId)
             : raw
-        UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil)
-        Haptics.notify(.success)
+
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            DispatchQueue.main.async {
+                switch status {
+                case .authorized, .limited:
+                    PHPhotoLibrary.shared().performChanges({
+                        PHAssetChangeRequest.creationRequestForAsset(from: img)
+                    }) { success, error in
+                        DispatchQueue.main.async {
+                            if success {
+                                Haptics.notify(.success)
+                            } else {
+                                Haptics.notify(.error)
+                                saveToPhotosErrorMessage = error?.localizedDescription ?? "Failed to save the photo."
+                                saveToPhotosErrorPresented = true
+                            }
+                        }
+                    }
+                case .denied, .restricted:
+                    Haptics.notify(.error)
+                    saveToPhotosErrorMessage = "Photo library access was denied. Go to Settings > Privacy > Photos and allow access for Boothify."
+                    saveToPhotosErrorPresented = true
+                case .notDetermined:
+                    // requestAuthorization always resolves to a concrete status — this
+                    // case is unreachable after the callback fires, but handle it defensively.
+                    Haptics.notify(.error)
+                    saveToPhotosErrorMessage = "Photo library permission not determined. Please try again."
+                    saveToPhotosErrorPresented = true
+                @unknown default:
+                    Haptics.notify(.error)
+                    saveToPhotosErrorMessage = "An unexpected error occurred while accessing the photo library."
+                    saveToPhotosErrorPresented = true
+                }
+            }
+        }
     }
 
     /// Composite the brand overlay onto `base` and return a new UIImage. Mirrors

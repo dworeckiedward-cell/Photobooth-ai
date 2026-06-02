@@ -369,7 +369,7 @@ struct EventHubView: View {
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Share event")
+                    Text("Share latest photo")
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
                     if let url {
@@ -444,10 +444,17 @@ struct EventHubView: View {
     private func loadRecent(slug: String) async {
         do {
             let list = try await BoothifyAPI.shared.listEventPhotos(slug: slug, status: .all, limit: 30)
-            // Show latest 3 in any non-failed state so operators can see processing items too.
+            // Show latest non-failed photos for the recent strip.
             let visible = list.photos.filter { $0.status != .failed }
             recentPhotos = visible.prefix(6).map { $0 }
-            totalCaptures = list.photos.count
+
+            // `list.total` is the server-side count of ALL matching photos (ignoring
+            // the page limit), so it stays accurate for events with 30+ captures.
+            // The per-page counters (completed, processing) are derived from the
+            // fetched slice, which is fine for the small-number display — if the event
+            // has hundreds of photos we still show the right completed/processing ratio
+            // for the most-recent batch, which is what operators care about.
+            totalCaptures = list.total
             totalCompleted = list.photos.filter { $0.status == .completed }.count
             totalProcessing = list.photos.filter {
                 $0.status == .generating || $0.status == .pending || $0.status == .uploaded
@@ -457,9 +464,9 @@ struct EventHubView: View {
         }
     }
 
-    // Temporary fallback: Share event currently uses the latest completed photo's
-    // public URL (`/p/<photoId>`) until `/e/<event-slug>` event landing page exists.
-    // The UX label stays "Share event" on purpose — that's what operators understand.
+    // Temporary fallback: shares the latest completed photo's public URL (`/p/<photoId>`)
+    // until a real `/e/<event-slug>` event gallery page exists.
+    // The label "Share latest photo" accurately describes what this URL points to.
     private func guestShareURL() -> URL? {
         guard let latest = latestCompleted else { return nil }
         return BoothifyAPI.shared.publicResultURL(photoId: latest.id)
