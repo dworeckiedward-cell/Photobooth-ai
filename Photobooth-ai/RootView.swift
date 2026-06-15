@@ -91,7 +91,7 @@ struct RootView: View {
             OnboardingQuizSheet { answers in applyOnboardingDefaults(answers) }
                 .interactiveDismissDisabled(false)
         }
-        .sheet(isPresented: $profilePresented) {
+        .fullScreenCover(isPresented: $profilePresented) {
             ProfileCardView()
         }
         .task {
