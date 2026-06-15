@@ -20,47 +20,37 @@ struct LoginView: View {
                 Spacer()
 
                 VStack(spacing: 0) {
-                    // Animated gradient icon cluster
+                    // Brand hero — single focused icon with violet glow
                     ZStack {
+                        // Outer ambient glow
                         Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [BoothifyTheme.violet.opacity(0.35), .clear],
-                                    center: .center,
-                                    startRadius: 0, endRadius: 70
-                                )
+                            .fill(BoothifyTheme.violet.opacity(0.18))
+                            .frame(width: 180, height: 180)
+                            .blur(radius: 36)
+
+                        // Inner soft glow ring
+                        Circle()
+                            .fill(BoothifyTheme.violet.opacity(0.10))
+                            .frame(width: 130, height: 130)
+                            .blur(radius: 16)
+
+                        // Brand icon card
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            .fill(BoothifyTheme.surface1)
+                            .frame(width: 96, height: 96)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                    .stroke(BoothifyTheme.violet.opacity(0.40), lineWidth: 1.5)
                             )
-                            .frame(width: 140, height: 140)
+                            .shadow(color: BoothifyTheme.violet.opacity(0.22), radius: 20, y: 8)
 
-                        HStack(spacing: -8) {
-                            Image(systemName: "camera.aperture")
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(BoothifyTheme.violet)
-                                .frame(width: 52, height: 52)
-                                .background(BoothifyTheme.surface1)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-
-                            Image(systemName: "slowmo")
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(BoothifyTheme.violet)
-                                .frame(width: 52, height: 52)
-                                .background(BoothifyTheme.surface1)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-                                .offset(y: 12)
-
-                            Image(systemName: "wand.and.stars")
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(BoothifyTheme.amber)
-                                .frame(width: 52, height: 52)
-                                .background(BoothifyTheme.surface1)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-                        }
-                        .accessibilityHidden(true)
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 40, weight: .semibold))
+                            .foregroundStyle(BoothifyTheme.violet)
+                            .symbolEffect(.variableColor.iterative.reversing, options: .repeating)
                     }
-                    .padding(.bottom, 24)
+                    .accessibilityHidden(true)
+                    .padding(.bottom, 28)
 
                     Text("Boothify")
                         .font(BoothifyType.display)

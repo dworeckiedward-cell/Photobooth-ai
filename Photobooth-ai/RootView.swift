@@ -74,7 +74,10 @@ struct RootView: View {
 
             // ── Tab bar — only at root; slides in/out with deep navigation ──
             if atRoot {
-                BoothifyTabBar(selected: $selectedTab) {
+                BoothifyTabBar(
+                    selected: $selectedTab,
+                    isProfileActive: profilePresented
+                ) {
                     Haptics.tap(.light)
                     profilePresented = true
                 }
@@ -193,6 +196,7 @@ struct RootView: View {
 
 private struct BoothifyTabBar: View {
     @Binding var selected: BoothifyTab
+    var isProfileActive: Bool = false
     let onProfileTap: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -241,10 +245,11 @@ private struct BoothifyTabBar: View {
 
     private var profileTabButton: some View {
         Button(action: onProfileTap) {
-            tabLabel(icon: "person.fill", title: "Profile", isActive: false)
+            tabLabel(icon: "person.fill", title: "Profile", isActive: isProfileActive)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
+        .accessibilityAddTraits(isProfileActive ? [.isSelected] : [])
     }
 
     @ViewBuilder
@@ -268,6 +273,7 @@ private struct BoothifyTabBar: View {
 
 private struct AppSettingsView: View {
     @Environment(AppState.self) private var app
+    @State private var confirmSignOut = false
 
     var body: some View {
         ZStack {
@@ -286,7 +292,7 @@ private struct AppSettingsView: View {
                 Section("Account") {
                     Button(role: .destructive) {
                         Haptics.tap(.medium)
-                        app.signOut()
+                        confirmSignOut = true
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
@@ -297,6 +303,10 @@ private struct AppSettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        .confirmationDialog("Sign out of Boothify?", isPresented: $confirmSignOut, titleVisibility: .visible) {
+            Button("Sign Out", role: .destructive) { app.signOut() }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 }
 
@@ -469,9 +479,7 @@ private struct ProfileCardView: View {
     private var optionsList: some View {
         VStack(spacing: 1) {
             optionRow(icon: "info.circle.fill", iconColor: Color(red: 0.30, green: 0.55, blue: 0.98),
-                      title: "About Boothify") {
-                // NavigationLink handled below
-            }
+                      title: "About Boothify") {}
             .overlay {
                 NavigationLink {
                     AboutBoothifyView()
@@ -479,12 +487,6 @@ private struct ProfileCardView: View {
                     Color.clear
                 }
             }
-
-            optionRow(icon: "bell.fill", iconColor: BoothifyTheme.amber,
-                      title: "Notifications", badge: "Coming soon") {}
-
-            optionRow(icon: "shield.fill", iconColor: BoothifyTheme.emerald,
-                      title: "Privacy & Security", badge: "Coming soon") {}
         }
         .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
         .overlay(

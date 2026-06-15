@@ -401,67 +401,62 @@ struct ResultView: View {
             .buttonStyle(PrimaryButtonStyle())
             .accessibilityHint("Send the photo link to the guest's phone via SMS")
 
-            // Secondary share actions
+            // Secondary — three focused actions + overflow menu
             HStack(spacing: BoothifySpacing.xs) {
                 ShareActionButton(symbol: "qrcode", label: "QR Code") {
-                    Haptics.tap()
-                    qrPresented = true
+                    Haptics.tap(); qrPresented = true
                 }
                 ShareActionButton(symbol: "envelope.fill", label: "Email") {
-                    Haptics.tap()
-                    emailPresented = true
+                    Haptics.tap(); emailPresented = true
                 }
-                ShareActionButton(symbol: "phone.bubble.fill", label: "WhatsApp") {
-                    Haptics.tap()
-                    let text = "Your photo is ready: \(publicURL.absoluteString)"
-                    let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                    guard let whatsAppURL = URL(string: "https://wa.me/?text=\(encoded)") else { return }
-                    if UIApplication.shared.canOpenURL(URL(string: "whatsapp://")!) {
-                        UIApplication.shared.open(whatsAppURL)
-                    } else {
-                        whatsAppUnavailablePresented = true
-                    }
-                }
-                ShareActionButton(symbol: "printer.fill", label: "Print") {
-                    Haptics.tap()
-                    Task { await printPhoto() }
-                }
-                .opacity(app.settings(for: eventId).print.enabled ? 1 : 0.3)
-                // Operator save — secondary, not the primary guest action
-                ShareActionButton(symbol: "square.and.arrow.down", label: "Save") {
-                    saveToPhotos()
-                }
-                .opacity(loadedImage == nil ? 0.4 : 1)
-                .accessibilityHint("Saves the generated image to your Photos library")
-                // IM1: native system share sheet (AirDrop, Messages, etc.)
-                ShareLink(item: publicURL,
-                          subject: Text("Your photo from Boothify"),
-                          message: Text("Tap to open →")) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "square.and.arrow.up").font(.title3)
-                        Text("Share").font(.caption2.weight(.medium))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(BoothifyTheme.surface1)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+                ShareLink(
+                    item: publicURL,
+                    subject: Text("Your photo from Boothify"),
+                    message: Text("Tap to open →")
+                ) {
+                    ActionButtonLabel(symbol: "square.and.arrow.up", label: "Share")
                 }
                 .buttonStyle(.plain)
                 .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
-                .accessibilityLabel("Open native share sheet — AirDrop, Messages, Mail")
+                .accessibilityLabel("Open share sheet")
+
+                // Overflow menu: less-common actions collapsed to keep the bar clean.
+                Menu {
+                    Button {
+                        Haptics.tap()
+                        let text = "Your photo is ready: \(publicURL.absoluteString)"
+                        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        guard let url = URL(string: "https://wa.me/?text=\(encoded)") else { return }
+                        if UIApplication.shared.canOpenURL(URL(string: "whatsapp://")!) {
+                            UIApplication.shared.open(url)
+                        } else {
+                            whatsAppUnavailablePresented = true
+                        }
+                    } label: { Label("WhatsApp", systemImage: "phone.bubble.fill") }
+
+                    Button {
+                        Haptics.tap()
+                        Task { await printPhoto() }
+                    } label: { Label("Print", systemImage: "printer.fill") }
+
+                    Button {
+                        Haptics.tap()
+                        saveToPhotos()
+                    } label: { Label("Save to Photos", systemImage: "square.and.arrow.down") }
+                } label: {
+                    ActionButtonLabel(symbol: "ellipsis", label: "More")
+                }
+                .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
+                .accessibilityLabel("More actions")
             }
 
-            // Tertiary navigation row
+            // Navigation row
             HStack(spacing: BoothifySpacing.xs) {
                 Button {
                     Haptics.tap()
                     app.pop()
                 } label: {
-                    Label("Another style", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Style", systemImage: "arrow.triangle.2.circlepath")
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(SecondaryButtonStyle())
@@ -896,6 +891,31 @@ private struct GeneratingParticle {
 
 // MARK: - Share buttons & sheets
 
+// Reusable label shape used by both ShareActionButton and Menu labels.
+private struct ActionButtonLabel: View {
+    let symbol: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: symbol)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.violet)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .padding(.vertical, 8)
+        .background(BoothifyTheme.surface1)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
 private struct ShareActionButton: View {
     let symbol: String
     let label: String
@@ -903,22 +923,7 @@ private struct ShareActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
-                Text(label)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .padding(.vertical, 8)
-            .background(BoothifyTheme.surface1)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            ActionButtonLabel(symbol: symbol, label: label)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Share via \(label)")
