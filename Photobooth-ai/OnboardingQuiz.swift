@@ -165,19 +165,22 @@ struct OnboardingQuizSheet: View {
 
                     bottomBar
                         .padding(.horizontal, BoothifySpacing.lg)
-                        .padding(.bottom, BoothifySpacing.lg)
-                        .padding(.top, BoothifySpacing.md)
+                        .padding(.bottom, step == totalSteps ? BoothifySpacing.lg : 0)
+                        .padding(.top, step == totalSteps ? BoothifySpacing.md : 0)
                 }
             }
             .navigationTitle("Welcome")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Skip") {
-                        finish(saving: false)
+                    if step < totalSteps {
+                        Button("Skip") {
+                            autoAdvanceTask?.cancel()
+                            finish(saving: false)
+                        }
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                        .font(.subheadline)
                     }
-                    .foregroundStyle(BoothifyTheme.textSecondary)
-                    .font(.subheadline)
                 }
             }
         }
@@ -508,49 +511,23 @@ struct OnboardingQuizSheet: View {
 
     @ViewBuilder
     private var bottomBar: some View {
-        HStack(spacing: BoothifySpacing.sm) {
-            // Back — only on steps after the first
-            if step > 0 && step <= totalSteps {
-                Button(action: goBack) {
-                    Label("Back", systemImage: "chevron.left")
-                        .font(.subheadline.weight(.semibold))
+        if step == totalSteps {
+            // Summary screen only — primary Finish button
+            Button {
+                Haptics.tap()
+                finish(saving: true)
+            } label: {
+                HStack(spacing: BoothifySpacing.xs) {
+                    Text("Finish")
+                    Image(systemName: "checkmark")
                 }
-                .buttonStyle(SecondaryButtonStyle())
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
             }
-
-            Spacer()
-
-            if step == totalSteps {
-                // Summary screen — primary Finish button
-                Button {
-                    Haptics.tap()
-                    finish(saving: true)
-                } label: {
-                    HStack(spacing: BoothifySpacing.xs) {
-                        Text("Finish")
-                        Image(systemName: "checkmark")
-                    }
-                    .font(.subheadline.weight(.semibold))
-                }
-                .buttonStyle(PrimaryButtonStyle())
-            } else {
-                // Question steps — subtle skip affordance; auto-advance handles the happy path
-                Button {
-                    autoAdvanceTask?.cancel()
-                    advance()
-                } label: {
-                    HStack(spacing: 3) {
-                        Text("Skip")
-                            .font(.subheadline.weight(.medium))
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                    }
-                    .foregroundStyle(BoothifyTheme.textMuted)
-                }
-                .buttonStyle(.plain)
-            }
+            .buttonStyle(PrimaryButtonStyle())
+            .frame(minHeight: 44)
         }
-        .frame(minHeight: 44)
+        // Question steps: no bottom button — tap answer to auto-advance, Skip in toolbar
     }
 
     private func finish(saving: Bool) {
