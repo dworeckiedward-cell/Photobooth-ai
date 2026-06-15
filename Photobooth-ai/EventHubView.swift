@@ -56,10 +56,13 @@ struct EventHubView: View {
 
                         shareEventSection
                     } else {
-                        Text("Event not found")
-                            .font(.body)
-                            .foregroundStyle(BoothifyTheme.textSecondary)
-                            .padding(.top, 40)
+                        AppEmptyState(
+                            symbol: "calendar.badge.exclamationmark",
+                            symbolColor: BoothifyTheme.error,
+                            title: "Event not found",
+                            subtitle: "This event may have been deleted or the link is invalid."
+                        )
+                        .padding(.top, BoothifySpacing.xl)
                     }
                 }
                 .padding(.horizontal, BoothifySpacing.md)
@@ -148,27 +151,8 @@ struct EventHubView: View {
 
     private var compactHeader: some View {
         HStack(spacing: BoothifySpacing.sm) {
-            HStack(spacing: BoothifySpacing.sm) {
-                ZStack {
-                    Circle()
-                        .fill(BoothifyTheme.emerald.opacity(0.25))
-                        .frame(width: 10, height: 10)
-                    Circle()
-                        .fill(BoothifyTheme.emerald)
-                        .frame(width: 6, height: 6)
-                }
-                .accessibilityHidden(true)
-                Text("Event active")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.emerald)
-            }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.xs + 2)
-            .background(BoothifyTheme.emerald.opacity(0.10), in: Capsule())
-            .overlay(Capsule().stroke(BoothifyTheme.emerald.opacity(0.25), lineWidth: 1))
-
+            AppStatusPill(label: "Event active")
             Spacer()
-
             Text(captureSummary)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(BoothifyTheme.textTertiary)
@@ -302,20 +286,12 @@ struct EventHubView: View {
 
                 if recentPhotos.isEmpty {
                     HStack(spacing: BoothifySpacing.md) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                                .fill(BoothifyTheme.surface2)
-                                .frame(width: 44, height: 44)
-                            Image(systemName: "tray")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(BoothifyTheme.textMuted)
-                        }
-                        .accessibilityHidden(true)
+                        AppIconBadge(symbol: "photo.on.rectangle.angled", color: BoothifyTheme.textMuted, size: 44)
                         VStack(alignment: .leading, spacing: 3) {
                             Text("No captures yet")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
-                            Text("Start a session to create the first result.")
+                            Text("Start a session to create the first AI portrait.")
                                 .font(.caption)
                                 .foregroundStyle(BoothifyTheme.textTertiary)
                         }
@@ -365,18 +341,15 @@ struct EventHubView: View {
         let url = guestShareURL()
         let hasUrl = url != nil
 
-        return VStack(alignment: .leading, spacing: BoothifySpacing.md) {
+        return AppCard(padding: BoothifySpacing.md, radius: BoothifyRadius.section) {
+            VStack(alignment: .leading, spacing: BoothifySpacing.md) {
             // Header row
             HStack(spacing: BoothifySpacing.md) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                        .fill(hasUrl ? BoothifyTheme.violet.opacity(0.12) : BoothifyTheme.surface2)
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "qrcode")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(hasUrl ? BoothifyTheme.violet : BoothifyTheme.textMuted)
-                }
-                .accessibilityHidden(true)
+                AppIconBadge(
+                    symbol: "qrcode",
+                    color: hasUrl ? BoothifyTheme.violet : BoothifyTheme.textMuted,
+                    size: 40
+                )
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Share latest photo")
@@ -452,9 +425,8 @@ struct EventHubView: View {
                 .disabled(!hasUrl)
             }
         }
-        .padding(BoothifySpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .boothifySurface(radius: BoothifyRadius.section)
+        }
     }
 
     // MARK: - Data

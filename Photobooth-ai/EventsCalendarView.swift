@@ -73,36 +73,23 @@ struct EventsCalendarView: View {
             Haptics.tap(.light)
             connectSheetPresented = true
         } label: {
-            HStack(spacing: BoothifySpacing.sm) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(BoothifyTheme.violet.opacity(0.15))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: "link.circle.fill")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.violet)
+            AppCard(padding: BoothifySpacing.sm + 2) {
+                HStack(spacing: BoothifySpacing.md) {
+                    AppIconBadge(symbol: "link.circle.fill", color: BoothifyTheme.violet, size: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Connect your calendar")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Sync with Google Calendar or iPhone")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.textMuted)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Connect your calendar")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text("Sync with Google Calendar or iPhone")
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textSecondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textMuted)
             }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.sm + 2)
-            .background(BoothifyTheme.surface1)
-            .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -241,19 +228,14 @@ struct EventsCalendarView: View {
     }
 
     private var emptyDayView: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: BoothifySpacing.sm) {
-                Image(systemName: "calendar.badge.exclamationmark")
-                    .font(.title2)
-                    .foregroundStyle(BoothifyTheme.textMuted)
-                Text("No events")
-                    .font(.subheadline)
-                    .foregroundStyle(BoothifyTheme.textMuted)
-            }
-            .padding(.vertical, BoothifySpacing.xl)
-            Spacer()
-        }
+        AppEmptyState(
+            symbol: "calendar",
+            title: "No events",
+            subtitle: "No photobooth events on this day.",
+            actionLabel: "New Event",
+            action: { app.push(.photoboothLanding) }
+        )
+        .padding(.top, BoothifySpacing.sm)
     }
 
     // MARK: - Calendar helpers
@@ -352,23 +334,21 @@ private struct CalendarEventRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: BoothifySpacing.md) {
-                // Left accent bar
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(BoothifyTheme.violet)
-                    .frame(width: 3, height: 44)
+                    .frame(width: 3)
+                    .frame(minHeight: 52)
+
+                AppIconBadge(symbol: "camera.aperture", color: BoothifyTheme.violet, size: 40)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(event.name)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    HStack(spacing: BoothifySpacing.xs) {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.caption2)
-                        Text("\(event.completedPhotos) photo\(event.completedPhotos == 1 ? "" : "s")")
-                            .font(.caption)
-                    }
-                    .foregroundStyle(BoothifyTheme.textSecondary)
+                    Text("\(event.completedPhotos) photo\(event.completedPhotos == 1 ? "" : "s") completed")
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textSecondary)
                 }
 
                 Spacer()
@@ -382,7 +362,7 @@ private struct CalendarEventRow: View {
             .background(BoothifyTheme.surface1)
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    .stroke(BoothifyTheme.violet.opacity(0.22), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
@@ -458,43 +438,23 @@ struct ConnectCalendarSheet: View {
 
     @ViewBuilder
     private func calendarOption(icon: String, iconColor: Color, title: String, subtitle: String, badge: String) -> some View {
-        HStack(spacing: BoothifySpacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(iconColor.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(iconColor)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(BoothifyTheme.textSecondary)
-            }
-
-            Spacer()
-
-            Text(badge)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.textMuted)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(BoothifyTheme.surface2)
-                .clipShape(Capsule())
-        }
-        .padding(BoothifySpacing.md)
-        .background(BoothifyTheme.surface1)
+        AppListRow(
+            symbol: icon,
+            symbolColor: iconColor,
+            title: title,
+            subtitle: subtitle,
+            badge: badge,
+            badgeColor: BoothifyTheme.textMuted,
+            accessory: .none,
+            disabled: true,
+            action: {}
+        )
+        .padding(BoothifySpacing.sm)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
-        .opacity(0.7)
         .accessibilityHint("Coming soon — not available yet")
     }
 }

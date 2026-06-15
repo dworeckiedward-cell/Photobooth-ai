@@ -208,7 +208,7 @@ private struct BoothifyTabBar: View {
     var body: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(BoothifyTheme.surfaceLine)
+                .fill(Color.white.opacity(0.06))
                 .frame(height: 0.5)
 
             HStack(spacing: 0) {
@@ -217,13 +217,11 @@ private struct BoothifyTabBar: View {
                 }
                 profileTabButton
             }
-            .padding(.top, 10)
+            .padding(.top, 8)
             .padding(.bottom, max(safeAreaBottom, 12))
         }
-        .background(
-            Color(red: 0.07, green: 0.07, blue: 0.09)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .background(.ultraThinMaterial)
+        .ignoresSafeArea(edges: .bottom)
     }
 
     @ViewBuilder
@@ -236,7 +234,7 @@ private struct BoothifyTabBar: View {
                 selected = tab
             }
         } label: {
-            tabLabel(icon: tab.icon, title: tab.title, isActive: isActive)
+            tabItem(icon: tab.icon, title: tab.title, isActive: isActive)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(tab.title)
@@ -245,7 +243,7 @@ private struct BoothifyTabBar: View {
 
     private var profileTabButton: some View {
         Button(action: onProfileTap) {
-            tabLabel(icon: "person.fill", title: "Profile", isActive: isProfileActive)
+            tabItem(icon: "person.fill", title: "Profile", isActive: isProfileActive)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
@@ -253,16 +251,23 @@ private struct BoothifyTabBar: View {
     }
 
     @ViewBuilder
-    private func tabLabel(icon: String, title: String, isActive: Bool) -> some View {
-        VStack(spacing: 4) {
+    private func tabItem(icon: String, title: String, isActive: Bool) -> some View {
+        VStack(spacing: 5) {
+            // Active indicator pill above icon
+            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                .fill(isActive ? BoothifyTheme.violet : Color.clear)
+                .frame(width: 22, height: 3)
+                .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isActive)
+
             Image(systemName: icon)
-                .font(.system(size: 21, weight: isActive ? .semibold : .regular))
-                .foregroundStyle(isActive ? BoothifyTheme.violet : BoothifyTheme.textMuted)
-                .scaleEffect(isActive ? 1.08 : 1.0)
+                .font(.system(size: 22, weight: isActive ? .semibold : .regular))
+                .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
+                .scaleEffect(isActive ? 1.06 : 1.0)
                 .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.70), value: isActive)
+
             Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(isActive ? BoothifyTheme.violet : BoothifyTheme.textMuted)
+                .font(.system(size: 10, weight: isActive ? .semibold : .regular))
+                .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
         }
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
@@ -275,20 +280,59 @@ private struct AppSettingsView: View {
     @Environment(AppState.self) private var app
     @State private var confirmSignOut = false
 
+    private var displayName: String { app.currentUser?.fullName ?? "Operator" }
+    private var email: String? { app.currentUser?.email }
+    private var initials: String {
+        displayName
+            .components(separatedBy: " ")
+            .prefix(2)
+            .compactMap { $0.first.map(String.init) }
+            .joined()
+    }
+
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
 
             List {
+                // ── User profile summary ──
+                Section {
+                    HStack(spacing: BoothifySpacing.md) {
+                        ZStack {
+                            Circle()
+                                .fill(BoothifyTheme.violet.opacity(0.22))
+                                .frame(width: 52, height: 52)
+                                .overlay(Circle().stroke(BoothifyTheme.violet.opacity(0.40), lineWidth: 1.5))
+                            Text(initials.isEmpty ? "?" : initials)
+                                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                .foregroundStyle(BoothifyTheme.violet)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(displayName)
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            if let email {
+                                Text(email)
+                                    .font(.subheadline)
+                                    .foregroundStyle(BoothifyTheme.textSecondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .padding(.vertical, BoothifySpacing.sm)
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                // ── App ──
                 Section("App") {
-                    NavigationLink {
-                        AboutBoothifyView()
-                    } label: {
+                    NavigationLink(destination: AboutBoothifyView()) {
                         Label("About Boothify", systemImage: "info.circle")
                             .foregroundStyle(.white)
                     }
                 }
+                .listRowBackground(BoothifyTheme.surface1)
 
+                // ── Account ──
                 Section("Account") {
                     Button(role: .destructive) {
                         Haptics.tap(.medium)
@@ -297,6 +341,7 @@ private struct AppSettingsView: View {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
+                .listRowBackground(BoothifyTheme.surface1)
             }
             .scrollContentBackground(.hidden)
             .listStyle(.insetGrouped)
@@ -446,91 +491,50 @@ private struct ProfileCardView: View {
 
     private var statsRow: some View {
         HStack(spacing: BoothifySpacing.sm) {
-            statCard(value: "\(app.events.count)", label: "Events", icon: "calendar")
-            statCard(value: "\(totalPhotos)", label: "Photos", icon: "photo.on.rectangle")
+            profileStat(value: "\(app.events.count)", label: "Events")
+            profileStat(value: "\(totalPhotos)", label: "Photos")
         }
     }
 
-    @ViewBuilder
-    private func statCard(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: BoothifySpacing.xs) {
-            Image(systemName: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.violet)
+    private func profileStat(value: String, label: String) -> some View {
+        VStack(spacing: 5) {
             Text(value)
-                .font(.title2.bold())
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
+                .contentTransition(.numericText())
             Text(label)
-                .font(.caption.weight(.medium))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, BoothifySpacing.md)
-        .background(BoothifyTheme.surface1)
+        .padding(.vertical, BoothifySpacing.lg)
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
     }
 
     // MARK: - Options list
 
     private var optionsList: some View {
-        VStack(spacing: 1) {
-            optionRow(icon: "info.circle.fill", iconColor: Color(red: 0.30, green: 0.55, blue: 0.98),
-                      title: "About Boothify") {}
+        VStack(spacing: 0) {
+            AppListRow(
+                symbol: "info.circle.fill",
+                symbolColor: Color(red: 0.30, green: 0.55, blue: 0.98),
+                title: "About Boothify",
+                action: {}
+            )
+            .padding(.horizontal, BoothifySpacing.md)
             .overlay {
-                NavigationLink {
-                    AboutBoothifyView()
-                } label: {
-                    Color.clear
-                }
+                NavigationLink(destination: AboutBoothifyView()) { Color.clear }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
-    }
-
-    @ViewBuilder
-    private func optionRow(icon: String, iconColor: Color, title: String, badge: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: BoothifySpacing.md) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(iconColor.opacity(0.18))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(iconColor)
-                }
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
-                Spacer()
-                if let badge {
-                    Text(badge)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(BoothifyTheme.surface2)
-                        .clipShape(Capsule())
-                } else {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                }
-            }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.sm + 2)
-            .background(BoothifyTheme.surface1)
-        }
-        .buttonStyle(.plain)
-        .disabled(badge != nil)
     }
 
     // MARK: - Sign out
@@ -542,18 +546,18 @@ private struct ProfileCardView: View {
         } label: {
             HStack(spacing: BoothifySpacing.sm) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.body.weight(.semibold))
                 Text("Sign Out")
+                    .font(.body.weight(.semibold))
             }
-            .font(.subheadline.weight(.semibold))
             .foregroundStyle(BoothifyTheme.error)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(BoothifyTheme.error.opacity(0.08))
+            .background(BoothifyTheme.error.opacity(0.08), in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                     .stroke(BoothifyTheme.error.opacity(0.22), lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
         .buttonStyle(.plain)
     }

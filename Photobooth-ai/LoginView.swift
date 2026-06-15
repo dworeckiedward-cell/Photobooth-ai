@@ -16,66 +16,75 @@ struct LoginView: View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
 
-            VStack(spacing: 28) {
+            // Ambient violet bloom at top-center
+            RadialGradient(
+                colors: [BoothifyTheme.violet.opacity(0.18), .clear],
+                center: .init(x: 0.5, y: -0.05),
+                startRadius: 0,
+                endRadius: 380
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
                 Spacer()
 
-                VStack(spacing: 0) {
-                    // Brand hero — single focused icon with violet glow
+                // ── Brand hero ────────────────────────────────
+                VStack(spacing: BoothifySpacing.xl) {
+                    // Icon card with layered glow
                     ZStack {
-                        // Outer ambient glow
+                        // Outer diffuse glow
                         Circle()
-                            .fill(BoothifyTheme.violet.opacity(0.18))
-                            .frame(width: 180, height: 180)
-                            .blur(radius: 36)
+                            .fill(BoothifyTheme.violet.opacity(0.14))
+                            .frame(width: 200, height: 200)
+                            .blur(radius: 48)
 
-                        // Inner soft glow ring
-                        Circle()
-                            .fill(BoothifyTheme.violet.opacity(0.10))
-                            .frame(width: 130, height: 130)
-                            .blur(radius: 16)
-
-                        // Brand icon card
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        // Card
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
                             .fill(BoothifyTheme.surface1)
-                            .frame(width: 96, height: 96)
+                            .frame(width: 92, height: 92)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                                    .stroke(BoothifyTheme.violet.opacity(0.40), lineWidth: 1.5)
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [
+                                                BoothifyTheme.violet.opacity(0.65),
+                                                BoothifyTheme.violet.opacity(0.18)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1.5
+                                    )
                             )
-                            .shadow(color: BoothifyTheme.violet.opacity(0.22), radius: 20, y: 8)
+                            .shadow(color: BoothifyTheme.violet.opacity(0.28), radius: 28, y: 14)
 
                         Image(systemName: "wand.and.stars")
-                            .font(.system(size: 40, weight: .semibold))
+                            .font(.system(size: 38, weight: .semibold))
                             .foregroundStyle(BoothifyTheme.violet)
                             .symbolEffect(.variableColor.iterative.reversing, options: .repeating)
                     }
                     .accessibilityHidden(true)
-                    .padding(.bottom, 28)
 
-                    Text("Boothify")
-                        .font(BoothifyType.display)
-                        .foregroundStyle(.white)
+                    // Wordmark + tagline
+                    VStack(spacing: BoothifySpacing.sm) {
+                        Text("Boothify")
+                            .font(.system(size: 46, weight: .bold, design: .default))
+                            .tracking(-1.2)
+                            .foregroundStyle(.white)
 
-                    Text("AI photobooth & 360 video for your events.")
-                        .font(.subheadline)
-                        .foregroundStyle(BoothifyTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 6)
-
-                    // Feature pills
-                    HStack(spacing: 8) {
-                        featurePill(icon: "camera.fill", label: "AI Photos")
-                        featurePill(icon: "video.fill", label: "360 Video")
-                        featurePill(icon: "icloud.fill", label: "Instant Share")
+                        Text("AI photo booth for your events")
+                            .font(.callout)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                            .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 20)
-                    .padding(.horizontal, 16)
                 }
+                .padding(.horizontal, BoothifySpacing.xl)
 
                 Spacer()
+                Spacer()
 
-                VStack(spacing: 12) {
+                // ── Sign-in section ───────────────────────────
+                VStack(spacing: BoothifySpacing.md) {
                     SignInWithAppleButton(
                         .signIn,
                         onRequest: { request in
@@ -83,16 +92,14 @@ struct LoginView: View {
                             rawNonce = nonce
                             // Request both — Apple only delivers them on the
                             // VERY FIRST sign-in for this Apple ID + app pair.
-                            // Persist locally on receipt so they survive future
-                            // logins (which only return the user identifier).
                             request.requestedScopes = [.email, .fullName]
                             request.nonce = AuthClient.sha256(nonce)
                         },
-                        onCompletion: handle(result:),
+                        onCompletion: handle(result:)
                     )
                     .signInWithAppleButtonStyle(.white)
-                    .frame(height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
                     .disabled(isSigningIn)
                     .opacity(isSigningIn ? 0.6 : 1)
 
@@ -112,14 +119,14 @@ struct LoginView: View {
                             .multilineTextAlignment(.center)
                     }
 
-                    Text("Your Apple ID is used only to sign you in. We never see your password.")
+                    Text("Your Apple ID is used only to sign you in.\nWe never see your password.")
                         .font(.caption2)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .foregroundStyle(BoothifyTheme.textMuted)
                         .multilineTextAlignment(.center)
-                        .padding(.top, 8)
+                        .padding(.top, 4)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+                .padding(.horizontal, BoothifySpacing.lg)
+                .padding(.bottom, 48)
             }
         }
     }
