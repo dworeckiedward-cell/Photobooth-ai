@@ -17,6 +17,7 @@ struct ResultView: View {
     @State private var photo: Photo?
     @State private var pollAttempts = 0
     @State private var pollTask: Task<Void, Never>?
+    @State private var retryCount = 0
     @State private var loadedImage: UIImage?
     @State private var messageIndex: Int = 0
     @State private var particlePhase: Bool = false
@@ -61,7 +62,7 @@ struct ResultView: View {
         .navigationTitle(photo?.style.label ?? "Result")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-        .task(id: photoId) {
+        .task(id: "\(photoId)-\(retryCount)") {
             await startPolling()
         }
         .onAppear { NotificationManager.shared.cancelPhotoReadyNotifications() }
@@ -314,6 +315,18 @@ struct ResultView: View {
                     .padding(.horizontal, BoothifySpacing.xl)
             }
 
+            if photo.errorMessage?.contains("Timed out") == true {
+                Button {
+                    Haptics.tap(.medium)
+                    retryPolling()
+                } label: {
+                    Label("Retry", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .frame(maxWidth: 260)
+                .padding(.top, BoothifySpacing.sm)
+            }
+
             Button {
                 Haptics.tap()
                 app.pop()
@@ -322,9 +335,16 @@ struct ResultView: View {
             }
             .buttonStyle(SecondaryButtonStyle())
             .frame(maxWidth: 260)
-            .padding(.top, BoothifySpacing.sm)
+            .padding(.top, photo.errorMessage?.contains("Timed out") == true ? 0 : BoothifySpacing.sm)
         }
         .padding(.horizontal, BoothifySpacing.lg)
+    }
+
+    private func retryPolling() {
+        photo = nil
+        pollAttempts = 0
+        messageIndex = 0
+        retryCount += 1
     }
 
     // MARK: - Subviews

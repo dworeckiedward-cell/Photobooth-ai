@@ -495,6 +495,7 @@ struct ConnectCalendarSheet: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         .opacity(0.7)
+        .accessibilityHint("Coming soon — not available yet")
     }
 }
 

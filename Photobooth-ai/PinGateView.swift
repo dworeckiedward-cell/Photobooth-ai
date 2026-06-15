@@ -107,6 +107,7 @@ struct PinGateView: View {
         }
         .onDisappear {
             cooldownTimer?.invalidate()
+            cooldownTimer = nil
         }
     }
 

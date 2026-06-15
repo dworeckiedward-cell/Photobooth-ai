@@ -97,6 +97,7 @@ struct RootView: View {
         .task {
             if !OnboardingStore.hasCompleted {
                 try? await Task.sleep(for: .milliseconds(350))
+                guard !Task.isCancelled else { return }
                 onboardingPresented = true
             }
         }

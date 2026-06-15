@@ -30,6 +30,7 @@ struct EventHubView: View {
     @State private var pinGatePresented: Bool = false
     @State private var settingsUnlocked: Bool = false
     @State private var lastUnlockTime: Date? = nil
+    @Environment(\.scenePhase) private var scenePhase
 
     private var event: Event? { app.event(id: eventId) }
     private var latestCompleted: Photo? {
@@ -111,6 +112,15 @@ struct EventHubView: View {
                 await app.refreshEvent(slug: slug)
                 await loadRecent(slug: slug)
             }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active, settingsUnlocked else { return }
+            let lockSettings = app.settings(for: eventId).lockPin
+            guard lockSettings.enabled, lockSettings.idleTimeoutMinutes > 0,
+                  let last = lastUnlockTime,
+                  Date.now.timeIntervalSince(last) > Double(lockSettings.idleTimeoutMinutes) * 60
+            else { return }
+            settingsUnlocked = false
         }
         .sheet(isPresented: $pinGatePresented) {
             PinGateView(eventId: eventId) {
@@ -407,10 +417,18 @@ struct EventHubView: View {
                     guard let url else { return }
                     Haptics.notify(.success)
                     UIPasteboard.general.string = url.absoluteString
-                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
+                    if reduceMotion {
+                        copiedLink = true
+                    } else {
+                        withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
+                    }
                     Task {
                         try? await Task.sleep(for: .seconds(1.4))
-                        withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
+                        if reduceMotion {
+                            copiedLink = false
+                        } else {
+                            withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
+                        }
                     }
                 } label: {
                     Label(copiedLink ? "Copied" : "Copy", systemImage: copiedLink ? "checkmark" : "doc.on.doc")
