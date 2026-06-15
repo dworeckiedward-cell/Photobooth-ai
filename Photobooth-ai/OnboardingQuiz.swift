@@ -118,6 +118,10 @@ struct OnboardingQuizSheet: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: Int = 0
     @State private var answers = OnboardingAnswers()
+    /// Tracks swipe direction so the transition slides the right way.
+    @State private var goingForward: Bool = true
+    /// Cancelled and restarted whenever the user changes their selection.
+    @State private var autoAdvanceTask: Task<Void, Never>? = nil
 
     /// Called after either Finish or Skip so the host (RootView) can apply
     /// the answers to defaults and flip the persistent completion flag.
@@ -129,33 +133,36 @@ struct OnboardingQuizSheet: View {
                 BoothifyTheme.bg.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Progress bar
                     progressBar
                         .padding(.horizontal, BoothifySpacing.lg)
                         .padding(.top, BoothifySpacing.md)
 
-                    // Step counter
-                    Text("Step \(min(step + 1, totalSteps)) of \(totalSteps)")
+                    Text(step < totalSteps ? "Step \(step + 1) of \(totalSteps)" : "Done")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(BoothifyTheme.textMuted)
+                        .contentTransition(.numericText())
+                        .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: step)
                         .padding(.top, BoothifySpacing.sm)
 
-                    // Step content
-                    Group {
-                        switch step {
-                        case 0: categoryStep
-                        case 1: modeStep
-                        case 2: brandingStep
-                        case 3: templateStep
-                        default: summaryStep
+                    // Step content — .id(step) forces SwiftUI to swap views so
+                    // the asymmetric transition fires on every step change.
+                    ZStack {
+                        Group {
+                            switch step {
+                            case 0: categoryStep
+                            case 1: modeStep
+                            case 2: brandingStep
+                            case 3: templateStep
+                            default: summaryStep
+                            }
                         }
+                        .id(step)
+                        .transition(stepTransition)
                     }
                     .frame(maxHeight: .infinity)
                     .padding(.horizontal, BoothifySpacing.lg)
                     .padding(.top, BoothifySpacing.lg)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: step)
 
-                    // Bottom bar
                     bottomBar
                         .padding(.horizontal, BoothifySpacing.lg)
                         .padding(.bottom, BoothifySpacing.lg)
@@ -177,6 +184,47 @@ struct OnboardingQuizSheet: View {
     }
 
     private var totalSteps: Int { 4 }
+
+    // Directional slide + fade: forward → slides from trailing, back → from leading.
+    private var stepTransition: AnyTransition {
+        let insertOffset: CGFloat = goingForward ? 36 : -36
+        return .asymmetric(
+            insertion: .opacity.combined(with: .offset(x: insertOffset, y: 0)),
+            removal:   .opacity.combined(with: .offset(x: -insertOffset, y: 0))
+        )
+    }
+
+    private var stepAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.86)
+    }
+
+    // MARK: - Auto-advance
+
+    /// Schedule a forward step after a short pause so the selected state is visible.
+    /// Cancels any pending advance first — safe to call on every tap.
+    private func scheduleAutoAdvance() {
+        autoAdvanceTask?.cancel()
+        autoAdvanceTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.26))
+            guard !Task.isCancelled else { return }
+            advance()
+        }
+    }
+
+    private func advance() {
+        guard step < totalSteps else { return }
+        goingForward = true
+        Haptics.tap(.light)
+        withAnimation(stepAnimation) { step += 1 }
+    }
+
+    private func goBack() {
+        guard step > 0 else { return }
+        autoAdvanceTask?.cancel()
+        goingForward = false
+        Haptics.tap(.light)
+        withAnimation(stepAnimation) { step -= 1 }
+    }
 
     // MARK: - Progress bar
 
@@ -207,7 +255,10 @@ struct OnboardingQuizSheet: View {
             optionGrid(
                 options: EventCategory.allCases,
                 selected: answers.category
-            ) { answers.category = $0 }
+            ) {
+                answers.category = $0
+                scheduleAutoAdvance()
+            }
         }
     }
 
@@ -221,7 +272,10 @@ struct OnboardingQuizSheet: View {
             optionList(
                 options: PrimaryBoothMode.allCases,
                 selected: answers.primaryMode
-            ) { answers.primaryMode = $0 }
+            ) {
+                answers.primaryMode = $0
+                scheduleAutoAdvance()
+            }
         }
     }
 
@@ -235,7 +289,10 @@ struct OnboardingQuizSheet: View {
             optionList(
                 options: BrandingPreference.allCases,
                 selected: answers.branding
-            ) { answers.branding = $0 }
+            ) {
+                answers.branding = $0
+                scheduleAutoAdvance()
+            }
         }
     }
 
@@ -264,6 +321,7 @@ struct OnboardingQuizSheet: View {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(BoothifyTheme.emerald)
+                    .symbolEffect(.bounce, options: .nonRepeating)
             }
             VStack(spacing: BoothifySpacing.xs) {
                 Text("All set.")
@@ -355,9 +413,11 @@ struct OnboardingQuizSheet: View {
                     RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
                         .fill(isSelected ? BoothifyTheme.violet.opacity(0.20) : BoothifyTheme.surface2)
                         .frame(width: 32, height: 32)
+                        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isSelected)
                     Image(systemName: symbol)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(isSelected ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isSelected)
                 }
                 Text(label)
                     .font(.subheadline.weight(.medium))
@@ -368,15 +428,21 @@ struct OnboardingQuizSheet: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.subheadline)
                         .foregroundStyle(BoothifyTheme.violet)
+                        .transition(.scale(scale: 0.5).combined(with: .opacity))
                 }
             }
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.sm + 4)
             .frame(maxWidth: .infinity, alignment: wide ? .leading : .center)
-            .background(isSelected ? BoothifyTheme.violet.opacity(0.10) : BoothifyTheme.surface1)
+            .background(
+                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                    .fill(isSelected ? BoothifyTheme.violet.opacity(0.10) : BoothifyTheme.surface1)
+                    .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isSelected)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                     .stroke(isSelected ? BoothifyTheme.violet : BoothifyTheme.surfaceLine, lineWidth: isSelected ? 1.5 : 1)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isSelected)
             )
             .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
@@ -389,15 +455,18 @@ struct OnboardingQuizSheet: View {
         Button {
             Haptics.selection()
             answers.preferredTemplateRawDuration = raw
+            scheduleAutoAdvance()
         } label: {
             HStack(spacing: BoothifySpacing.sm) {
                 ZStack {
                     RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
                         .fill(isSel ? BoothifyTheme.violet.opacity(0.20) : BoothifyTheme.surface2)
                         .frame(width: 32, height: 32)
+                        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isSel)
                     Image(systemName: "slowmo")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(isSel ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isSel)
                 }
                 Text(label)
                     .foregroundStyle(.white)
@@ -415,14 +484,20 @@ struct OnboardingQuizSheet: View {
                 if isSel {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(BoothifyTheme.violet)
+                        .transition(.scale(scale: 0.5).combined(with: .opacity))
                 }
             }
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.sm + 4)
-            .background(isSel ? BoothifyTheme.violet.opacity(0.10) : BoothifyTheme.surface1)
+            .background(
+                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                    .fill(isSel ? BoothifyTheme.violet.opacity(0.10) : BoothifyTheme.surface1)
+                    .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isSel)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                     .stroke(isSel ? BoothifyTheme.violet : BoothifyTheme.surfaceLine, lineWidth: isSel ? 1.5 : 1)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isSel)
             )
             .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         }
@@ -434,32 +509,48 @@ struct OnboardingQuizSheet: View {
     @ViewBuilder
     private var bottomBar: some View {
         HStack(spacing: BoothifySpacing.sm) {
-            if step > 0 {
-                Button {
-                    Haptics.tap(.light)
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step -= 1 }
-                } label: {
+            // Back — only on steps after the first
+            if step > 0 && step <= totalSteps {
+                Button(action: goBack) {
                     Label("Back", systemImage: "chevron.left")
                         .font(.subheadline.weight(.semibold))
                 }
                 .buttonStyle(SecondaryButtonStyle())
             }
-            Button {
-                Haptics.tap()
-                if step < totalSteps {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step += 1 }
-                } else {
+
+            Spacer()
+
+            if step == totalSteps {
+                // Summary screen — primary Finish button
+                Button {
+                    Haptics.tap()
                     finish(saving: true)
+                } label: {
+                    HStack(spacing: BoothifySpacing.xs) {
+                        Text("Finish")
+                        Image(systemName: "checkmark")
+                    }
+                    .font(.subheadline.weight(.semibold))
                 }
-            } label: {
-                HStack(spacing: BoothifySpacing.xs) {
-                    Text(step == totalSteps ? "Finish" : "Next")
-                    Image(systemName: step == totalSteps ? "checkmark" : "chevron.right")
+                .buttonStyle(PrimaryButtonStyle())
+            } else {
+                // Question steps — subtle skip affordance; auto-advance handles the happy path
+                Button {
+                    autoAdvanceTask?.cancel()
+                    advance()
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("Skip")
+                            .font(.subheadline.weight(.medium))
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(BoothifyTheme.textMuted)
                 }
-                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.plain)
             }
-            .buttonStyle(PrimaryButtonStyle())
         }
+        .frame(minHeight: 44)
     }
 
     private func finish(saving: Bool) {
