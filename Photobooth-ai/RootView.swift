@@ -200,6 +200,10 @@ private struct BoothifyTabBar: View {
     let onProfileTap: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    // @ScaledMetric: these sizes track the user's Dynamic Type setting
+    @ScaledMetric(relativeTo: .caption2) private var tabIconSize: CGFloat = 21
+    @ScaledMetric(relativeTo: .caption2) private var tabLabelSize: CGFloat = 10
+
     private var safeAreaBottom: CGFloat {
         (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
             .windows.first?.safeAreaInsets.bottom ?? 0
@@ -207,9 +211,13 @@ private struct BoothifyTabBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.white.opacity(0.06))
-                .frame(height: 0.5)
+            // Premium separator: gradient fade on edges instead of flat line
+            LinearGradient(
+                colors: [.clear, Color.white.opacity(0.10), Color.white.opacity(0.10), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 0.5)
 
             HStack(spacing: 0) {
                 ForEach(BoothifyTab.allCases, id: \.rawValue) { tab in
@@ -217,10 +225,11 @@ private struct BoothifyTabBar: View {
                 }
                 profileTabButton
             }
-            .padding(.top, 8)
+            .padding(.top, 10)
             .padding(.bottom, max(safeAreaBottom, 12))
         }
         .background(.ultraThinMaterial)
+        .background(Color.white.opacity(0.04))
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -247,29 +256,39 @@ private struct BoothifyTabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
+        .accessibilityHint("Opens your profile card")
         .accessibilityAddTraits(isProfileActive ? [.isSelected] : [])
     }
 
     @ViewBuilder
     private func tabItem(icon: String, title: String, isActive: Bool) -> some View {
-        VStack(spacing: 5) {
-            // Active indicator pill above icon
-            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                .fill(isActive ? BoothifyTheme.violet : Color.clear)
-                .frame(width: 22, height: 3)
-                .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isActive)
+        VStack(spacing: 4) {
+            // Active indicator pill — glow when active
+            ZStack {
+                if isActive && !reduceMotion {
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                        .fill(BoothifyTheme.violet.opacity(0.45))
+                        .frame(width: 22, height: 3)
+                        .blur(radius: 3)
+                }
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(isActive ? BoothifyTheme.violet : Color.clear)
+                    .frame(width: 22, height: 3)
+            }
+            .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isActive)
 
             Image(systemName: icon)
-                .font(.system(size: 22, weight: isActive ? .semibold : .regular))
+                .font(.system(size: tabIconSize, weight: isActive ? .semibold : .regular))
                 .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
-                .scaleEffect(isActive ? 1.06 : 1.0)
-                .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.70), value: isActive)
+                .scaleEffect(isActive ? 1.08 : 1.0)
+                .animation(reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.65), value: isActive)
 
             Text(title)
-                .font(.system(size: 10, weight: isActive ? .semibold : .regular))
+                .font(.system(size: tabLabelSize, weight: isActive ? .semibold : .regular))
                 .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
         }
         .frame(maxWidth: .infinity)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
 }
@@ -279,6 +298,7 @@ private struct BoothifyTabBar: View {
 private struct AppSettingsView: View {
     @Environment(AppState.self) private var app
     @State private var confirmSignOut = false
+    @ScaledMetric(relativeTo: .title3) private var avatarInitialsSize: CGFloat = 20
 
     private var displayName: String { app.currentUser?.fullName ?? "Operator" }
     private var email: String? { app.currentUser?.email }
@@ -304,7 +324,7 @@ private struct AppSettingsView: View {
                                 .frame(width: 52, height: 52)
                                 .overlay(Circle().stroke(BoothifyTheme.violet.opacity(0.40), lineWidth: 1.5))
                             Text(initials.isEmpty ? "?" : initials)
-                                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                .font(.system(size: avatarInitialsSize, weight: .semibold, design: .rounded))
                                 .foregroundStyle(BoothifyTheme.violet)
                         }
                         VStack(alignment: .leading, spacing: 2) {
@@ -361,6 +381,9 @@ private struct ProfileCardView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var confirmSignOut = false
+
+    @ScaledMetric(relativeTo: .title)  private var avatarInitialsSize: CGFloat = 34
+    @ScaledMetric(relativeTo: .title2) private var statNumberSize: CGFloat = 30
 
     private var displayName: String { app.currentUser?.fullName ?? "Operator" }
     private var email: String?      { app.currentUser?.email }
@@ -420,44 +443,66 @@ private struct ProfileCardView: View {
 
     private var header: some View {
         ZStack(alignment: .bottom) {
-            // Gradient background
+            // Base gradient
             Rectangle()
                 .fill(
                     LinearGradient(
                         stops: [
-                            .init(color: BoothifyTheme.violet.opacity(0.55), location: 0),
-                            .init(color: Color(red: 0.22, green: 0.10, blue: 0.45).opacity(0.65), location: 0.5),
+                            .init(color: BoothifyTheme.violet.opacity(0.60), location: 0),
+                            .init(color: Color(red: 0.22, green: 0.10, blue: 0.45).opacity(0.70), location: 0.45),
                             .init(color: BoothifyTheme.bg, location: 1),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
-                .frame(height: 200)
+                .frame(height: 220)
 
-            // Subtle noise/grain overlay for texture
+            // Ambient radial bloom at top-center (matches LoginView)
+            RadialGradient(
+                colors: [BoothifyTheme.violet.opacity(0.35), .clear],
+                center: .init(x: 0.5, y: 0.0),
+                startRadius: 0,
+                endRadius: 260
+            )
+            .frame(height: 220)
+            .allowsHitTesting(false)
+
+            // Noise texture for premium feel
             Rectangle()
-                .fill(.white.opacity(0.03))
-                .frame(height: 200)
+                .fill(.white.opacity(0.025))
+                .frame(height: 220)
                 .blendMode(.overlay)
+                .allowsHitTesting(false)
 
-            // Avatar — overlaps the gradient bottom edge
+            // Avatar — overlaps gradient bottom edge
             VStack(spacing: BoothifySpacing.md) {
                 ZStack {
-                    // Glow ring
+                    // Outer diffuse bloom — dimensional layering
                     Circle()
-                        .fill(BoothifyTheme.violet.opacity(0.25))
-                        .frame(width: 108, height: 108)
-                        .blur(radius: 14)
+                        .fill(BoothifyTheme.violet.opacity(0.30))
+                        .frame(width: 120, height: 120)
+                        .blur(radius: 20)
 
+                    // Inner ambient ring
+                    Circle()
+                        .fill(BoothifyTheme.violet.opacity(0.10))
+                        .frame(width: 106, height: 106)
+
+                    // Avatar fill
                     Circle()
                         .fill(Color(red: 0.10, green: 0.07, blue: 0.18))
                         .frame(width: 96, height: 96)
+                        .shadow(color: BoothifyTheme.violet.opacity(0.55), radius: 24, y: 8)
 
+                    // Gradient stroke border
                     Circle()
                         .stroke(
                             LinearGradient(
-                                colors: [BoothifyTheme.violet, BoothifyTheme.violet.opacity(0.30)],
+                                colors: [
+                                    BoothifyTheme.violet,
+                                    BoothifyTheme.violet.opacity(0.20)
+                                ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -466,7 +511,7 @@ private struct ProfileCardView: View {
                         .frame(width: 96, height: 96)
 
                     Text(initials.isEmpty ? "?" : initials)
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .font(.system(size: avatarInitialsSize, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
 
@@ -474,6 +519,7 @@ private struct ProfileCardView: View {
                     Text(displayName)
                         .font(.title3.bold())
                         .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.30), radius: 4, y: 2)
                     if let email {
                         Text(email)
                             .font(.subheadline)
@@ -491,27 +537,34 @@ private struct ProfileCardView: View {
 
     private var statsRow: some View {
         HStack(spacing: BoothifySpacing.sm) {
-            profileStat(value: "\(app.events.count)", label: "Events")
-            profileStat(value: "\(totalPhotos)", label: "Photos")
+            profileStat(value: "\(app.events.count)", label: "Events", tint: BoothifyTheme.violet)
+            profileStat(value: "\(totalPhotos)", label: "Photos", tint: BoothifyTheme.emerald)
         }
     }
 
-    private func profileStat(value: String, label: String) -> some View {
+    private func profileStat(value: String, label: String, tint: Color) -> some View {
         VStack(spacing: 5) {
             Text(value)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .font(.system(size: statNumberSize, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText())
             Text(label)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.textSecondary)
+            // Colored accent bar — visual hierarchy cue per stat
+            Rectangle()
+                .fill(tint.opacity(0.60))
+                .frame(height: 2)
+                .clipShape(Capsule())
+                .padding(.horizontal, BoothifySpacing.xl)
+                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, BoothifySpacing.lg)
         .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                .stroke(tint.opacity(0.16), lineWidth: 1)
         )
     }
 

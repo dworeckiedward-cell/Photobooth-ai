@@ -12,6 +12,9 @@ struct LoginView: View {
     @State private var isSigningIn: Bool = false
     @State private var errorMessage: String?
 
+    @ScaledMetric(relativeTo: .largeTitle) private var wordmarkSize: CGFloat = 46
+    @ScaledMetric(relativeTo: .title)      private var iconSize: CGFloat = 38
+
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
@@ -59,7 +62,7 @@ struct LoginView: View {
                             .shadow(color: BoothifyTheme.violet.opacity(0.28), radius: 28, y: 14)
 
                         Image(systemName: "wand.and.stars")
-                            .font(.system(size: 38, weight: .semibold))
+                            .font(.system(size: iconSize, weight: .semibold))
                             .foregroundStyle(BoothifyTheme.violet)
                             .symbolEffect(.variableColor.iterative.reversing, options: .repeating)
                     }
@@ -68,7 +71,7 @@ struct LoginView: View {
                     // Wordmark + tagline
                     VStack(spacing: BoothifySpacing.sm) {
                         Text("Boothify")
-                            .font(.system(size: 46, weight: .bold, design: .default))
+                            .font(.system(size: wordmarkSize, weight: .bold, design: .default))
                             .tracking(-1.2)
                             .foregroundStyle(.white)
 
