@@ -25,6 +25,7 @@ struct EventHubView: View {
     @State private var sharePresented: Bool = false
     @State private var qrPresented: Bool = false
     @State private var copiedLink: Bool = false
+    @State private var loadError: String? = nil
 
     // PIN gate
     @State private var pinGatePresented: Bool = false
@@ -50,7 +51,25 @@ struct EventHubView: View {
 
                         CloudStatusPanel(eventId: eventId)
 
-                        recentCapturesSection
+                        if let loadError {
+                            AppEmptyState(
+                                symbol: "wifi.exclamationmark",
+                                symbolColor: BoothifyTheme.amber,
+                                title: "Couldn't load captures",
+                                subtitle: loadError,
+                                actionLabel: "Retry",
+                                action: {
+                                    self.loadError = nil
+                                    Task {
+                                        if let slug = event?.slug {
+                                            await loadRecent(slug: slug)
+                                        }
+                                    }
+                                }
+                            )
+                        } else {
+                            recentCapturesSection
+                        }
 
                         statsRow
 
@@ -434,6 +453,7 @@ struct EventHubView: View {
     private func loadRecent(slug: String) async {
         do {
             let list = try await BoothifyAPI.shared.listEventPhotos(slug: slug, status: .all, limit: 30)
+            loadError = nil
             // Show latest non-failed photos for the recent strip.
             let visible = list.photos.filter { $0.status != .failed }
             recentPhotos = visible.prefix(6).map { $0 }
@@ -450,7 +470,8 @@ struct EventHubView: View {
                 $0.status == .generating || $0.status == .pending || $0.status == .uploaded
             }.count
         } catch {
-            // Silent — empty states already cover the no-data case.
+            let message = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            loadError = message
         }
     }
 

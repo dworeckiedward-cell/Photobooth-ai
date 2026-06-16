@@ -7,7 +7,7 @@ private enum BoothifyTab: Int, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .home:     "Home"
+        case .home:     "Booth"
         case .events:   "Events"
         case .settings: "Settings"
         }

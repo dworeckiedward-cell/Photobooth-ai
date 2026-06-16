@@ -403,24 +403,28 @@ struct ConnectCalendarSheet: View {
                             .padding(.horizontal, BoothifySpacing.xl)
                     }
 
-                    // Options
-                    VStack(spacing: BoothifySpacing.sm) {
-                        calendarOption(
-                            icon: "calendar",
-                            iconColor: BoothifyTheme.error,
-                            title: "iPhone Calendar",
-                            subtitle: "iCloud, Google Cal, Exchange",
-                            badge: "Coming soon"
-                        )
-                        calendarOption(
-                            icon: "g.circle.fill",
-                            iconColor: Color(red: 0.26, green: 0.52, blue: 0.96),
-                            title: "Google Calendar",
-                            subtitle: "Direct Google account sync",
-                            badge: "Coming soon"
-                        )
+                    // Coming soon notice — not tappable, not a false affordance
+                    HStack(spacing: BoothifySpacing.md) {
+                        AppIconBadge(symbol: "lock.fill", color: BoothifyTheme.textMuted, size: 40)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Google Calendar & iPhone Calendar")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.textSecondary)
+                            Text("Calendar sync is coming in a future update.")
+                                .font(.caption)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                        Spacer()
                     }
+                    .padding(BoothifySpacing.md)
+                    .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    )
                     .padding(.horizontal, BoothifySpacing.lg)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Calendar sync coming soon")
 
                     Spacer()
                 }
@@ -436,27 +440,6 @@ struct ConnectCalendarSheet: View {
         }
     }
 
-    @ViewBuilder
-    private func calendarOption(icon: String, iconColor: Color, title: String, subtitle: String, badge: String) -> some View {
-        AppListRow(
-            symbol: icon,
-            symbolColor: iconColor,
-            title: title,
-            subtitle: subtitle,
-            badge: badge,
-            badgeColor: BoothifyTheme.textMuted,
-            accessory: .none,
-            disabled: true,
-            action: {}
-        )
-        .padding(BoothifySpacing.sm)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
-        .accessibilityHint("Coming soon — not available yet")
-    }
 }
 
 // MARK: - Calendar extension
