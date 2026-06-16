@@ -13,7 +13,17 @@ private enum BoothifyTab: Int, CaseIterable, Hashable {
         }
     }
 
+    /// Outline variant — shown when the tab is NOT selected (iOS convention).
     var icon: String {
+        switch self {
+        case .home:     "house"
+        case .events:   "calendar"
+        case .settings: "gearshape"
+        }
+    }
+
+    /// Filled variant — shown when the tab IS selected (iOS convention).
+    var selectedIcon: String {
         switch self {
         case .home:     "house.fill"
         case .events:   "calendar"
@@ -201,35 +211,34 @@ private struct BoothifyTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // @ScaledMetric: these sizes track the user's Dynamic Type setting
-    @ScaledMetric(relativeTo: .caption2) private var tabIconSize: CGFloat = 21
+    @ScaledMetric(relativeTo: .caption2) private var tabIconSize: CGFloat = 24
     @ScaledMetric(relativeTo: .caption2) private var tabLabelSize: CGFloat = 10
 
     private var safeAreaBottom: CGFloat {
-        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-            .windows.first?.safeAreaInsets.bottom ?? 0
+        (UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?
+            .windows.first(where: { $0.isKeyWindow })?
+            .safeAreaInsets.bottom) ?? 0
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Premium separator: gradient fade on edges instead of flat line
-            LinearGradient(
-                colors: [.clear, Color.white.opacity(0.10), Color.white.opacity(0.10), .clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(height: 0.5)
+            // Native hairline top separator — a single thin line, like UITabBar
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 0.5)
 
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
                 ForEach(BoothifyTab.allCases, id: \.rawValue) { tab in
                     navTabButton(tab)
                 }
                 profileTabButton
             }
-            .padding(.top, 10)
-            .padding(.bottom, max(safeAreaBottom, 12))
+            .padding(.top, 8)
+            .padding(.bottom, max(safeAreaBottom, 10))
         }
         .background(.ultraThinMaterial)
-        .background(Color.white.opacity(0.04))
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -239,11 +248,11 @@ private struct BoothifyTabBar: View {
         Button {
             guard selected != tab else { return }
             Haptics.tap(.light)
-            withAnimation(reduceMotion ? nil : .spring(response: 0.30, dampingFraction: 0.72)) {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
                 selected = tab
             }
         } label: {
-            tabItem(icon: tab.icon, title: tab.title, isActive: isActive)
+            tabItem(icon: tab.icon, selectedIcon: tab.selectedIcon, title: tab.title, isActive: isActive)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(tab.title)
@@ -252,7 +261,7 @@ private struct BoothifyTabBar: View {
 
     private var profileTabButton: some View {
         Button(action: onProfileTap) {
-            tabItem(icon: "person.fill", title: "Profile", isActive: isProfileActive)
+            tabItem(icon: "person", selectedIcon: "person.fill", title: "Profile", isActive: isProfileActive)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Profile")
@@ -261,35 +270,26 @@ private struct BoothifyTabBar: View {
     }
 
     @ViewBuilder
-    private func tabItem(icon: String, title: String, isActive: Bool) -> some View {
+    private func tabItem(icon: String, selectedIcon: String, title: String, isActive: Bool) -> some View {
+        let tint = isActive ? BoothifyTheme.violet : BoothifyTheme.textMuted
         VStack(spacing: 4) {
-            // Active indicator pill — glow when active
-            ZStack {
-                if isActive && !reduceMotion {
-                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(BoothifyTheme.violet.opacity(0.45))
-                        .frame(width: 22, height: 3)
-                        .blur(radius: 3)
-                }
-                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                    .fill(isActive ? BoothifyTheme.violet : Color.clear)
-                    .frame(width: 22, height: 3)
-            }
-            .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72), value: isActive)
-
-            Image(systemName: icon)
-                .font(.system(size: tabIconSize, weight: isActive ? .semibold : .regular))
-                .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
-                .scaleEffect(isActive ? 1.08 : 1.0)
-                .animation(reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.65), value: isActive)
+            Image(systemName: isActive ? selectedIcon : icon)
+                .font(.system(size: tabIconSize))
+                .symbolRenderingMode(.hierarchical)
+                .frame(height: tabIconSize + 4)
+                // Subtle native bounce on selection. Passing a constant when
+                // reduce-motion is on means the value never changes → no animation.
+                .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
 
             Text(title)
-                .font(.system(size: tabLabelSize, weight: isActive ? .semibold : .regular))
-                .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
+                .font(.system(size: tabLabelSize, weight: isActive ? .semibold : .medium))
+                .lineLimit(1)
         }
+        .foregroundStyle(tint)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isActive)
     }
 }
 
