@@ -192,21 +192,6 @@ struct LoginView: View {
         return f.string(from: components)
     }
 
-    @ViewBuilder
-    private func featurePill(icon: String, label: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.caption2.weight(.semibold))
-            Text(label)
-                .font(.caption2.weight(.semibold))
-        }
-        .foregroundStyle(BoothifyTheme.textSecondary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(BoothifyTheme.surface1)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-    }
 }
 
 #Preview {

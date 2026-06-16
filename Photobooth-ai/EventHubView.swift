@@ -362,89 +362,89 @@ struct EventHubView: View {
 
         return AppCard(padding: BoothifySpacing.md, radius: BoothifyRadius.section) {
             VStack(alignment: .leading, spacing: BoothifySpacing.md) {
-            // Header row
-            HStack(spacing: BoothifySpacing.md) {
-                AppIconBadge(
-                    symbol: "qrcode",
-                    color: hasUrl ? BoothifyTheme.violet : BoothifyTheme.textMuted,
-                    size: 40
-                )
+                // Header row
+                HStack(spacing: BoothifySpacing.md) {
+                    AppIconBadge(
+                        symbol: "qrcode",
+                        color: hasUrl ? BoothifyTheme.violet : BoothifyTheme.textMuted,
+                        size: 40
+                    )
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Share latest photo")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.white)
-                    if let url {
-                        Text(url.absoluteString)
-                            .font(.caption2.monospaced())
-                            .foregroundStyle(BoothifyTheme.textTertiary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    } else {
-                        Text("Available after the first completed capture.")
-                            .font(.caption)
-                            .foregroundStyle(BoothifyTheme.textTertiary)
-                    }
-                }
-                Spacer()
-            }
-
-            // Action row
-            HStack(spacing: BoothifySpacing.sm) {
-                Button {
-                    Haptics.tap()
-                    guard let url else { return }
-                    shareSheetItems = [url]
-                    sharePresented = true
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(SecondaryButtonStyle())
-                .disabled(!hasUrl)
-
-                Button {
-                    guard let url else { return }
-                    Haptics.notify(.success)
-                    UIPasteboard.general.string = url.absoluteString
-                    if reduceMotion {
-                        copiedLink = true
-                    } else {
-                        withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
-                    }
-                    Task {
-                        try? await Task.sleep(for: .seconds(1.4))
-                        if reduceMotion {
-                            copiedLink = false
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Share latest photo")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                        if let url {
+                            Text(url.absoluteString)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         } else {
-                            withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
+                            Text("Available after the first completed capture.")
+                                .font(.caption)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
                         }
                     }
-                } label: {
-                    Label(copiedLink ? "Copied" : "Copy", systemImage: copiedLink ? "checkmark" : "doc.on.doc")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
+                    Spacer()
                 }
-                .buttonStyle(SecondaryButtonStyle())
-                .disabled(!hasUrl)
 
-                Button {
-                    Haptics.tap()
-                    qrPresented = true
-                } label: {
-                    Label("QR", systemImage: "qrcode.viewfinder")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
+                // Action row
+                HStack(spacing: BoothifySpacing.sm) {
+                    Button {
+                        Haptics.tap()
+                        guard let url else { return }
+                        shareSheetItems = [url]
+                        sharePresented = true
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(!hasUrl)
+
+                    Button {
+                        guard let url else { return }
+                        Haptics.notify(.success)
+                        UIPasteboard.general.string = url.absoluteString
+                        if reduceMotion {
+                            copiedLink = true
+                        } else {
+                            withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
+                        }
+                        Task {
+                            try? await Task.sleep(for: .seconds(1.4))
+                            if reduceMotion {
+                                copiedLink = false
+                            } else {
+                                withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
+                            }
+                        }
+                    } label: {
+                        Label(copiedLink ? "Copied" : "Copy", systemImage: copiedLink ? "checkmark" : "doc.on.doc")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(!hasUrl)
+
+                    Button {
+                        Haptics.tap()
+                        qrPresented = true
+                    } label: {
+                        Label("QR", systemImage: "qrcode.viewfinder")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(!hasUrl)
                 }
-                .buttonStyle(SecondaryButtonStyle())
-                .disabled(!hasUrl)
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

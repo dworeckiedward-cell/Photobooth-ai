@@ -72,15 +72,15 @@ struct GalleryView: View {
 
                     // Empty state
                     } else if photos.isEmpty {
-                        BoothifyEmptyState(
-                            icon: "photo.stack",
+                        AppEmptyState(
+                            symbol: "photo.stack",
                             title: "No photos yet",
                             subtitle: "Take photos via the kiosk and they'll appear here.",
+                            actionLabel: "Start capturing",
                             action: {
                                 Haptics.tap(.medium)
                                 app.push(.camera(eventId: eventId))
-                            },
-                            actionLabel: "Start capturing"
+                            }
                         )
                         .padding(.top, BoothifySpacing.xxl)
 

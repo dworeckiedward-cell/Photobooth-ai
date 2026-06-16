@@ -11,12 +11,12 @@ struct ModeSelectionView: View {
                 VStack(spacing: 0) {
                     // ── Wordmark header ────────────────────────────────────
                     wordmarkHeader
-                        .padding(.top, 8)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
+                        .padding(.top, BoothifySpacing.sm)
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .padding(.bottom, BoothifySpacing.lg)
 
                     // ── Cards ──────────────────────────────────────────────
-                    VStack(spacing: 12) {
+                    VStack(spacing: BoothifySpacing.sm) {
                         // Primary: AI Photobooth — tall, dominant
                         ModeTile(
                             title: "AI Photobooth",
@@ -48,8 +48,8 @@ struct ModeSelectionView: View {
                         }
                     }
                     .frame(maxWidth: 620)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
+                    .padding(.horizontal, BoothifySpacing.md)
+                    .padding(.bottom, BoothifySpacing.xl)
                 }
                 .frame(maxWidth: .infinity)
             }

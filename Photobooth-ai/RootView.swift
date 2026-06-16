@@ -500,7 +500,7 @@ private struct ProfileCardView: View {
                     if let email {
                         Text(email)
                             .font(.subheadline)
-                            .foregroundStyle(Color.white.opacity(0.55))
+                            .foregroundStyle(BoothifyTheme.textSecondary)
                     }
                 }
                 .padding(.bottom, BoothifySpacing.lg)

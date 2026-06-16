@@ -180,9 +180,7 @@ struct PhotoboothLandingView: View {
     @ViewBuilder
     private var recentEventsSection: some View {
         if app.isLoadingEvents && app.events.isEmpty {
-            ProgressView()
-                .progressViewStyle(.circular)
-                .tint(BoothifyTheme.violet)
+            AppLoadingState(label: "Loading events…")
                 .padding(.top, BoothifySpacing.lg)
         } else if app.events.isEmpty {
             emptyEventsState
@@ -213,41 +211,10 @@ struct PhotoboothLandingView: View {
     }
 
     private var emptyEventsState: some View {
-        VStack(spacing: BoothifySpacing.md) {
-            ZStack {
-                Circle()
-                    .fill(BoothifyTheme.surface2)
-                    .frame(width: 72, height: 72)
-                ZStack {
-                    Image(systemName: "sparkles")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(BoothifyTheme.violet)
-                        .offset(x: 14, y: -12)
-                    Image(systemName: "calendar.badge.plus")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.textSecondary)
-                }
-            }
-            .accessibilityHidden(true)
-
-            VStack(spacing: BoothifySpacing.xs) {
-                Text("No recent events yet")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                Text("Create your first event to begin capturing AI portraits.")
-                    .font(.caption)
-                    .foregroundStyle(BoothifyTheme.textTertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, BoothifySpacing.xl)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, BoothifySpacing.xl)
-        .padding(.horizontal, BoothifySpacing.md)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+        AppEmptyState(
+            symbol: "calendar.badge.plus",
+            title: "No recent events yet",
+            subtitle: "Create your first event to begin capturing AI portraits."
         )
     }
 
@@ -397,11 +364,10 @@ private struct RecentEventRow: View {
         }
     }
 
-    /// Gradient is on media/photo content — permitted by design system.
     private var gradientPlaceholder: some View {
         ZStack {
             LinearGradient(
-                colors: [BoothifyTheme.violet.opacity(0.85), BoothifyTheme.fuchsia.opacity(0.55)],
+                colors: [BoothifyTheme.violet.opacity(0.85), BoothifyTheme.violet.opacity(0.40)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
             Image(systemName: "camera.aperture")
