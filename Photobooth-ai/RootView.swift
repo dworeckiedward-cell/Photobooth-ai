@@ -298,16 +298,11 @@ private struct BoothifyTabBar: View {
 private struct AppSettingsView: View {
     @Environment(AppState.self) private var app
     @State private var confirmSignOut = false
-    @ScaledMetric(relativeTo: .title3) private var avatarInitialsSize: CGFloat = 20
 
-    private var displayName: String { app.currentUser?.fullName ?? "Operator" }
-    private var email: String? { app.currentUser?.email }
-    private var initials: String {
-        displayName
-            .components(separatedBy: " ")
-            .prefix(2)
-            .compactMap { $0.first.map(String.init) }
-            .joined()
+    private var appVersion: String {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+        let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        return "\(v) (\(b))"
     }
 
     var body: some View {
@@ -315,34 +310,6 @@ private struct AppSettingsView: View {
             BoothifyTheme.bg.ignoresSafeArea()
 
             List {
-                // ── User profile summary ──
-                Section {
-                    HStack(spacing: BoothifySpacing.md) {
-                        ZStack {
-                            Circle()
-                                .fill(BoothifyTheme.violet.opacity(0.22))
-                                .frame(width: 52, height: 52)
-                                .overlay(Circle().stroke(BoothifyTheme.violet.opacity(0.40), lineWidth: 1.5))
-                            Text(initials.isEmpty ? "?" : initials)
-                                .font(.system(size: avatarInitialsSize, weight: .semibold, design: .rounded))
-                                .foregroundStyle(BoothifyTheme.violet)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            if let email {
-                                Text(email)
-                                    .font(.subheadline)
-                                    .foregroundStyle(BoothifyTheme.textSecondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                    .padding(.vertical, BoothifySpacing.sm)
-                }
-                .listRowBackground(BoothifyTheme.surface1)
-
                 // ── App ──
                 Section("App") {
                     NavigationLink(destination: AboutBoothifyView()) {
@@ -353,13 +320,21 @@ private struct AppSettingsView: View {
                 .listRowBackground(BoothifyTheme.surface1)
 
                 // ── Account ──
-                Section("Account") {
+                Section {
                     Button(role: .destructive) {
                         Haptics.tap(.medium)
                         confirmSignOut = true
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
+                } header: {
+                    Text("Account")
+                } footer: {
+                    Text("Boothify \(appVersion)")
+                        .font(.footnote)
+                        .foregroundStyle(BoothifyTheme.textMuted)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, BoothifySpacing.lg)
                 }
                 .listRowBackground(BoothifyTheme.surface1)
             }
@@ -380,7 +355,6 @@ private struct AppSettingsView: View {
 private struct ProfileCardView: View {
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
-    @State private var confirmSignOut = false
 
     @ScaledMetric(relativeTo: .title)  private var avatarInitialsSize: CGFloat = 34
     @ScaledMetric(relativeTo: .title2) private var statNumberSize: CGFloat = 30
@@ -408,11 +382,8 @@ private struct ProfileCardView: View {
                         statsRow
                             .padding(.top, BoothifySpacing.lg)
                             .padding(.horizontal, BoothifySpacing.lg)
-                        optionsList
+                        settingsHint
                             .padding(.top, BoothifySpacing.lg)
-                            .padding(.horizontal, BoothifySpacing.lg)
-                        signOutButton
-                            .padding(.top, BoothifySpacing.xl)
                             .padding(.horizontal, BoothifySpacing.lg)
                             .padding(.bottom, BoothifySpacing.xl)
                     }
@@ -429,14 +400,20 @@ private struct ProfileCardView: View {
                     .font(.body.weight(.semibold))
                 }
             }
-            .confirmationDialog("Sign out of Boothify?", isPresented: $confirmSignOut, titleVisibility: .visible) {
-                Button("Sign Out", role: .destructive) {
-                    dismiss()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { app.signOut() }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
         }
+    }
+
+    // Quiet signpost — account actions (About, Sign Out) live in the Settings tab.
+    private var settingsHint: some View {
+        HStack(spacing: BoothifySpacing.xs) {
+            Image(systemName: "gearshape")
+                .font(.caption)
+            Text("App info and sign out are in the Settings tab.")
+                .font(.caption)
+        }
+        .foregroundStyle(BoothifyTheme.textTertiary)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Header with gradient + avatar
@@ -568,52 +545,6 @@ private struct ProfileCardView: View {
         )
     }
 
-    // MARK: - Options list
-
-    private var optionsList: some View {
-        VStack(spacing: 0) {
-            AppListRow(
-                symbol: "info.circle.fill",
-                symbolColor: Color(red: 0.30, green: 0.55, blue: 0.98),
-                title: "About Boothify",
-                action: {}
-            )
-            .padding(.horizontal, BoothifySpacing.md)
-            .overlay {
-                NavigationLink(destination: AboutBoothifyView()) { Color.clear }
-            }
-        }
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
-    }
-
-    // MARK: - Sign out
-
-    private var signOutButton: some View {
-        Button {
-            Haptics.tap(.medium)
-            confirmSignOut = true
-        } label: {
-            HStack(spacing: BoothifySpacing.sm) {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.body.weight(.semibold))
-                Text("Sign Out")
-                    .font(.body.weight(.semibold))
-            }
-            .foregroundStyle(BoothifyTheme.error)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(BoothifyTheme.error.opacity(0.08), in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                    .stroke(BoothifyTheme.error.opacity(0.22), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 // MARK: - Auth splash
