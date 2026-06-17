@@ -117,27 +117,29 @@ struct CloudStatusPanel: View {
                     .padding(.top, BoothifySpacing.xs)
                 }
 
-                // Offline photo queue indicator
+                // Offline photo queue indicator — green = safe, not a warning
                 let offlineCount = PhotoUploadQueue.shared.pendingCount
                 if offlineCount > 0 {
                     HStack(spacing: BoothifySpacing.xs) {
-                        Image(systemName: "arrow.up.circle.fill")
+                        Image(systemName: "checkmark.icloud.fill")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(BoothifyTheme.violet)
-                        Text("\(offlineCount) photo\(offlineCount == 1 ? "" : "s") pending upload")
-                            .font(BoothifyType.caption)
-                            .foregroundStyle(BoothifyTheme.textSecondary)
+                            .foregroundStyle(BoothifyTheme.emerald)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(offlineCount) photo\(offlineCount == 1 ? "" : "s") saved locally")
+                                .font(BoothifyType.captionEmphasis)
+                                .foregroundStyle(.white)
+                            Text("Will sync automatically when back online")
+                                .font(.caption2)
+                                .foregroundStyle(BoothifyTheme.textSecondary)
+                        }
                         Spacer()
-                        Text("Queued offline")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(BoothifyTheme.textTertiary)
                     }
                     .padding(BoothifySpacing.sm)
-                    .background(BoothifyTheme.violet.opacity(0.08))
+                    .background(BoothifyTheme.emerald.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                            .stroke(BoothifyTheme.violet.opacity(0.20), lineWidth: 0.5)
+                            .stroke(BoothifyTheme.emerald.opacity(0.25), lineWidth: 0.5)
                     )
                     .padding(.top, BoothifySpacing.xs)
                 }

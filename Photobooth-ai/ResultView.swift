@@ -24,6 +24,7 @@ struct ResultView: View {
     @State private var haloPulse: Bool = false
     @State private var dotPhase: Bool = false
     @State private var revealOpacity: Double = 0
+    @State private var elapsedSeconds: Int = 0
     @State private var glow: Double = 0
     @State private var showConfetti: Bool = false
     @State private var sharePresented: Bool = false
@@ -251,14 +252,36 @@ struct ResultView: View {
                     }
                 }
 
-                // 6. Footer
-                Text("Usually ready in ~15 seconds")
-                    .font(.caption)
-                    .foregroundStyle(BoothifyTheme.textMuted)
+                // 6. Footer — elapsed timer + slow-generation callout
+                VStack(spacing: BoothifySpacing.xs) {
+                    if elapsedSeconds < 30 {
+                        Text("Usually ready in ~15 seconds")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textMuted)
+                    } else if elapsedSeconds < 60 {
+                        HStack(spacing: 5) {
+                            Image(systemName: "clock")
+                                .font(.caption2.weight(.semibold))
+                            Text("Still working… \(elapsedSeconds)s")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.amber)
+                    } else {
+                        HStack(spacing: 5) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2.weight(.semibold))
+                            Text("Taking longer than usual — almost there")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.amber)
+                    }
+                }
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: elapsedSeconds / 30)
             }
         }
         .padding(BoothifySpacing.xl)
         .onAppear {
+            elapsedSeconds = 0
             guard !reduceMotion else { return }
             withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) {
                 particlePhase = true
@@ -268,6 +291,12 @@ struct ResultView: View {
             }
             withAnimation(.easeInOut(duration: 0.6).repeatForever()) {
                 dotPhase = true
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                elapsedSeconds += 1
             }
         }
         .accessibilityElement(children: .combine)

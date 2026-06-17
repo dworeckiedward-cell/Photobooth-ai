@@ -54,6 +54,30 @@ struct SettingsHubView: View {
                 }
             }
 
+            // Quick Setup — 3 most critical items surfaced for new operators
+            Section {
+                SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
+                    app.push(.settingsCamera(eventId: eventId))
+                }
+                SettingsRow(icon: "wand.and.stars", title: "AI Portraits", subtitle: "\(app.settings(for: eventId).aiPortraits.enabledStyles.count) styles enabled", badge: .beta) {
+                    app.push(.settingsAIPortraits(eventId: eventId))
+                }
+                SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off", badge: .available) {
+                    app.push(.settingsLockPin(eventId: eventId))
+                }
+            } header: {
+                HStack(spacing: 5) {
+                    Image(systemName: "bolt.fill")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(BoothifyTheme.violet)
+                    Text("Quick Setup")
+                        .font(.caption.weight(.bold))
+                        .kerning(0.5)
+                }
+                .foregroundStyle(BoothifyTheme.violet)
+            }
+            .listRowBackground(BoothifyTheme.surface1)
+
             // Set Up — rows are filtered by the current event's BoothMode so each
             // panel stays focused on what the operator actually configures here.
             Section("Set Up") {

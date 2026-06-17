@@ -343,12 +343,19 @@ struct EventHubView: View {
 
     // MARK: - Stats row
 
+    private var completionRate: String {
+        guard totalCaptures > 0 else { return "—" }
+        let pct = Int(Double(totalCompleted) / Double(totalCaptures) * 100)
+        return "\(pct)%"
+    }
+
     private var statsRow: some View {
         let allZero = totalCaptures == 0 && totalCompleted == 0 && totalProcessing == 0
         return HStack(spacing: BoothifySpacing.sm) {
             StatTile(label: "Captures", value: "\(totalCaptures)", tint: BoothifyTheme.violet, muted: allZero)
             StatTile(label: "Completed", value: "\(totalCompleted)", tint: BoothifyTheme.emerald, muted: allZero)
             StatTile(label: "Processing", value: "\(totalProcessing)", tint: BoothifyTheme.amber, muted: allZero)
+            StatTile(label: "Rate", value: completionRate, tint: BoothifyTheme.emerald, muted: allZero)
         }
         .opacity(allZero ? 0.55 : 1.0)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: allZero)
