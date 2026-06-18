@@ -59,30 +59,36 @@ struct RootView: View {
         @Bindable var app = app
         let atRoot = app.path.isEmpty
 
-        ZStack(alignment: .bottom) {
-            // Single NavigationStack — root swaps per selected tab,
-            // deep nav (EventHub, Camera, etc.) uses app.path as always.
-            NavigationStack(path: $app.path) {
-                Group {
-                    switch selectedTab {
-                    case .home:     ModeSelectionView()
-                    case .events:   EventsCalendarView()
-                    case .settings: AppSettingsView()
-                    }
-                }
-                .id(selectedTab)
-                .transition(.opacity)
-                .animation(.easeOut(duration: 0.18), value: selectedTab)
-                .navigationDestination(for: Route.self) { route in
-                    destination(for: route)
+        // Single NavigationStack — root swaps per selected tab,
+        // deep nav (EventHub, Camera, etc.) uses app.path as always.
+        NavigationStack(path: $app.path) {
+            Group {
+                switch selectedTab {
+                case .home:     ModeSelectionView()
+                case .events:   EventsCalendarView()
+                case .settings: AppSettingsView()
                 }
             }
-            .onChange(of: selectedTab) { _, _ in
-                // Safety net: if somehow we're deep when tab changes, pop back.
-                if !app.path.isEmpty { app.popToRoot() }
+            .id(selectedTab)
+            // Reserve room at the bottom of the root tab screens so scroll/list
+            // content (e.g. "Notifications", "New Event") never hides behind the
+            // floating tab bar. Pushed destinations don't inherit this.
+            .safeAreaPadding(.bottom, atRoot ? 118 : 0)
+            .transition(.opacity)
+            .animation(.easeOut(duration: 0.18), value: selectedTab)
+            .navigationDestination(for: Route.self) { route in
+                destination(for: route)
             }
-
-            // ── Tab bar — only at root; slides in/out with deep navigation ──
+        }
+        .onChange(of: selectedTab) { _, _ in
+            // Safety net: if somehow we're deep when tab changes, pop back.
+            if !app.path.isEmpty { app.popToRoot() }
+        }
+        // ── Floating tab bar — anchored to the bottom edge via overlay so it
+        // sits low like Apple's floating controls. Content clearance is handled
+        // separately by safeAreaPadding above (we do NOT use safeAreaInset for
+        // positioning, which would push the bar too high).
+        .overlay(alignment: .bottom) {
             if atRoot {
                 BoothifyTabBar(
                     selected: $selectedTab,
@@ -91,10 +97,12 @@ struct RootView: View {
                     Haptics.tap(.light)
                     profilePresented = true
                 }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        // Animation lives on the ZStack so the tab bar exit transition fires correctly.
+        // Animation drives the tab bar slide-in/out with deep navigation.
         .animation(.spring(response: 0.38, dampingFraction: 0.82), value: atRoot)
         // Status HUD sits above everything, pointer-events off so it never blocks taps.
         .overlay(alignment: .top) {
@@ -108,11 +116,9 @@ struct RootView: View {
             ProfileCardView()
         }
         .task {
-            if !OnboardingStore.hasCompleted {
-                try? await Task.sleep(for: .milliseconds(350))
-                guard !Task.isCancelled else { return }
-                onboardingPresented = true
-            }
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            onboardingPresented = true
         }
     }
 
@@ -211,39 +217,56 @@ private struct BoothifyTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // @ScaledMetric: these sizes track the user's Dynamic Type setting
-    @ScaledMetric(relativeTo: .caption2) private var tabIconSize: CGFloat = 24
-    @ScaledMetric(relativeTo: .caption2) private var tabLabelSize: CGFloat = 10
+    @ScaledMetric(relativeTo: .caption2) private var inactiveIcon: CGFloat = 26
+    @ScaledMetric(relativeTo: .caption2) private var activeIcon: CGFloat = 30
+    @ScaledMetric(relativeTo: .caption2) private var tabLabelSize: CGFloat = 11
 
-    private var safeAreaBottom: CGFloat {
-        (UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?
-            .windows.first(where: { $0.isKeyWindow })?
-            .safeAreaInsets.bottom) ?? 0
-    }
+    private let corner: CGFloat = 28
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Dark opaque bar — no glass blur, matches editorial card aesthetic
-            HStack(alignment: .top, spacing: 0) {
-                ForEach(BoothifyTab.allCases, id: \.rawValue) { tab in
-                    navTabButton(tab)
-                }
-                profileTabButton
+        HStack(alignment: .center, spacing: 0) {
+            ForEach(BoothifyTab.allCases, id: \.rawValue) { tab in
+                navTabButton(tab)
             }
-            .padding(.top, 10)
-            .padding(.bottom, max(safeAreaBottom, 8))
+            profileTabButton
         }
-        .background(
-            Color(red: 0.07, green: 0.07, blue: 0.09)
-                .overlay(
-                    Rectangle()
-                        .fill(Color.white.opacity(0.07))
-                        .frame(height: 0.5),
-                    alignment: .top
+        .padding(.horizontal, 8)
+        .padding(.vertical, 16)
+        .background(barMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay(
+            // Faint top-weighted stroke — the liquid-glass rim highlight.
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.20), Color.white.opacity(0.04)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: 0.8
                 )
         )
-        .ignoresSafeArea(edges: .bottom)
+        .shadow(color: .black.opacity(0.45), radius: 18, y: 8)
+        // Outer margins (horizontal + bottom lift) are applied by the overlay
+        // in RootView so the bar anchors low against the device bottom edge.
+    }
+
+    /// Dark translucent liquid glass — ultraThinMaterial forced to a dark
+    /// scheme so blur reads premium-dark, plus a subtle violet floor wash.
+    private var barMaterial: some View {
+        RoundedRectangle(cornerRadius: corner, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .fill(Color.black.opacity(0.34))
+            )
+            .overlay(
+                LinearGradient(
+                    colors: [BoothifyTheme.violet.opacity(0.10), .clear],
+                    startPoint: .bottom, endPoint: .center
+                )
+                .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+            )
     }
 
     @ViewBuilder
@@ -276,25 +299,21 @@ private struct BoothifyTabBar: View {
     @ViewBuilder
     private func tabItem(icon: String, selectedIcon: String, title: String, isActive: Bool) -> some View {
         let tint = isActive ? BoothifyTheme.violet : BoothifyTheme.textMuted
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             Image(systemName: isActive ? selectedIcon : icon)
-                .font(.system(size: tabIconSize))
+                .font(.system(size: isActive ? activeIcon : inactiveIcon, weight: .regular))
                 .symbolRenderingMode(.hierarchical)
-                .frame(height: tabIconSize + 4)
+                // Reserve the active height for both states → no vertical jump.
+                .frame(height: activeIcon + 2)
                 .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
 
             Text(title)
-                .font(.system(size: tabLabelSize, weight: isActive ? .semibold : .medium))
+                .font(.system(size: tabLabelSize, weight: .medium))
                 .lineLimit(1)
-
-            // Active dot indicator
-            Circle()
-                .fill(isActive ? BoothifyTheme.violet : Color.clear)
-                .frame(width: 4, height: 4)
         }
         .foregroundStyle(tint)
         .frame(maxWidth: .infinity)
-        .frame(minHeight: 44)
+        .frame(minHeight: 44) // 44pt tap target (HIG) without inflating visual height
         .contentShape(Rectangle())
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isActive)
     }
@@ -312,21 +331,97 @@ private struct AppSettingsView: View {
         return "\(v) (\(b))"
     }
 
+    private var displayName: String { app.currentUser?.fullName ?? "Operator" }
+    private var email: String { app.currentUser?.email ?? "—" }
+
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
 
             List {
-                // ── App ──
-                Section("App") {
-                    NavigationLink(destination: AboutBoothifyView()) {
-                        Label("About Boothify", systemImage: "info.circle")
+                // ── Account & Plan ───────────────────────────────────────
+                Section("Account & Plan") {
+                    // Account info row
+                    HStack(spacing: BoothifySpacing.md) {
+                        ZStack {
+                            Circle()
+                                .fill(BoothifyTheme.violet.opacity(0.20))
+                                .frame(width: 44, height: 44)
+                            Text(String(displayName.prefix(1)))
+                                .font(.body.weight(.bold))
+                                .foregroundStyle(BoothifyTheme.violet)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(displayName)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text(email)
+                                .font(.footnote)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+
+                    // Subscription tier
+                    HStack {
+                        Label("Subscription", systemImage: "sparkle")
                             .foregroundStyle(.white)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Image(systemName: "crown.fill")
+                                .font(.caption2.weight(.bold))
+                            Text("PRO")
+                                .font(.caption.weight(.bold))
+                                .kerning(0.4)
+                        }
+                        .foregroundStyle(BoothifyTheme.violet)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(BoothifyTheme.violet.opacity(0.15), in: Capsule())
+                        .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.35), lineWidth: 0.8))
                     }
                 }
                 .listRowBackground(BoothifyTheme.surface1)
 
-                // ── Account ──
+                // ── Default Booth Settings ───────────────────────────────
+                Section("Default Booth Settings") {
+                    globalSettingsRow(icon: "camera.rotate", title: "Default Camera", subtitle: "Back · Mirrored selfie off")
+                    globalSettingsRow(icon: "wand.and.stars", title: "Default AI Styles", subtitle: "22 styles available")
+                    globalSettingsRow(icon: "rosette", title: "Default Branding", subtitle: "Logo watermark off")
+                    globalSettingsRow(icon: "square.and.arrow.up", title: "Default Sharing", subtitle: "Email + SMS templates")
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                // ── App ──────────────────────────────────────────────────
+                Section("App") {
+                    globalSettingsRow(icon: "faceid", title: "Face ID / PIN Lock", subtitle: "Protect operator panel")
+                    globalSettingsRow(icon: "bell", title: "Notifications", subtitle: "Event alerts, delivery status")
+                    globalSettingsRow(icon: "internaldrive", title: "Storage", subtitle: "Manage local cache")
+                    globalSettingsRow(icon: "globe", title: "Language & Region", subtitle: Locale.current.localizedString(forLanguageCode: Locale.current.language.languageCode?.identifier ?? "en") ?? "English")
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                // ── Support ──────────────────────────────────────────────
+                Section("Support") {
+                    globalSettingsRow(icon: "questionmark.circle", title: "Help Center", subtitle: "Guides & tutorials")
+                    globalSettingsRow(icon: "envelope", title: "Contact Support", subtitle: "support@boothify.app")
+                    globalSettingsRow(icon: "sparkles", title: "What's New", subtitle: "v\(appVersion)")
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                // ── About ────────────────────────────────────────────────
+                Section {
+                    NavigationLink(destination: AboutBoothifyView()) {
+                        Label("About Boothify", systemImage: "info.circle")
+                            .foregroundStyle(.white)
+                    }
+                    globalSettingsRow(icon: "hand.raised", title: "Privacy Policy", subtitle: nil)
+                    globalSettingsRow(icon: "doc.text", title: "Terms of Service", subtitle: nil)
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
+                // ── Sign Out ─────────────────────────────────────────────
                 Section {
                     Button(role: .destructive) {
                         Haptics.tap(.medium)
@@ -334,14 +429,12 @@ private struct AppSettingsView: View {
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
-                } header: {
-                    Text("Account")
                 } footer: {
-                    Text("Boothify \(appVersion)")
+                    Text("Boothify \(appVersion) · Powered by Servify Labs")
                         .font(.footnote)
                         .foregroundStyle(BoothifyTheme.textMuted)
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, BoothifySpacing.lg)
+                        .padding(.top, BoothifySpacing.sm)
                 }
                 .listRowBackground(BoothifyTheme.surface1)
             }
@@ -354,6 +447,38 @@ private struct AppSettingsView: View {
             Button("Sign Out", role: .destructive) { app.signOut() }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    @ViewBuilder
+    private func globalSettingsRow(icon: String, title: String, subtitle: String?) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(BoothifyTheme.surface2)
+                    .frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+            }
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(.white)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.textMuted)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
 
