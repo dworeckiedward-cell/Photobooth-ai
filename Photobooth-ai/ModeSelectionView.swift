@@ -9,9 +9,9 @@ struct ModeSelectionView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // ── Wordmark header ────────────────────────────────────
-                    wordmarkHeader
-                        .padding(.top, BoothifySpacing.sm)
+                    // ── Tier badges row ────────────────────────────────────
+                    tierBadgesRow
+                        .padding(.top, BoothifySpacing.md)
                         .padding(.horizontal, BoothifySpacing.md)
                         .padding(.bottom, BoothifySpacing.lg)
 
@@ -25,7 +25,7 @@ struct ModeSelectionView: View {
                             ctaSymbol: "arrow.right",
                             asset: "Mode_Photobooth",
                             badge: .live,
-                            cardHeight: 320,
+                            cardHeight: 340,
                             primary: true
                         ) {
                             Haptics.tap(.medium)
@@ -37,10 +37,10 @@ struct ModeSelectionView: View {
                             title: "360 AI Booth",
                             tagline: "Rotating video. AI cinematic effects.",
                             cta: "Preview",
-                            ctaSymbol: "play.fill",
+                            ctaSymbol: "arrow.right",
                             asset: "Mode_360",
                             badge: .beta,
-                            cardHeight: 210,
+                            cardHeight: 220,
                             primary: false
                         ) {
                             Haptics.tap()
@@ -57,38 +57,43 @@ struct ModeSelectionView: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    // MARK: - Wordmark header
+    // MARK: - Tier badges row
 
-    /// Clean editorial header — logo left, tagline right. No nav bar needed.
     @ViewBuilder
-    private var wordmarkHeader: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Boothify")
-                    .font(BoothifyType.title)
-                    .foregroundStyle(.white)
-                    .kerning(-0.3)
-                Text("Choose your mode")
-                    .font(BoothifyType.caption)
-                    .foregroundStyle(BoothifyTheme.textTertiary)
+    private var tierBadgesRow: some View {
+        HStack {
+            // PREMIUM badge — left
+            HStack(spacing: 6) {
+                Image(systemName: "sparkle")
+                    .font(.caption2.weight(.bold))
+                Text("PREMIUM")
+                    .font(.caption.weight(.bold))
+                    .kerning(0.6)
             }
+            .foregroundStyle(BoothifyTheme.violet)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 8)
+            .background(BoothifyTheme.violet.opacity(0.14), in: Capsule())
+            .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.40), lineWidth: 1))
+
             Spacer()
-            // Ambient live indicator — the event is "open for business"
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(BoothifyTheme.emerald)
-                    .frame(width: 6, height: 6)
-                Text("Ready")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textSecondary)
+
+            // PRO badge — right
+            HStack(spacing: 6) {
+                Image(systemName: "crown.fill")
+                    .font(.caption2.weight(.bold))
+                Text("PRO")
+                    .font(.caption.weight(.bold))
+                    .kerning(0.6)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .foregroundStyle(BoothifyTheme.textSecondary)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 8)
             .background(BoothifyTheme.surface1, in: Capsule())
             .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Boothify — Choose your mode")
+        .accessibilityLabel("Boothify — Premium Pro account")
     }
 }
 
@@ -102,7 +107,7 @@ private struct ModeTile: View {
             switch self { case .live: "LIVE"; case .beta: "BETA" }
         }
         var tint: Color {
-            switch self { case .live: BoothifyTheme.emerald; case .beta: BoothifyTheme.amber }
+            switch self { case .live: BoothifyTheme.violet; case .beta: BoothifyTheme.amber }
         }
         var symbol: String {
             switch self { case .live: "circle.fill"; case .beta: "sparkles" }
@@ -223,14 +228,19 @@ private struct ModeTile: View {
             Image(systemName: ctaSymbol)
                 .font(.caption.weight(.bold))
         }
-        .foregroundStyle(primary ? Color.black : BoothifyTheme.amber)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 9)
-        .background(primary ? Color.white : Color.black.opacity(0.55), in: Capsule())
+        .foregroundStyle(.white)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(
+            primary
+                ? BoothifyTheme.violet
+                : Color.black.opacity(0.50),
+            in: Capsule()
+        )
         .overlay(
             Capsule().stroke(
-                primary ? Color.clear : BoothifyTheme.amber.opacity(0.60),
-                lineWidth: 1
+                primary ? Color.clear : BoothifyTheme.violet.opacity(0.65),
+                lineWidth: 1.5
             )
         )
     }

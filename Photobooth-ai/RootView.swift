@@ -224,21 +224,25 @@ private struct BoothifyTabBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Native hairline top separator — a single thin line, like UITabBar
-            Rectangle()
-                .fill(Color.white.opacity(0.08))
-                .frame(height: 0.5)
-
+            // Dark opaque bar — no glass blur, matches editorial card aesthetic
             HStack(alignment: .top, spacing: 0) {
                 ForEach(BoothifyTab.allCases, id: \.rawValue) { tab in
                     navTabButton(tab)
                 }
                 profileTabButton
             }
-            .padding(.top, 8)
-            .padding(.bottom, max(safeAreaBottom, 10))
+            .padding(.top, 10)
+            .padding(.bottom, max(safeAreaBottom, 8))
         }
-        .background(.ultraThinMaterial)
+        .background(
+            Color(red: 0.07, green: 0.07, blue: 0.09)
+                .overlay(
+                    Rectangle()
+                        .fill(Color.white.opacity(0.07))
+                        .frame(height: 0.5),
+                    alignment: .top
+                )
+        )
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -277,13 +281,16 @@ private struct BoothifyTabBar: View {
                 .font(.system(size: tabIconSize))
                 .symbolRenderingMode(.hierarchical)
                 .frame(height: tabIconSize + 4)
-                // Subtle native bounce on selection. Passing a constant when
-                // reduce-motion is on means the value never changes → no animation.
                 .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
 
             Text(title)
                 .font(.system(size: tabLabelSize, weight: isActive ? .semibold : .medium))
                 .lineLimit(1)
+
+            // Active dot indicator
+            Circle()
+                .fill(isActive ? BoothifyTheme.violet : Color.clear)
+                .frame(width: 4, height: 4)
         }
         .foregroundStyle(tint)
         .frame(maxWidth: .infinity)
