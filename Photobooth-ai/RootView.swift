@@ -536,7 +536,7 @@ private struct ProfileCardView: View {
                     LinearGradient(
                         stops: [
                             .init(color: BoothifyTheme.violet.opacity(0.60), location: 0),
-                            .init(color: Color(red: 0.22, green: 0.10, blue: 0.45).opacity(0.70), location: 0.45),
+                            .init(color: Color(red: 0.10, green: 0.22, blue: 0.45).opacity(0.70), location: 0.45),
                             .init(color: BoothifyTheme.bg, location: 1),
                         ],
                         startPoint: .top,
