@@ -19,7 +19,7 @@ struct EventsCalendarView: View {
             VStack(spacing: 0) {
                 connectBanner
                     .padding(.horizontal, BoothifySpacing.md)
-                    .padding(.top, BoothifySpacing.md)
+                    .padding(.top, BoothifySpacing.xs)
                     .padding(.bottom, BoothifySpacing.sm)
 
                 monthHeader

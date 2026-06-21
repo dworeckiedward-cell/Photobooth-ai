@@ -39,7 +39,6 @@ struct RootView: View {
 
     @State private var onboardingPresented: Bool = false
     @State private var selectedTab: BoothifyTab = .home
-    @State private var profilePresented: Bool = false
 
     var body: some View {
         @Bindable var app = app
@@ -90,16 +89,14 @@ struct RootView: View {
         // positioning, which would push the bar too high).
         .overlay(alignment: .bottom) {
             if atRoot {
-                BoothifyTabBar(
-                    selected: $selectedTab,
-                    isProfileActive: profilePresented
-                ) {
-                    Haptics.tap(.light)
-                    profilePresented = true
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 8)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                BoothifyTabBar(selected: $selectedTab)
+                    .padding(.horizontal, 24)
+                    // Negative bottom padding pulls the pill down toward the
+                    // physical edge (overlay otherwise pins it above the ~34pt
+                    // home-indicator safe area, which read as "too high" on
+                    // iPhone 17). Lands it ~14pt above the bottom edge.
+                    .padding(.bottom, -18)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         // Animation drives the tab bar slide-in/out with deep navigation.
@@ -111,9 +108,6 @@ struct RootView: View {
         .sheet(isPresented: $onboardingPresented) {
             OnboardingQuizSheet { answers in applyOnboardingDefaults(answers) }
                 .interactiveDismissDisabled(false)
-        }
-        .fullScreenCover(isPresented: $profilePresented) {
-            ProfileCardView()
         }
         .task {
             try? await Task.sleep(for: .milliseconds(350))
@@ -212,8 +206,6 @@ struct RootView: View {
 
 private struct BoothifyTabBar: View {
     @Binding var selected: BoothifyTab
-    var isProfileActive: Bool = false
-    let onProfileTap: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // @ScaledMetric: these sizes track the user's Dynamic Type setting
@@ -228,7 +220,6 @@ private struct BoothifyTabBar: View {
             ForEach(BoothifyTab.allCases, id: \.rawValue) { tab in
                 navTabButton(tab)
             }
-            profileTabButton
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 16)
@@ -286,16 +277,6 @@ private struct BoothifyTabBar: View {
         .accessibilityAddTraits(isActive ? [.isSelected] : [])
     }
 
-    private var profileTabButton: some View {
-        Button(action: onProfileTap) {
-            tabItem(icon: "person", selectedIcon: "person.fill", title: "Profile", isActive: isProfileActive)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Profile")
-        .accessibilityHint("Opens your profile card")
-        .accessibilityAddTraits(isProfileActive ? [.isSelected] : [])
-    }
-
     @ViewBuilder
     private func tabItem(icon: String, selectedIcon: String, title: String, isActive: Bool) -> some View {
         let tint = isActive ? BoothifyTheme.violet : BoothifyTheme.textMuted
@@ -339,30 +320,39 @@ private struct AppSettingsView: View {
             BoothifyTheme.bg.ignoresSafeArea()
 
             List {
+                // ── Profile header (iOS-style, pushes the full profile) ──
+                Section {
+                    NavigationLink {
+                        ProfileCardView()
+                    } label: {
+                        HStack(spacing: BoothifySpacing.md) {
+                            ZStack {
+                                Circle()
+                                    .fill(BoothifyTheme.violet.opacity(0.20))
+                                    .frame(width: 60, height: 60)
+                                Text(String(displayName.prefix(1)))
+                                    .font(.title2.weight(.bold))
+                                    .foregroundStyle(BoothifyTheme.violet)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(displayName)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text("View profile")
+                                    .font(.subheadline)
+                                    .foregroundStyle(BoothifyTheme.textTertiary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .accessibilityLabel("Profile, \(displayName)")
+                    .accessibilityHint("Opens your profile")
+                }
+                .listRowBackground(BoothifyTheme.surface1)
+
                 // ── Account & Plan ───────────────────────────────────────
                 Section("Account & Plan") {
-                    // Account info row
-                    HStack(spacing: BoothifySpacing.md) {
-                        ZStack {
-                            Circle()
-                                .fill(BoothifyTheme.violet.opacity(0.20))
-                                .frame(width: 44, height: 44)
-                            Text(String(displayName.prefix(1)))
-                                .font(.body.weight(.bold))
-                                .foregroundStyle(BoothifyTheme.violet)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.white)
-                            Text(email)
-                                .font(.footnote)
-                                .foregroundStyle(BoothifyTheme.textTertiary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-
                     // Subscription tier
                     HStack {
                         Label("Subscription", systemImage: "sparkle")
@@ -482,11 +472,10 @@ private struct AppSettingsView: View {
     }
 }
 
-// MARK: - Profile card (sheet)
+// MARK: - Profile (pushed section)
 
 private struct ProfileCardView: View {
     @Environment(AppState.self) private var app
-    @Environment(\.dismiss) private var dismiss
 
     @ScaledMetric(relativeTo: .title)  private var avatarInitialsSize: CGFloat = 34
     @ScaledMetric(relativeTo: .title2) private var statNumberSize: CGFloat = 30
@@ -504,35 +493,24 @@ private struct ProfileCardView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                BoothifyTheme.bg.ignoresSafeArea()
+        ZStack {
+            BoothifyTheme.bg.ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        header
-                        statsRow
-                            .padding(.top, BoothifySpacing.lg)
-                            .padding(.horizontal, BoothifySpacing.lg)
-                        settingsHint
-                            .padding(.top, BoothifySpacing.lg)
-                            .padding(.horizontal, BoothifySpacing.lg)
-                            .padding(.bottom, BoothifySpacing.xl)
-                    }
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        Haptics.tap(.light)
-                        dismiss()
-                    }
-                    .foregroundStyle(BoothifyTheme.violet)
-                    .font(.body.weight(.semibold))
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    header
+                    statsRow
+                        .padding(.top, BoothifySpacing.lg)
+                        .padding(.horizontal, BoothifySpacing.lg)
+                    settingsHint
+                        .padding(.top, BoothifySpacing.lg)
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .padding(.bottom, BoothifySpacing.xl)
                 }
             }
         }
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // Quiet signpost — account actions (About, Sign Out) live in the Settings tab.
