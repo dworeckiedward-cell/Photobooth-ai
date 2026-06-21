@@ -17,6 +17,12 @@ struct PhotoboothLandingView: View {
         eventName.trimmingCharacters(in: .whitespaces).count >= 2
     }
 
+    private let presets: [(label: String, fill: String)] = [
+        ("Wedding", "Wedding"),
+        ("Birthday", "Birthday Party"),
+        ("Brand Event", "Brand Event"),
+    ]
+
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
@@ -24,6 +30,7 @@ struct PhotoboothLandingView: View {
             ScrollView {
                 VStack(spacing: BoothifySpacing.lg) {
                     headerBlock
+                    heroCard
                     newEventCard
 
                     if let topErr = app.topLevelError {
@@ -43,7 +50,7 @@ struct PhotoboothLandingView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .navigationTitle("Photobooth")
+        .navigationTitle("AI Photobooth")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             CrashRestoreManager.clearActiveEvent()
@@ -56,21 +63,16 @@ struct PhotoboothLandingView: View {
 
     private var headerBlock: some View {
         VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
-            HStack(spacing: BoothifySpacing.xs) {
-                Image(systemName: "bolt.fill")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(BoothifyTheme.violet)
-                Text("AI PHOTOBOOTH")
-                    .font(.caption2.weight(.bold))
-                    .kerning(1.4)
-                    .foregroundStyle(BoothifyTheme.textTertiary)
-            }
+            Text("AI PHOTOGRAPHY")
+                .font(.caption2.weight(.bold))
+                .kerning(1.6)
+                .foregroundStyle(BoothifyTheme.textTertiary)
 
             Text("Start a new event")
                 .font(BoothifyType.displayMedium)
                 .foregroundStyle(.white)
 
-            Text("Create an event and start capturing AI portraits instantly.")
+            Text("Create a branded booth session in seconds.")
                 .font(.subheadline)
                 .foregroundStyle(BoothifyTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -79,26 +81,89 @@ struct PhotoboothLandingView: View {
         .padding(.top, BoothifySpacing.xs)
     }
 
-    // MARK: - New event card
+    // MARK: - Hero / preview card
+
+    private var heroCard: some View {
+        ZStack(alignment: .bottomLeading) {
+            Rectangle().fill(Color.black)
+                .overlay {
+                    Image("Mode_Photobooth")
+                        .resizable()
+                        .scaledToFill()
+                }
+            // Legibility gradient
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.05), location: 0),
+                    .init(color: .black.opacity(0.55), location: 0.55),
+                    .init(color: .black.opacity(0.92), location: 1),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            // Brand wash at the floor
+            LinearGradient(
+                colors: [BoothifyTheme.violet.opacity(0.30), .clear],
+                startPoint: .bottom, endPoint: .center
+            )
+
+            // Status pill — top-right
+            VStack {
+                HStack {
+                    Spacer()
+                    HStack(spacing: 5) {
+                        Circle().fill(BoothifyTheme.violet).frame(width: 6, height: 6)
+                        Text("LIVE READY")
+                            .font(.caption2.weight(.bold))
+                            .kerning(0.8)
+                    }
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(.black.opacity(0.50), in: Capsule())
+                    .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.50), lineWidth: 0.8))
+                }
+                Spacer()
+            }
+            .padding(16)
+
+            // Title block — bottom-left
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AI Photobooth")
+                    .font(.system(.title, design: .default, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.4), radius: 6, y: 2)
+                Text("22 cinematic styles · instant portraits")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.70))
+            }
+            .padding(20)
+        }
+        .frame(height: 210)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.45), radius: 22, y: 12)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("AI Photobooth. 22 cinematic styles, instant portraits. Live ready.")
+    }
+
+    // MARK: - Session setup card
 
     private var newEventCard: some View {
         VStack(alignment: .leading, spacing: BoothifySpacing.md) {
             // Card eyebrow
             HStack(spacing: BoothifySpacing.xs) {
-                Image(systemName: "plus.viewfinder")
+                Image(systemName: "slider.horizontal.3")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.violet)
-                Text("NEW EVENT")
+                Text("SESSION SETUP")
                     .font(.caption2.weight(.semibold))
                     .kerning(1.2)
                     .foregroundStyle(BoothifyTheme.textTertiary)
                 Spacer()
             }
-
-            // Divider
-            Rectangle()
-                .fill(BoothifyTheme.surfaceLine)
-                .frame(height: 1)
 
             // Input group
             VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
@@ -109,7 +174,7 @@ struct PhotoboothLandingView: View {
                 TextField(
                     "",
                     text: $eventName,
-                    prompt: Text("e.g. Anna & Tom's Wedding")
+                    prompt: Text("Anna & Tom's Wedding")
                         .foregroundColor(.white.opacity(0.28))
                 )
                 .font(.body)
@@ -120,9 +185,13 @@ struct PhotoboothLandingView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
                         .stroke(
-                            nameFocused ? BoothifyTheme.violet.opacity(0.6) : BoothifyTheme.surfaceLine,
+                            nameFocused ? BoothifyTheme.violet.opacity(0.7) : BoothifyTheme.surfaceLine,
                             lineWidth: nameFocused ? 1.5 : 1
                         )
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                        .fill(BoothifyTheme.violet.opacity(nameFocused ? 0.10 : 0))
                 )
                 .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
                 .focused($nameFocused)
@@ -132,6 +201,19 @@ struct PhotoboothLandingView: View {
                 .disabled(creating)
                 .accessibilityLabel("Event name")
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: nameFocused)
+
+                // Preset chips
+                HStack(spacing: BoothifySpacing.xs) {
+                    ForEach(presets, id: \.label) { preset in
+                        EventPresetChip(label: preset.label) {
+                            Haptics.tap(.light)
+                            eventName = preset.fill
+                            nameFocused = true
+                        }
+                        .disabled(creating)
+                    }
+                }
+                .padding(.top, 2)
             }
 
             // CTA
@@ -167,9 +249,9 @@ struct PhotoboothLandingView: View {
             }
         }
         .padding(BoothifySpacing.lg)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
+        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.4), radius: 20, y: 8)
@@ -183,7 +265,7 @@ struct PhotoboothLandingView: View {
             AppLoadingState(label: "Loading events…")
                 .padding(.top, BoothifySpacing.lg)
         } else if app.events.isEmpty {
-            emptyEventsState
+            compactEmptyState
         } else {
             VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
                 HStack {
@@ -210,12 +292,41 @@ struct PhotoboothLandingView: View {
         }
     }
 
-    private var emptyEventsState: some View {
-        AppEmptyState(
-            symbol: "calendar.badge.plus",
-            title: "No recent events yet",
-            subtitle: "Create your first event to begin capturing AI portraits."
-        )
+    // Compact, quiet empty state — not a giant dead card.
+    private var compactEmptyState: some View {
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+            Text("RECENT EVENTS")
+                .font(.caption2.weight(.semibold))
+                .kerning(1.4)
+                .foregroundStyle(BoothifyTheme.textTertiary)
+                .padding(.horizontal, 2)
+
+            HStack(spacing: BoothifySpacing.md) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.title3)
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .frame(width: 36, height: 36)
+                    .background(BoothifyTheme.violet.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("No sessions yet")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text("Create your first event to begin capturing AI portraits.")
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(BoothifySpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Actions
@@ -241,6 +352,33 @@ struct PhotoboothLandingView: View {
                 creating = false
             }
         }
+    }
+}
+
+// MARK: - Preset chip
+
+private struct EventPresetChip: View {
+    let label: String
+    let action: () -> Void
+    @State private var pressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.violet)
+                .padding(.horizontal, BoothifySpacing.sm + 2)
+                .padding(.vertical, 7)
+                .background(BoothifyTheme.violet.opacity(0.14), in: Capsule())
+                .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.32), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(pressed ? 0.95 : 1)
+        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.7), value: pressed)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: 30, perform: {}, onPressingChanged: { pressed = $0 })
+        .accessibilityLabel("\(label) preset")
+        .accessibilityHint("Fills the event name")
     }
 }
 
