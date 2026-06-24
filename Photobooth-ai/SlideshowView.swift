@@ -31,7 +31,9 @@ struct SlideshowView: View {
             startTimer()
             startBackgroundRefresh()
         }
+        .onAppear { KioskManager.beginKeepAwake() }
         .onDisappear {
+            KioskManager.endKeepAwake()
             timerTask?.cancel()
             refreshTask?.cancel()
         }

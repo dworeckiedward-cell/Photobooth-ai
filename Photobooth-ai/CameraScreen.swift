@@ -142,7 +142,9 @@ struct CameraScreen: View {
                 startIdleWatch()
             }
         }
+        .onAppear { KioskManager.beginKeepAwake() }
         .onDisappear {
+            KioskManager.endKeepAwake()
             controller.stop()
             idleTask?.cancel()
             AttendantSpeech.shared.stop()
