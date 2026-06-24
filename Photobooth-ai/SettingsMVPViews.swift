@@ -1124,8 +1124,20 @@ struct SurveySettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
 
+    @State private var csvShareURL: URL?
+    @State private var showCSVShare = false
+
     private var s: SurveySettings { app.settings(for: eventId).survey }
     private var responses: [SurveyResponse] { app.surveyResponses(for: eventId) }
+
+    private func exportCSV() {
+        let eventName = app.events.first(where: { $0.id == eventId })?.name ?? "event"
+        let csv = CSVExporter.surveyCSV(responses, question: s.questionText)
+        if let url = CSVExporter.writeTemp(csv, name: "boothify-\(eventName)-responses") {
+            csvShareURL = url
+            showCSVShare = true
+        }
+    }
 
     var body: some View {
         Form {
@@ -1155,6 +1167,15 @@ struct SurveySettingsView: View {
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+
+                if !responses.isEmpty {
+                    Button {
+                        Haptics.tap()
+                        exportCSV()
+                    } label: {
+                        Label("Export responses (CSV)", systemImage: "square.and.arrow.up")
+                    }
+                }
             } header: {
                 Text("Stats")
             }
@@ -1187,6 +1208,11 @@ struct SurveySettingsView: View {
         .mvpFormBackground()
         .navigationTitle("Survey")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showCSVShare) {
+            if let url = csvShareURL {
+                ActivityShareSheet(items: [url])
+            }
+        }
     }
 
     private var averageRatingLabel: String {
