@@ -68,6 +68,13 @@
 - Full **Kiosk Mode** (attract + ASAM + PIN exit), **StoreKit 2** tiers, public **/e/<slug>** album, **white-label email**.
 - Parity: multi-channel share + offline queue, surveys/disclaimers, AirPrint strips, 360 booth.
 
+## ✅ Polish — brand overlay on no-AI output + on-demand backdrops
+- Reusable `BrandOverlayRenderer` bakes the operator logo/mark into Instant Looks single-look output (white-label, print-ready). (`b17343a`)
+- On-demand Studio Backdrops inside Instant Looks (segment + composite + brand overlay). (`92de478`)
+
+## ⚠️ Important verification note — Vision person segmentation is device-only
+- `VNGeneratePersonSegmentationRequest` (green screen M1.1 + backdrops) **does not run in the iOS Simulator** — it returns nil there and the photo passes through unchanged. A diagnostic confirmed the backdrop **render + composite pipeline is correct** (produced a full backdrop image when the mask was bypassed); only the ML mask is sim-unavailable. **Must be verified on a real device.** Everything else in this session was screenshot-verified in the sim.
+
 ## Remaining (genuinely needs device or human)
 - **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline — the ONE big item that needs **real-device camera testing** (simulator uses a placeholder image, so the capture pipeline can't be verified). Existing GIF/boomerang/slow-mo already work (end at a share sheet); the gap is routing them through AI + print-strip layouts. Defer to a device session.
 - **M4** observability (needs Sentry DSN — human); shared rate-limit (needs Upstash/Redis — human); final on-device HIG/a11y audit.
