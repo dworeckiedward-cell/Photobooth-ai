@@ -68,6 +68,7 @@ struct SlideshowView: View {
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .modifier(KenBurns(active: !reduceMotion, trigger: currentIndex))
                             .clipped()
                     case .failure:
                         photo.style.accentGradient
@@ -89,9 +90,17 @@ struct SlideshowView: View {
 
     private var overlayControls: some View {
         VStack(spacing: 0) {
-            // Top bar: close + counter
-            HStack {
+            // Top bar: close + event name + counter
+            HStack(spacing: BoothifySpacing.sm) {
                 closeButton
+                if let name = event?.name, !name.isEmpty {
+                    Text(name)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 Spacer()
                 slideCounter
             }
@@ -108,17 +117,56 @@ struct SlideshowView: View {
 
             Spacer()
 
-            // Bottom progress dots
-            progressDots
-                .padding(.bottom, BoothifySpacing.lg)
-                .background(
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.45)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+            // Bottom: progress dots, with the "scan for all photos" QR pinned trailing
+            ZStack(alignment: .bottomTrailing) {
+                progressDots
+                    .padding(.bottom, BoothifySpacing.lg)
+                if let qrURL = albumQRURL {
+                    scanCard(qrURL)
+                        .padding(.trailing, BoothifySpacing.md)
+                        .padding(.bottom, BoothifySpacing.md)
+                }
+            }
+            .background(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.45)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
+            )
         }
+    }
+
+    /// Public album URL for the QR — only when the operator has set the event
+    /// to public sharing, so we never invite guests to scan into a private notice.
+    private var albumQRURL: URL? {
+        guard let event, event.effectiveShareMode == .public else { return nil }
+        return BoothifyAPI.shared.publicAlbumURL(slug: event.slug)
+    }
+
+    /// Small "scan to see every photo" card — the Event Wall's takeaway moment.
+    private func scanCard(_ url: URL) -> some View {
+        HStack(spacing: BoothifySpacing.sm) {
+            QRCodeView(url: url, cornerRadius: 8)
+                .frame(width: 72, height: 72)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Loc.t("Scan for all photos", pl: "Zeskanuj po wszystkie zdjęcia", de: "Scannen für alle Fotos"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(Loc.t("See & download the whole album", pl: "Zobacz i pobierz cały album", de: "Ganzes Album ansehen & laden"))
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(BoothifySpacing.sm)
+        .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                .stroke(.white.opacity(0.14), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Loc.t("Scan the QR code for all photos", pl: "Zeskanuj kod QR po wszystkie zdjęcia", de: "QR-Code für alle Fotos scannen"))
     }
 
     private var closeButton: some View {
@@ -235,6 +283,32 @@ struct SlideshowView: View {
                 }
             }
         }
+    }
+}
+
+/// Slow cinematic pan/zoom ("Ken Burns") for the Event Wall. Each new slide
+/// (`trigger` changes) starts zoomed-in slightly and eases back out over the
+/// dwell time, giving still photos a premium, alive feel on a TV. Disabled
+/// entirely when Reduce Motion is on.
+private struct KenBurns: ViewModifier {
+    let active: Bool
+    let trigger: Int
+    @State private var zoomedIn = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(active ? (zoomedIn ? 1.0 : 1.10) : 1.0)
+            .offset(x: active ? (zoomedIn ? 0 : 8) : 0)
+            .onChange(of: trigger) { _, _ in
+                guard active else { return }
+                zoomedIn = false
+                withAnimation(.easeInOut(duration: 5.4)) { zoomedIn = true }
+            }
+            .onAppear {
+                guard active else { return }
+                zoomedIn = false
+                withAnimation(.easeInOut(duration: 5.4)) { zoomedIn = true }
+            }
     }
 }
 

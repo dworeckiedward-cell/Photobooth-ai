@@ -82,6 +82,12 @@
 ## ✅ Event templates (1-tap setup) — DONE (verified)
 - `EventTemplate` (Wedding / Birthday / Brand Event): tapping a chip on the setup screen names AND pre-configures the new event on create — disclaimer/consent, survey (lead capture for corporate), brand overlay, email sender/subject. Only touches wired fields (no guessing). Selected chip highlights + shows a hint. Screenshot-verified: Brand Event selected → "Lead capture survey + branding + consent." (`6d8d5bf`)
 
+## ✅ Event Wall (slideshow TV mode upgrade) — DONE (build green; needs real photos to view)
+- Slideshow is now a branded "Event Wall": event name in the top bar, a **QR "Scan for all photos"** card pinned bottom-trailing (links to the existing public `/e/<slug>` album — shown ONLY when the event's share mode is `.public`, so it never points guests at a private notice), and a reduce-motion-safe **Ken Burns** slow pan/zoom on each slide. QR/branding localized (EN/PL/DE). New `BoothifyAPI.publicAlbumURL(slug:)` helper. (build verified; the wall itself needs real event photos — AsyncImage can't load in the simulator.)
+
+## ✅ UX audit follow-up (Instant Looks + Landing) — DONE (verified)
+- Heuristics + refactoring-UI pass on the newest screens: Instant Looks strip/look/backdrop renders now show a busy overlay (Visibility of System Status); strip failure surfaces a message; remaining guest messages localized (PL/DE). Landing: template chip no longer clobbers a name the operator already typed. (`8288212`)
+
 ## ✅ Video stabilization (LumaBooth-grade) — DONE
 - Research confirmed LumaBooth's "stabilization" = iOS AVFoundation `preferredVideoStabilizationMode` + operator toggle (adds latency). Implemented: `configureStabilization` now picks the strongest mode the active format supports (cinematicExtended→cinematic→standard→auto), gated by a new Camera setting `stabilizationEnabled` (Optional, nil=on) with toggle + copy; applied to 360 + slow-mo recording. (`b22f129`) — verify on device (recording feature).
 

@@ -65,6 +65,13 @@ final class BoothifyAPI {
         baseURL.appending(path: "p").appending(path: photoId.uuidString.lowercased())
     }
 
+    /// Build the public event-album URL the webapp serves at `/e/<slug>`.
+    /// Used by the Event Wall QR so guests scan once to see every photo.
+    /// Only meaningful when the event's share mode is `.public`.
+    func publicAlbumURL(slug: String) -> URL {
+        baseURL.appending(path: "e").appending(path: slug)
+    }
+
     // MARK: - Events
 
     /// `POST /api/events` — create a new event.
