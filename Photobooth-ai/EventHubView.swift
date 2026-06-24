@@ -380,23 +380,91 @@ struct EventHubView: View {
     }
 
     // MARK: - Stats row
+    //
+    // Counts come from the refreshed `event` (server-side totals over ALL
+    // photos), not the 30-row recent slice — so they stay accurate at scale.
+    // `app.refreshEvent(slug:)` runs before `loadRecent` on appear/refresh.
+
+    private var statCaptures: Int { event?.totalPhotos ?? totalCaptures }
+    private var statCompleted: Int { event?.completedPhotos ?? totalCompleted }
+    private var statFailed: Int { event?.failedPhotos ?? 0 }
+    private var statProcessing: Int {
+        max(0, statCaptures - statCompleted - statFailed)
+    }
 
     private var completionRate: String {
-        guard totalCaptures > 0 else { return "—" }
-        let pct = Int(Double(totalCompleted) / Double(totalCaptures) * 100)
+        guard statCaptures > 0 else { return "—" }
+        let pct = Int((Double(statCompleted) / Double(statCaptures) * 100).rounded())
         return "\(pct)%"
     }
 
     private var statsRow: some View {
-        let allZero = totalCaptures == 0 && totalCompleted == 0 && totalProcessing == 0
-        return HStack(spacing: BoothifySpacing.sm) {
-            StatTile(label: "Captures", value: "\(totalCaptures)", tint: BoothifyTheme.violet, muted: allZero)
-            StatTile(label: "Completed", value: "\(totalCompleted)", tint: BoothifyTheme.emerald, muted: allZero)
-            StatTile(label: "Processing", value: "\(totalProcessing)", tint: BoothifyTheme.amber, muted: allZero)
-            StatTile(label: "Rate", value: completionRate, tint: BoothifyTheme.emerald, muted: allZero)
+        let allZero = statCaptures == 0
+        // Surface Failed only when it matters; otherwise keep the calmer
+        // Processing tile (one less number to read when nothing's wrong).
+        let showFailed = statFailed > 0
+        return VStack(spacing: BoothifySpacing.sm) {
+            HStack(spacing: BoothifySpacing.sm) {
+                StatTile(label: "Captures", value: "\(statCaptures)", tint: BoothifyTheme.violet, muted: allZero)
+                StatTile(label: "Completed", value: "\(statCompleted)", tint: BoothifyTheme.emerald, muted: allZero)
+                if showFailed {
+                    StatTile(label: "Failed", value: "\(statFailed)", tint: BoothifyTheme.error, muted: false)
+                } else {
+                    StatTile(label: "Processing", value: "\(statProcessing)", tint: BoothifyTheme.amber, muted: allZero)
+                }
+                StatTile(label: "Rate", value: completionRate, tint: BoothifyTheme.emerald, muted: allZero)
+            }
+            capacityBar
         }
-        .opacity(allZero ? 0.55 : 1.0)
+        .opacity(allZero ? 0.7 : 1.0)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: allZero)
+    }
+
+    /// Capacity meter — operators must see when an event nears its photo cap,
+    /// because capture stops at the cap. Hidden when no cap is set.
+    @ViewBuilder
+    private var capacityBar: some View {
+        if let cap = event?.maxPhotos, cap > 0 {
+            let used = min(statCaptures, cap)
+            let fraction = Double(used) / Double(cap)
+            let tint: Color = fraction >= 1 ? BoothifyTheme.error
+                : fraction >= 0.85 ? BoothifyTheme.amber
+                : BoothifyTheme.emerald
+            VStack(alignment: .leading, spacing: BoothifySpacing.xs) {
+                HStack {
+                    Text("CAPACITY")
+                        .font(.caption2.weight(.bold))
+                        .kerning(0.8)
+                        .foregroundStyle(BoothifyTheme.textMuted)
+                    Spacer()
+                    Text("\(used) / \(cap)")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(fraction >= 0.85 ? tint : BoothifyTheme.textSecondary)
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(BoothifyTheme.surface2)
+                        Capsule().fill(tint)
+                            .frame(width: max(6, geo.size.width * CGFloat(min(fraction, 1))))
+                    }
+                }
+                .frame(height: 6)
+                if fraction >= 1 {
+                    Text("Photo cap reached — raise the limit in Settings to keep capturing.")
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.error)
+                }
+            }
+            .padding(BoothifySpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
+                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Capacity \(used) of \(cap) photos used\(fraction >= 1 ? ", cap reached" : "")")
+        }
     }
 
     // MARK: - Share event

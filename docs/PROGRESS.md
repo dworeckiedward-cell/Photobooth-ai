@@ -82,6 +82,9 @@
 ## ✅ Event templates (1-tap setup) — DONE (verified)
 - `EventTemplate` (Wedding / Birthday / Brand Event): tapping a chip on the setup screen names AND pre-configures the new event on create — disclaimer/consent, survey (lead capture for corporate), brand overlay, email sender/subject. Only touches wired fields (no guessing). Selected chip highlights + shows a hint. Screenshot-verified: Brand Event selected → "Lead capture survey + branding + consent." (`6d8d5bf`)
 
+## ✅ Operator analytics — accurate counts + capacity meter — DONE (build green)
+- Event Hub stats now read server-accurate totals from the refreshed `event` (totalPhotos/completedPhotos/failedPhotos) instead of a 30-row slice that undercounted at scale. Surfaces a **Failed** tile only when failures > 0 (calmer otherwise). Added a **capacity meter** (used / max with a fill bar that goes emerald→amber→red and a "cap reached" warning) so operators see when an event nears its photo limit — the point at which capture stops. Live numbers need a real backend event to view; the capacity/fraction logic is deterministic.
+
 ## ✅ Event Wall (slideshow TV mode upgrade) — DONE (build green; needs real photos to view)
 - Slideshow is now a branded "Event Wall": event name in the top bar, a **QR "Scan for all photos"** card pinned bottom-trailing (links to the existing public `/e/<slug>` album — shown ONLY when the event's share mode is `.public`, so it never points guests at a private notice), and a reduce-motion-safe **Ken Burns** slow pan/zoom on each slide. QR/branding localized (EN/PL/DE). New `BoothifyAPI.publicAlbumURL(slug:)` helper. (build verified; the wall itself needs real event photos — AsyncImage can't load in the simulator.)
 
