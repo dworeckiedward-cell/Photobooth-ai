@@ -12,6 +12,11 @@ struct StylePickerView: View {
     @State private var queuedOffline = false
     @State private var tilesAppeared: Bool = false
 
+    // Face count of the captured photo (computed once). AI portraits work best
+    // with one person, so a group/no-face photo gets a confirmation first.
+    @State private var faceCount: Int? = nil
+    @State private var groupWarningStyle: PhotoStyle? = nil
+
     var body: some View {
         ZStack(alignment: .bottom) {
             BoothifyTheme.bg.ignoresSafeArea()
@@ -140,10 +145,34 @@ struct StylePickerView: View {
         }
         .navigationTitle("Choose style")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            // Count faces once, off the main thread, to drive the group warning.
+            let data = capturedImageData
+            faceCount = await Task.detached(priority: .utility) {
+                await FaceDetector.faceCount(in: data)
+            }.value
+        }
         .alert("Photo Queued", isPresented: $queuedOffline) {
             Button("OK") { app.pop() }
         } message: {
             Text("No internet connection. Your photo will be uploaded automatically when WiFi returns.")
+        }
+        .alert(
+            "Best with one person",
+            isPresented: Binding(
+                get: { groupWarningStyle != nil },
+                set: { if !$0 { groupWarningStyle = nil } }
+            )
+        ) {
+            Button("Continue anyway") {
+                if let style = groupWarningStyle {
+                    groupWarningStyle = nil
+                    proceed(style: style)
+                }
+            }
+            Button("Back", role: .cancel) { groupWarningStyle = nil }
+        } message: {
+            Text("AI portraits look best with a single person. Group photos may not come out as expected.")
         }
     }
 
@@ -151,6 +180,17 @@ struct StylePickerView: View {
         guard selecting == nil else { return }
         Haptics.tap(.medium)
         uploadError = nil
+
+        // If we know the photo isn't a single face (0 or 2+), confirm first.
+        if let count = faceCount, count != 1 {
+            groupWarningStyle = style
+            return
+        }
+        proceed(style: style)
+    }
+
+    private func proceed(style: PhotoStyle) {
+        guard selecting == nil else { return }
 
         // Offline path — queue locally and show confirmation.
         if !NetworkMonitor.shared.isConnected {
