@@ -61,7 +61,7 @@ struct CameraScreen: View {
             // Live camera preview
             CameraPreviewView(controller: controller)
                 .ignoresSafeArea()
-                .scaleEffect(x: controller.isFront ? -1 : 1, y: 1, anchor: .center)
+                .scaleEffect(x: controller.shouldMirror ? -1 : 1, y: 1, anchor: .center)
 
             // Permission denied fallback
             if permissionDenied {
@@ -308,7 +308,7 @@ struct CameraScreen: View {
             Group {
                 switch captureMode {
                 case .photo:
-                    Text("Tap to capture — 3-second countdown")
+                    Text("Tap to capture")
                 case .boomerang:
                     Text("Tap to record GIF burst")
                 case .slowMo:
@@ -409,7 +409,7 @@ struct CameraScreen: View {
                     .disabled(capturing || countdown != nil || permissionDenied)
                     .opacity(permissionDenied ? 0.4 : 1)
                     .accessibilityLabel(captureMode == .photo ? "Take photo" : "Record GIF")
-                    .accessibilityHint(captureMode == .photo ? "Starts 3-second countdown, then captures" : "Records a burst for GIF")
+                    .accessibilityHint(captureMode == .photo ? "Starts the countdown, then captures" : "Records a burst for GIF")
 
                 case .slowMo:
                     slowMoButton
@@ -525,6 +525,9 @@ struct CameraScreen: View {
     // MARK: - Actions
 
     private func prepareCamera() async {
+        // Honor the operator's mirror-selfie setting (was previously ignored — the
+        // front camera was always mirrored). Read live so it reflects the event.
+        controller.mirrorFrontCamera = app.settings(for: eventId).camera.mirrorSelfie
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         switch status {
         case .authorized:
@@ -545,9 +548,15 @@ struct CameraScreen: View {
         guard countdown == nil, !capturing else { return }
         bumpInteraction()
         Haptics.tap(.medium)
-        countdown = 3
+        // Operator-configured countdown (was hardcoded to 3). 0 → snap immediately.
+        let seconds = max(0, app.settings(for: eventId).capture.countdownFirstPhoto)
+        guard seconds > 0 else {
+            Task { await capture() }
+            return
+        }
+        countdown = seconds
         Task {
-            for value in stride(from: 3, through: 1, by: -1) {
+            for value in stride(from: seconds, through: 1, by: -1) {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { countdown = value }
                 let style: UIImpactFeedbackGenerator.FeedbackStyle = value == 1 ? .heavy : .medium
                 Haptics.tap(style)
@@ -589,7 +598,8 @@ struct CameraScreen: View {
                 )
             }
             let image = try await controller.capturePhoto()
-            if let data = image.jpegData(compressionQuality: 0.85) {
+            let quality = app.settings(for: eventId).capture.quality
+            if let data = image.jpegData(compressionQuality: quality) {
                 proceedWith(imageData: data)
             }
         } catch {
@@ -761,6 +771,11 @@ final class CameraController {
     private(set) var currentMode: Mode = .photo
     private(set) var isRecording: Bool = false
     private(set) var isFront: Bool = true
+    /// Operator setting (event.camera.mirrorSelfie). When false, the front camera
+    /// is NOT mirrored — preview and captured output match the real-world view.
+    var mirrorFrontCamera: Bool = true
+    /// True when the front camera should be mirrored right now.
+    var shouldMirror: Bool { isFront && mirrorFrontCamera }
     private var currentInput: AVCaptureDeviceInput?
     private let photoDelegate = PhotoCaptureDelegate()
     private let movieDelegate = MovieCaptureDelegate()
@@ -959,7 +974,7 @@ final class CameraController {
 
         // Mirror front-camera output so the saved file matches what the operator
         // saw on the preview. AVCaptureMovieFileOutput won't mirror by default.
-        if let connection = movieOutput.connection(with: .video), isFront,
+        if let connection = movieOutput.connection(with: .video), shouldMirror,
            connection.isVideoMirroringSupported {
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = true
@@ -1013,7 +1028,7 @@ final class CameraController {
         }
 
         let settings = AVCapturePhotoSettings()
-        if isFront {
+        if shouldMirror {
             // Mirror the captured image to match the on-screen preview.
             if let conn = photoOutput.connection(with: .video) {
                 if conn.isVideoMirroringSupported {

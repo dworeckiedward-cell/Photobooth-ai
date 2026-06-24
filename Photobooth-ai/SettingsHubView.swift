@@ -88,7 +88,7 @@ struct SettingsHubView: View {
                     SettingsRow(icon: "printer", title: "Print Setup", subtitle: printSubtitle, badge: .available) {
                         app.push(.settingsPrint(eventId: eventId))
                     }
-                    SettingsRow(icon: "person.crop.rectangle.badge.xmark", title: "Background Removal", subtitle: backgroundRemovalSubtitle, badge: .available) {
+                    SettingsRow(icon: "person.crop.rectangle.badge.xmark", title: "Background Removal", subtitle: backgroundRemovalSubtitle, badge: .demo) {
                         app.push(.settingsBackgroundRemoval(eventId: eventId))
                     }
                     SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
@@ -97,7 +97,7 @@ struct SettingsHubView: View {
                     SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
                         app.push(.settingsStickers(eventId: eventId))
                     }
-                    SettingsRow(icon: "sparkles", title: "Effects", subtitle: effectsSubtitle, badge: .available) {
+                    SettingsRow(icon: "sparkles", title: "Effects", subtitle: effectsSubtitle, badge: .demo) {
                         app.push(.settingsEffects(eventId: eventId))
                     }
                     SettingsRow(icon: "wand.and.stars", title: "AI Portraits", subtitle: "\(app.settings(for: eventId).aiPortraits.enabledStyles.count) styles enabled", badge: .beta) {
@@ -111,7 +111,7 @@ struct SettingsHubView: View {
                     SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
                         app.push(.settingsStickers(eventId: eventId))
                     }
-                    SettingsRow(icon: "sparkles", title: "Effects", subtitle: effectsSubtitle, badge: .available) {
+                    SettingsRow(icon: "sparkles", title: "Effects", subtitle: effectsSubtitle, badge: .demo) {
                         app.push(.settingsEffects(eventId: eventId))
                     }
                 }
