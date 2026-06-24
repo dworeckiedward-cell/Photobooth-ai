@@ -247,8 +247,16 @@ struct InstantLooksView: View {
     private func apply(_ look: LocalLook) {
         selected = look
         let data = capturedImageData
+        let overlay = app.settings(for: eventId).brandOverlay
+        let eid = eventId
         Task.detached(priority: .userInitiated) {
-            let out = LocalLookProcessor.process(data, look: look)
+            var out = LocalLookProcessor.process(data, look: look)
+            // Bake the operator's brand overlay (logo / mark) for white-label,
+            // print-ready output — same treatment as the AI result screen.
+            if overlay.enabled, overlay.applyToResults, let img = UIImage(data: out) {
+                out = BrandOverlayRenderer.bake(into: img, settings: overlay, eventId: eid)
+                    .jpegData(compressionQuality: 0.92) ?? out
+            }
             // Write a temp file so ShareLink shares the real JPEG (Messages/Mail/
             // WhatsApp/AirDrop), not a re-encoded screenshot.
             let url = FileManager.default.temporaryDirectory
