@@ -182,6 +182,16 @@ struct AIPortraitsSettingsView: View {
                         .padding(.top, BoothifySpacing.xs)
                 }
 
+                SettingsCard {
+                    HStack(alignment: .top, spacing: BoothifySpacing.sm) {
+                        Image(systemName: "wand.and.stars.inverse")
+                            .foregroundStyle(BoothifyTheme.violet)
+                        Text("Turn every style off below to run a no-AI booth — guests skip the cloud and go straight to instant on-device looks (works offline, no AI billing).")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                    }
+                }
+
                 SettingsCard(title: "Generation") {
                     SettingsStepper(
                         "Timeout",
