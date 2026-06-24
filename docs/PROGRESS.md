@@ -72,6 +72,9 @@
 - Reusable `BrandOverlayRenderer` bakes the operator logo/mark into Instant Looks single-look output (white-label, print-ready). (`b17343a`)
 - On-demand Studio Backdrops inside Instant Looks (segment + composite + brand overlay). (`92de478`)
 
+## ✅ Video stabilization (LumaBooth-grade) — DONE
+- Research confirmed LumaBooth's "stabilization" = iOS AVFoundation `preferredVideoStabilizationMode` + operator toggle (adds latency). Implemented: `configureStabilization` now picks the strongest mode the active format supports (cinematicExtended→cinematic→standard→auto), gated by a new Camera setting `stabilizationEnabled` (Optional, nil=on) with toggle + copy; applied to 360 + slow-mo recording. (`b22f129`) — verify on device (recording feature).
+
 ## ⚠️ Important verification note — Vision person segmentation is device-only
 - `VNGeneratePersonSegmentationRequest` (green screen M1.1 + backdrops) **does not run in the iOS Simulator** — it returns nil there and the photo passes through unchanged. A diagnostic confirmed the backdrop **render + composite pipeline is correct** (produced a full backdrop image when the mask was bypassed); only the ML mask is sim-unavailable. **Must be verified on a real device.** Everything else in this session was screenshot-verified in the sim.
 
