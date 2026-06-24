@@ -11,17 +11,12 @@ struct PhotoboothLandingView: View {
     @State private var eventName: String = ""
     @State private var creating: Bool = false
     @State private var createError: String? = nil
+    @State private var selectedTemplate: EventTemplate? = nil
     @FocusState private var nameFocused: Bool
 
     private var isValidName: Bool {
         eventName.trimmingCharacters(in: .whitespaces).count >= 2
     }
-
-    private let presets: [(label: String, fill: String)] = [
-        ("Wedding", "Wedding"),
-        ("Birthday", "Birthday Party"),
-        ("Brand Event", "Brand Event"),
-    ]
 
     var body: some View {
         ZStack {
@@ -202,18 +197,26 @@ struct PhotoboothLandingView: View {
                 .accessibilityLabel("Event name")
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: nameFocused)
 
-                // Preset chips
+                // Template chips — fill the name AND pre-configure the event on create.
                 HStack(spacing: BoothifySpacing.xs) {
-                    ForEach(presets, id: \.label) { preset in
-                        EventPresetChip(label: preset.label) {
+                    ForEach(EventTemplate.allCases) { template in
+                        EventPresetChip(label: template.label, selected: selectedTemplate == template) {
                             Haptics.tap(.light)
-                            eventName = preset.fill
+                            selectedTemplate = template
+                            eventName = template.nameSeed
                             nameFocused = true
                         }
                         .disabled(creating)
                     }
                 }
                 .padding(.top, 2)
+
+                if let t = selectedTemplate {
+                    Text(templateHint(t))
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .padding(.top, 1)
+                }
             }
 
             // CTA
@@ -331,6 +334,14 @@ struct PhotoboothLandingView: View {
 
     // MARK: - Actions
 
+    private func templateHint(_ t: EventTemplate) -> String {
+        switch t {
+        case .wedding:   return "Sets up branding + photo consent. No survey."
+        case .birthday:  return "Low-friction fun: no forms, all styles."
+        case .corporate: return "Lead capture survey + branding + consent."
+        }
+    }
+
     private func startSession() {
         let trimmed = eventName.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else { return }
@@ -338,12 +349,19 @@ struct PhotoboothLandingView: View {
         createError = nil
         nameFocused = false
         Haptics.tap(.medium)
+        let template = selectedTemplate
         Task {
             do {
                 let event = try await app.createEvent(name: trimmed)
+                // One-tap template: pre-configure the new event's settings.
+                if let template {
+                    let configured = template.apply(to: app.settings(for: event.id), eventName: trimmed)
+                    app.updateSettings(configured, for: event.id)
+                }
                 Haptics.notify(.success)
                 creating = false
                 eventName = ""
+                selectedTemplate = nil
                 app.push(.eventHub(eventId: event.id))
                 app.push(.camera(eventId: event.id))
             } catch {
@@ -359,6 +377,7 @@ struct PhotoboothLandingView: View {
 
 private struct EventPresetChip: View {
     let label: String
+    var selected: Bool = false
     let action: () -> Void
     @State private var pressed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -367,18 +386,19 @@ private struct EventPresetChip: View {
         Button(action: action) {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.violet)
+                .foregroundStyle(selected ? .white : BoothifyTheme.violet)
                 .padding(.horizontal, BoothifySpacing.sm + 2)
                 .padding(.vertical, 7)
-                .background(BoothifyTheme.violet.opacity(0.14), in: Capsule())
-                .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.32), lineWidth: 1))
+                .background(BoothifyTheme.violet.opacity(selected ? 1.0 : 0.14), in: Capsule())
+                .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(selected ? 0 : 0.32), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed ? 0.95 : 1)
         .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.7), value: pressed)
         .onLongPressGesture(minimumDuration: 0, maximumDistance: 30, perform: {}, onPressingChanged: { pressed = $0 })
-        .accessibilityLabel("\(label) preset")
-        .accessibilityHint("Fills the event name")
+        .accessibilityLabel("\(label) template")
+        .accessibilityHint("Names and pre-configures the event")
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }
 
