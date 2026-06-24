@@ -671,8 +671,23 @@ struct CameraScreen: View {
     }
 
     private func proceedWith(imageData: Data) {
-        controller.stop()
-        app.push(.stylePicker(eventId: eventId, capturedImageData: imageData))
+        let bg = app.settings(for: eventId).backgroundRemoval
+        // Real green-screen / background replacement (Vision person segmentation),
+        // applied on-device before the photo continues. Off → push immediately.
+        guard bg.enabled, bg.mode != .off else {
+            controller.stop()
+            app.push(.stylePicker(eventId: eventId, capturedImageData: imageData))
+            return
+        }
+        capturing = true
+        Task.detached(priority: .userInitiated) {
+            let processed = BackgroundReplacer.process(imageData, settings: bg)
+            await MainActor.run {
+                capturing = false
+                controller.stop()
+                app.push(.stylePicker(eventId: eventId, capturedImageData: processed))
+            }
+        }
     }
 
     private func placeholderImageData() -> Data? {

@@ -88,7 +88,7 @@ struct SettingsHubView: View {
                     SettingsRow(icon: "printer", title: "Print Setup", subtitle: printSubtitle, badge: .available) {
                         app.push(.settingsPrint(eventId: eventId))
                     }
-                    SettingsRow(icon: "person.crop.rectangle.badge.xmark", title: "Background Removal", subtitle: backgroundRemovalSubtitle, badge: .demo) {
+                    SettingsRow(icon: "person.crop.rectangle.badge.xmark", title: "Background Removal", subtitle: backgroundRemovalSubtitle, badge: .available) {
                         app.push(.settingsBackgroundRemoval(eventId: eventId))
                     }
                     SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {

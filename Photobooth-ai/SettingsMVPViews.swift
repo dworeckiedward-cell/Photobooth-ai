@@ -255,7 +255,7 @@ struct BackgroundRemovalSettingsView: View {
             Section {
                 Toggle("Enable background removal", isOn: app.mvpBinding(eventId: eventId, keyPath: \.backgroundRemoval.enabled))
             } footer: {
-                Text("Demo — settings save and surface on the result screen. Real masking pipeline ships alongside AI 360.")
+                Text("Removes the background on-device (Apple Vision person segmentation) and replaces it with your chosen color or image — applied to each photo as it's captured.")
                     .font(.caption2)
             }
 
@@ -351,7 +351,7 @@ private struct BackgroundRemovalPreviewSheet: View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
             VStack(spacing: 16) {
-                Text("Before / After (mock)")
+                Text("Before / After preview")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
                     .padding(.top, 28)
@@ -382,7 +382,7 @@ private struct BackgroundRemovalPreviewSheet: View {
                 .frame(height: 320)
                 .padding(.horizontal, 16)
 
-                Text("Cutout shape is a placeholder. Real mask comes from on-device or RemoveBG inference.")
+                Text("Preview is approximate. Live capture uses full Apple Vision person segmentation for a precise cutout.")
                     .font(.caption2)
                     .foregroundStyle(BoothifyTheme.textTertiary)
                     .multilineTextAlignment(.center)
