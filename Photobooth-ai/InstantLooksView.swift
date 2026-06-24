@@ -14,6 +14,9 @@ struct InstantLooksView: View {
     @State private var processedData: Data? = nil
     @State private var shareURL: URL? = nil
     @State private var saveMessage: String? = nil
+    @State private var reelGenerating = false
+    @State private var reelURL: URL? = nil
+    @State private var showReelShare = false
 
     private var eventName: String? {
         app.events.first(where: { $0.id == eventId })?.name
@@ -40,6 +43,11 @@ struct InstantLooksView: View {
         .alert("Saved", isPresented: Binding(get: { saveMessage != nil }, set: { if !$0 { saveMessage = nil } })) {
             Button("OK") { saveMessage = nil }
         } message: { Text(saveMessage ?? "") }
+        .sheet(isPresented: $showReelShare) {
+            if let url = reelURL {
+                ActivityShareSheet(items: [url])
+            }
+        }
     }
 
     // MARK: - Picker
@@ -85,6 +93,44 @@ struct InstantLooksView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: 620)
+                .padding(.horizontal, BoothifySpacing.md)
+
+                // Differentiator: a short looping video reel from ONE photo.
+                Button {
+                    Haptics.tap(.medium)
+                    makeReel()
+                } label: {
+                    HStack(spacing: BoothifySpacing.sm) {
+                        Image(systemName: "film")
+                            .font(.body.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Look reel · video")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text("Your photo cycling through 6 looks")
+                                .font(.caption)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                        Spacer()
+                        if reelGenerating {
+                            ProgressView().tint(BoothifyTheme.violet)
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.textMuted)
+                        }
+                    }
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .padding(BoothifySpacing.md)
+                    .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(reelGenerating)
                 .frame(maxWidth: 620)
                 .padding(.horizontal, BoothifySpacing.md)
 
@@ -212,6 +258,20 @@ struct InstantLooksView: View {
                 processedData = out
                 shareURL = url
             }
+        }
+    }
+
+    private func makeReel() {
+        guard !reelGenerating else { return }
+        reelGenerating = true
+        LookReelComposer.compose(from: capturedImageData) { url in
+            reelGenerating = false
+            guard let url else {
+                saveMessage = "Couldn't make the reel."
+                return
+            }
+            reelURL = url
+            showReelShare = true
         }
     }
 
