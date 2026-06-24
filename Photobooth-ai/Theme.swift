@@ -12,8 +12,9 @@ enum BoothifyTheme {
     // Text hierarchy
     static let textPrimary    = Color.white
     static let textSecondary  = Color(red: 0.65, green: 0.66, blue: 0.70)  // zinc-400
-    static let textTertiary   = Color(red: 0.45, green: 0.46, blue: 0.50)  // zinc-500
-    static let textMuted      = Color(red: 0.30, green: 0.31, blue: 0.35)  // zinc-600
+    // Bumped for WCAG AA legibility on the true-black background (small captions):
+    static let textTertiary   = Color(red: 0.52, green: 0.53, blue: 0.57)  // ~zinc-450
+    static let textMuted      = Color(red: 0.42, green: 0.43, blue: 0.47)  // ~zinc-500
 
     // Accent palette
     // NOTE: token name kept as `violet` for compatibility, but the brand accent

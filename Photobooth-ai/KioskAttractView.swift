@@ -12,6 +12,7 @@ struct KioskAttractView: View {
     @State private var pulse = false
     @State private var pinGate = false
     @State private var confirmExit = false
+    @State private var showExitHint = false
 
     private var title: String {
         app.events.first(where: { $0.id == eventId })?.name ?? "Photo Booth"
@@ -83,12 +84,38 @@ struct KioskAttractView: View {
                 .accessibilityLabel("Exit kiosk mode")
                 .accessibilityHint("Double-tap and hold to exit")
         }
+        // First-entry hint so the operator learns the hidden exit gesture.
+        .overlay(alignment: .topLeading) {
+            if showExitHint {
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.point.up.left.fill").font(.caption2)
+                    Text(Loc.t("Hold here to exit", pl: "Przytrzymaj, aby wyjść", de: "Halten zum Beenden"))
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(.black.opacity(0.6), in: Capsule())
+                .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 1))
+                .padding(.top, 12).padding(.leading, 12)
+                .transition(.opacity)
+            }
+        }
         .statusBarHidden(true)
         .onAppear {
             KioskManager.beginKeepAwake()
             KioskManager.requestSingleAppMode(true)
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
                 pulse = true
+            }
+            // Show the exit-gesture hint once, then auto-dismiss.
+            let key = "boothify.kiosk.exitHintShown"
+            if !UserDefaults.standard.bool(forKey: key) {
+                UserDefaults.standard.set(true, forKey: key)
+                withAnimation { showExitHint = true }
+                Task {
+                    try? await Task.sleep(for: .seconds(4))
+                    withAnimation { showExitHint = false }
+                }
             }
         }
         .onDisappear { KioskManager.endKeepAwake() }

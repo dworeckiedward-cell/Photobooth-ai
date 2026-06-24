@@ -63,6 +63,8 @@ struct InstantLooksView: View {
                     .font(.subheadline)
                     .foregroundStyle(BoothifyTheme.textSecondary)
 
+                sectionHeader(Loc.t("Create", pl: "Stwórz", de: "Erstellen"))
+
                 // Differentiator: a classic photo strip from ONE photo in 4 looks.
                 Button {
                     Haptics.tap(.medium)
@@ -134,6 +136,8 @@ struct InstantLooksView: View {
                 .frame(maxWidth: 620)
                 .padding(.horizontal, BoothifySpacing.md)
 
+                sectionHeader(Loc.t("Looks", pl: "Style", de: "Looks"))
+
                 LazyVGrid(columns: columns, spacing: BoothifySpacing.sm) {
                     ForEach(LocalLook.allCases) { look in
                         Button {
@@ -171,10 +175,9 @@ struct InstantLooksView: View {
 
                 // On-demand studio backdrops — segment the guest and drop them on
                 // a premium backdrop instantly, no physical green screen needed.
+                sectionHeader(Loc.t("Studio backdrops", pl: "Tła studyjne", de: "Studio-Hintergründe"))
+
                 VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
-                    Text(Loc.t("Studio backdrops", pl: "Tła studyjne", de: "Studio-Hintergründe"))
-                        .font(.headline)
-                        .foregroundStyle(.white)
                     LazyVGrid(columns: columns, spacing: BoothifySpacing.sm) {
                         ForEach(StudioBackdrop.allCases) { backdrop in
                             Button {
@@ -299,6 +302,17 @@ struct InstantLooksView: View {
                 shareURL = url
             }
         }
+    }
+
+    // Left-aligned section header that lines up with the 620-wide content.
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(.white)
+            .frame(maxWidth: 620, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.top, BoothifySpacing.xs)
     }
 
     private func applyBackdrop(_ backdrop: StudioBackdrop) {
