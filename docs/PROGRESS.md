@@ -79,6 +79,9 @@
 - **#3** reviewed = non-issue (both result paths already use ShareLink/system share).
 - Minor items also done (`4c083b6`): segmented Instant Looks (Create/Looks/Backdrops headers, verified), one-time kiosk exit-gesture hint, bumped caption contrast (textTertiary/textMuted) for AA. Zero Sev-4 remained.
 
+## ✅ Event templates (1-tap setup) — DONE (verified)
+- `EventTemplate` (Wedding / Birthday / Brand Event): tapping a chip on the setup screen names AND pre-configures the new event on create — disclaimer/consent, survey (lead capture for corporate), brand overlay, email sender/subject. Only touches wired fields (no guessing). Selected chip highlights + shows a hint. Screenshot-verified: Brand Event selected → "Lead capture survey + branding + consent." (`6d8d5bf`)
+
 ## ✅ Video stabilization (LumaBooth-grade) — DONE
 - Research confirmed LumaBooth's "stabilization" = iOS AVFoundation `preferredVideoStabilizationMode` + operator toggle (adds latency). Implemented: `configureStabilization` now picks the strongest mode the active format supports (cinematicExtended→cinematic→standard→auto), gated by a new Camera setting `stabilizationEnabled` (Optional, nil=on) with toggle + copy; applied to 360 + slow-mo recording. (`b22f129`) — verify on device (recording feature).
 
