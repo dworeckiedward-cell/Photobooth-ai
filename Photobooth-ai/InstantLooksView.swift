@@ -55,6 +55,39 @@ struct InstantLooksView: View {
                     .font(.subheadline)
                     .foregroundStyle(BoothifyTheme.textSecondary)
 
+                // Differentiator: a classic photo strip from ONE photo in 4 looks.
+                Button {
+                    Haptics.tap(.medium)
+                    makeStrip()
+                } label: {
+                    HStack(spacing: BoothifySpacing.sm) {
+                        Image(systemName: "rectangle.split.1x2")
+                            .font(.body.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Classic photo strip")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text("Your photo in 4 looks — printable")
+                                .font(.caption)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(BoothifyTheme.textMuted)
+                    }
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .padding(BoothifySpacing.md)
+                    .background(BoothifyTheme.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                            .stroke(BoothifyTheme.violet.opacity(0.35), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: 620)
+                .padding(.horizontal, BoothifySpacing.md)
+
                 LazyVGrid(columns: columns, spacing: BoothifySpacing.sm) {
                     ForEach(LocalLook.allCases) { look in
                         Button {
@@ -177,6 +210,22 @@ struct InstantLooksView: View {
             try? out.write(to: url)
             await MainActor.run {
                 processedData = out
+                shareURL = url
+            }
+        }
+    }
+
+    private func makeStrip() {
+        let data = capturedImageData
+        let title = eventName
+        let accent = UIColor(BoothifyTheme.violet)
+        Task.detached(priority: .userInitiated) {
+            guard let strip = PhotoStripComposer.compose(from: data, title: title, accent: accent) else { return }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("boothify-strip-\(UUID().uuidString).jpg")
+            try? strip.write(to: url)
+            await MainActor.run {
+                processedData = strip
                 shareURL = url
             }
         }
