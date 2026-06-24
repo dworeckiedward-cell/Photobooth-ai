@@ -966,9 +966,13 @@ final class CameraController {
         // blindly requesting cinematicExtended (unsupported on older devices).
         // cinematic modes are face-aware and keep the subject stable as the rig
         // spins — exactly what a 360 / slow-mo booth needs.
-        let preferred: [AVCaptureVideoStabilizationMode] = [
+        var preferred: [AVCaptureVideoStabilizationMode] = [
             .cinematicExtended, .cinematic, .standard, .auto,
         ]
+        // iOS 18+: the strongest (Apple's newest) — prefer it when available.
+        if #available(iOS 18.0, *) {
+            preferred.insert(.cinematicExtendedEnhanced, at: 0)
+        }
         if let format = currentInput?.device.activeFormat {
             connection.preferredVideoStabilizationMode =
                 preferred.first { format.isVideoStabilizationModeSupported($0) } ?? .auto
@@ -1005,6 +1009,11 @@ final class CameraController {
             // but may not be at 240fps.
         }
         session.commitConfiguration()
+
+        // The 240fps format change can reset which stabilization modes the
+        // connection supports — re-apply so slow-mo stays stabilized (LumaBooth
+        // captures high-fps AND stabilizes together).
+        configureStabilization()
     }
 
     /// Start recording to a new file under `<tmp or documents>/url`. Caller picks
