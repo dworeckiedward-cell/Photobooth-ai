@@ -1,35 +1,41 @@
 # Boothify — Progress (execution of docs/EXECUTION-PROMPT.md)
 
-## M0 — Odblokowanie i „prawda" — IN PROGRESS
+## ✅ M0 — Odblokowanie i „prawda" — DONE
+- **M0.1** Gemini 429 → typed `quota_exceeded` + HTTP 429 (not 500); iOS calm "AI limit reached" state. (`d039b95`, `13f1526`)
+- **M0.2** Quota fail-open backstop (per-instance brake + block missing-config in prod) + atomic `claim_photo_slot` RPC (migration 14) with route fallback. (`3a293ad`)
+- **M0.3** Wired Capture countdown + JPEG quality + Camera mirror-selfie; Effects/Background-Removal marked honestly. (`7a02b38`)
+- **M0.4** Backend boot-time env validation (instrumentation); iOS release auth-gate confirmed ON. (`3d689a7`)
 
-### ✅ M0.1 — Gemini 429 → typed quota_exceeded + iOS UX
-- Backend (`ai-photobooth`): new `GenerationError` kind `quota_exceeded`; classify upstream 429/RESOURCE_EXHAUSTED; skip retries; route returns **429** (not 500) for quota. (commit `d039b95`)
-- iOS: `ResultView.failedView` shows calm amber "AI limit reached" for quota_exceeded. (commit `13f1526`)
+## ✅ M1.1 — Real green screen (Vision) — DONE
+- On-device `BackgroundReplacer` (VNGeneratePersonSegmentationRequest + CIBlendWithMask): transparent / color / image backgrounds, applied at capture off-main, fallback-safe. Badge AVAILABLE, copy de-mocked. (`3dff1dc`)
 
-### ✅ M0.3 — Reconcile dead Settings (iOS) (commit `7a02b38`)
-- Countdown reads `event.capture.countdownFirstPhoto` (was hardcoded 3; 0 snaps).
-- JPEG quality reads `event.capture.quality` (was 0.85).
-- Mirror selfie honors `event.camera.mirrorSelfie` (was always on) — across preview/photo/video/boomerang.
-- Effects + Background Removal badged **DEMO** (were AVAILABLE) until real pipelines ship (M1.1).
+## 🟡 M2.1 — Kiosk (core done) 
+- `KioskManager`: reference-counted keep-screen-awake wired into camera + slideshow (iPad won't sleep mid-event); ASAM + Guided-Access helpers for managed fleets. (`55e8889`)
+- **Remaining:** full in-app nav-lock + attract screen (confine guest to event flow, exit via PIN) — larger nav change, deferred.
 
-### ✅ M0.2 — Generation race fix + quota backstop (backend)
-- Quota backstop in `quota.ts`: per-instance daily attempt brake (`GEMINI_INSTANCE_DAILY_CAP`, default 1000) + **block missing-config in production** (was unbounded fail-open).
-- Atomic photo-slot claim: migration `00000000000014_claim_photo_slot.sql` (advisory lock + SELECT FOR UPDATE) + route calls `claim_photo_slot` RPC with graceful fallback to the legacy check.
-
-### ⏭ M0.4 — env validation + release flags — NOT STARTED
-- Backend: boot-time env schema validation (~20 vars).
-- iOS: confirm `AppConfig.authGateEnabled` ON in Release.
+## ✅ M2.2 — StoreKit 2 subscriptions — DONE (code)
+- `StoreManager` (StoreKit 2): products, purchase, restore, live transaction listener, `currentTier` from entitlements, `PremiumFeature.canUse` gating helper.
+- `PaywallView` with plan cards + Restore + App-Review disclosure + empty state.
+- Settings "Subscription" row shows the REAL tier (no more hardcoded PRO) and opens the paywall. (`1894cc7`)
 
 ---
 
 ## TODO(human) — actions only you can do (blocking launch)
-1. **Gemini billing** — enable paid tier on the Google project behind `GEMINI_API_KEY`; set the key in `.env.local` AND Vercel Production → redeploy. (Without this every generation 429s.) — see `src/lib/gemini/client.ts`.
-2. **Apply migration** `00000000000014_claim_photo_slot.sql` to Supabase (supabase db push / Management API), then regenerate types. Until applied, the route falls back to the non-atomic check.
-3. **App Store Connect / Stripe** — for M2 monetization (StoreKit products; Stripe live config per `ai-photobooth/TODO-HUMAN.md`).
-4. **Sentry DSN**, shared rate-limit infra (Upstash/Redis) — for M4.
-5. Decide monetization classification (3.1.3c vs StoreKit) — recommendation in `FINISH-PLAN.md` §5.
+1. **Gemini billing** — enable paid tier; set `GEMINI_API_KEY` in `.env.local` + Vercel prod → redeploy. (Else every generation 429s.) — `ai-photobooth/src/lib/gemini/client.ts`.
+2. **Apply Supabase migration** `00000000000014_claim_photo_slot.sql` + regenerate types (makes the photo-cap atomic; until then it falls back to the non-atomic check).
+3. **App Store Connect**: create auto-renewable subscriptions Starter/Pro/Business (group "Boothify", 14-day trial); add `Boothify.storekit` to the scheme for sandbox testing. Product IDs in `StoreManager.SubscriptionTier.productID`.
+4. **Stripe live config** (web/US billing path) per `ai-photobooth/TODO-HUMAN.md`.
+5. **Sentry DSN** + shared rate-limit infra (Upstash/Redis) — M4.
 
 ---
 
-## Next up
-- M0.4 (env validation + release flag), then **M1** (green screen, multi-capture → AI/print).
+## Remaining roadmap
+- **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline (large).
+- **M2.1 full** in-app kiosk nav-lock + attract screen.
+- **M3** consent RODO end-to-end; face-count detection + group UX; email white-label; guest gallery `/e/<slug>`.
+- **M4** onboarding + event templates; observability; final HIG/a11y audit + launch gate (`FINISH-PLAN.md` §9).
+
+## Enforcement note (entitlement gating)
+`PremiumFeature.canUse` exists but premium features are NOT yet hard-gated in the
+flows — doing so before the App Store products exist would lock the app entirely
+(sandbox currentTier is always .free). Wire enforcement once products are live.
