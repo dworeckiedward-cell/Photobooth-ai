@@ -53,6 +53,13 @@
 ## ✅ Differentiator — Instant Photo Strip — DONE (verified)
 - `PhotoStripComposer` renders a classic 4-frame photo-booth strip from ONE capture in multiple on-device looks + event title/date footer — instant, offline, printable/shareable. LumaBooth needs a burst of separate captures for a strip; Boothify generates it from a single photo. "Classic photo strip" entry in Instant Looks; strip screenshot-verified on iPhone 17 Pro. (`24a8448`)
 
+## ✅ Differentiator pack ("better than LumaBooth") — DONE
+- **Studio Backdrops** — 8 procedural on-device green-screen backgrounds (no assets). (`be4d568`)
+- **CSV lead export** — export survey/guest data from Survey settings (share sheet). (`9fd657e`)
+- **Look Reel (MP4)** — AVAssetWriter video cycling one photo through 6 looks. (`bdc937a`)
+- **Guest i18n (EN/PL/DE)** — runtime Loc helper on attract/Instant Looks/camera; verified PL live in sim. (`afcdf66`)
+- Deferred: live filtered camera preview (#1) — needs the camera pipeline reworked + a real device to verify; not shipped blind.
+
 ## Boothify vs LumaBooth — where Boothify now wins
 - **22 AI cinematic restyle styles** (LumaBooth: only AI *background removal*).
 - **Instant Looks** — 12 on-device looks that work fully **offline / no AI billing** (LumaBooth AI needs internet).
