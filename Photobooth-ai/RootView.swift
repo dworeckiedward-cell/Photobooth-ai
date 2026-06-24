@@ -121,7 +121,10 @@ struct RootView: View {
         }
         .task {
             try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled, !app.isKiosk else { return }
+            // First-run only: don't force the setup quiz on every launch (respects
+            // the operator's time). It marks itself complete on Finish/Skip.
+            // (OnboardingStore.reset() re-enables it.) Never shown in kiosk.
+            guard !Task.isCancelled, !app.isKiosk, !OnboardingStore.hasCompleted else { return }
             onboardingPresented = true
         }
     }

@@ -224,7 +224,7 @@ struct ResultView: View {
 
                 // 4. Copy block
                 VStack(spacing: BoothifySpacing.xs) {
-                    Text("Crafting your portrait")
+                    Text(Loc.t("Crafting your portrait", pl: "Tworzymy Twój portret", de: "Dein Porträt entsteht"))
                         .font(.title2.bold())
                         .foregroundStyle(.white)
                     Text(funnyMessage(index: messageIndex))
@@ -327,10 +327,18 @@ struct ResultView: View {
         let isTimeout = raw.contains("Timed out")
         let tint = isQuota ? BoothifyTheme.amber : BoothifyTheme.error
         let symbol = isQuota ? "hourglass" : "exclamationmark.triangle.fill"
-        let title = isQuota ? "AI limit reached" : "Generation failed"
+        let title = isQuota
+            ? Loc.t("AI limit reached", pl: "Limit AI osiągnięty", de: "KI-Limit erreicht")
+            : Loc.t("Generation failed", pl: "Generowanie nie powiodło się", de: "Erstellung fehlgeschlagen")
         let body: String = isQuota
-            ? "We've hit the AI generation limit for now. Please try again in a little while."
-            : (raw.isEmpty ? "Something went wrong. Try a different style or retake." : raw)
+            ? Loc.t("We've hit the AI generation limit for now. Please try again in a little while.",
+                    pl: "Chwilowo osiągnęliśmy limit generowania AI. Spróbuj ponownie za chwilę.",
+                    de: "Das KI-Limit ist vorerst erreicht. Bitte versuche es in Kürze erneut.")
+            : (raw.isEmpty
+               ? Loc.t("Something went wrong. Try a different style or retake.",
+                       pl: "Coś poszło nie tak. Wybierz inny styl lub zrób zdjęcie ponownie.",
+                       de: "Etwas ist schiefgelaufen. Wähle einen anderen Look oder nimm neu auf.")
+               : raw)
 
         return VStack(spacing: BoothifySpacing.md) {
             ZStack {
@@ -363,7 +371,7 @@ struct ResultView: View {
                     Haptics.tap(.medium)
                     retryPolling()
                 } label: {
-                    Label("Retry", systemImage: "arrow.clockwise")
+                    Label(Loc.t("Retry", pl: "Ponów", de: "Erneut"), systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .frame(maxWidth: 260)
@@ -374,7 +382,7 @@ struct ResultView: View {
                 Haptics.tap()
                 app.pop()
             } label: {
-                Label("Try another style", systemImage: "arrow.triangle.2.circlepath")
+                Label(Loc.t("Try another style", pl: "Inny styl", de: "Anderer Look"), systemImage: "arrow.triangle.2.circlepath")
             }
             .buttonStyle(SecondaryButtonStyle())
             .frame(maxWidth: 260)
@@ -485,7 +493,7 @@ struct ResultView: View {
                     Button {
                         Haptics.tap()
                         saveToPhotos()
-                    } label: { Label("Save to Photos", systemImage: "square.and.arrow.down") }
+                    } label: { Label(Loc.t("Save to Photos", pl: "Zapisz w Zdjęciach", de: "In Fotos sichern"), systemImage: "square.and.arrow.down") }
                 } label: {
                     ActionButtonLabel(symbol: "ellipsis", label: "More")
                 }
@@ -511,7 +519,7 @@ struct ResultView: View {
                         return false
                     }
                 } label: {
-                    Label("Retake", systemImage: "camera.fill")
+                    Label(Loc.t("Retake", pl: "Ponów zdjęcie", de: "Neu aufnehmen"), systemImage: "camera.fill")
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(SecondaryButtonStyle())
@@ -523,7 +531,7 @@ struct ResultView: View {
                         return false
                     }
                 } label: {
-                    Label("Done", systemImage: "checkmark")
+                    Label(Loc.t("Done", pl: "Gotowe", de: "Fertig"), systemImage: "checkmark")
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(SecondaryButtonStyle())
