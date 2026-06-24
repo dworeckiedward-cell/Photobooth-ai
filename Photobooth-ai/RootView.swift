@@ -65,17 +65,24 @@ struct RootView: View {
         // deep nav (EventHub, Camera, etc.) uses app.path as always.
         NavigationStack(path: $app.path) {
             Group {
-                switch selectedTab {
-                case .home:     ModeSelectionView()
-                case .events:   EventsCalendarView()
-                case .settings: AppSettingsView()
+                if app.isKiosk, let kioskId = app.kioskEventId {
+                    // Kiosk root — branded attract screen, no tabs. The guest
+                    // capture flow pushes onto app.path as usual; on completion it
+                    // pops back here.
+                    KioskAttractView(eventId: kioskId)
+                } else {
+                    switch selectedTab {
+                    case .home:     ModeSelectionView()
+                    case .events:   EventsCalendarView()
+                    case .settings: AppSettingsView()
+                    }
                 }
             }
-            .id(selectedTab)
+            .id(app.isKiosk ? "kiosk" : "tab-\(selectedTab.rawValue)")
             // Reserve room at the bottom of the root tab screens so scroll/list
             // content (e.g. "Notifications", "New Event") never hides behind the
             // floating tab bar. Pushed destinations don't inherit this.
-            .safeAreaPadding(.bottom, atRoot ? 118 : 0)
+            .safeAreaPadding(.bottom, (atRoot && !app.isKiosk) ? 118 : 0)
             .transition(.opacity)
             .animation(.easeOut(duration: 0.18), value: selectedTab)
             .navigationDestination(for: Route.self) { route in
@@ -91,7 +98,7 @@ struct RootView: View {
         // separately by safeAreaPadding above (we do NOT use safeAreaInset for
         // positioning, which would push the bar too high).
         .overlay(alignment: .bottom) {
-            if atRoot {
+            if atRoot && !app.isKiosk {
                 BoothifyTabBar(selected: $selectedTab)
                     .padding(.horizontal, 24)
                     // Negative bottom padding pulls the pill down toward the
@@ -114,7 +121,7 @@ struct RootView: View {
         }
         .task {
             try? await Task.sleep(for: .milliseconds(350))
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, !app.isKiosk else { return }
             onboardingPresented = true
         }
     }

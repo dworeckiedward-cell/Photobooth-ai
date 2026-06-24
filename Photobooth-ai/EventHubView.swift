@@ -49,6 +49,8 @@ struct EventHubView: View {
 
                         primaryCard
 
+                        kioskButton
+
                         CloudStatusPanel(eventId: eventId)
 
                         if let loadError {
@@ -182,6 +184,42 @@ struct EventHubView: View {
     private var captureSummary: String {
         if totalCaptures == 0 { return "No captures yet" }
         return "\(totalCaptures) captures · \(totalCompleted) completed"
+    }
+
+    // MARK: - Kiosk Mode
+
+    private var kioskButton: some View {
+        Button {
+            guard let event else { return }
+            Haptics.tap(.medium)
+            app.enterKiosk(eventId: event.id)
+        } label: {
+            HStack(spacing: BoothifySpacing.sm) {
+                Image(systemName: "lock.display")
+                    .font(.body.weight(.semibold))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Start Kiosk Mode")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text("Hand the device to guests — locks to the booth")
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textMuted)
+            }
+            .foregroundStyle(BoothifyTheme.violet)
+            .padding(BoothifySpacing.md)
+            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Locks the app into the guest photo booth for this event")
     }
 
     // MARK: - Primary launch CTA

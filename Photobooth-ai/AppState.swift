@@ -19,6 +19,22 @@ final class AppState {
     /// NavigationStack path. Each entry is a Route.
     var path = NavigationPath()
 
+    /// When non-nil, the app is locked into Kiosk Mode for this event: the root
+    /// shows the branded attract screen, the tab bar is hidden, and the guest can
+    /// only run the capture flow. Exit is gated by the event's Lock PIN.
+    var kioskEventId: UUID?
+    var isKiosk: Bool { kioskEventId != nil }
+
+    func enterKiosk(eventId: UUID) {
+        popToRoot()
+        kioskEventId = eventId
+    }
+
+    func exitKiosk() {
+        kioskEventId = nil
+        popToRoot()
+    }
+
     /// Parallel typed stack mirroring `path`. NavigationPath itself is opaque, so
     /// we track Routes here to support `popUntil(_:)`. System swipe-back can drift
     /// this stack ahead of `path`, so callers must clamp to `path.count`.
