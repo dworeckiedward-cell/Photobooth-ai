@@ -55,11 +55,11 @@ struct InstantLooksView: View {
     private var pickerPhase: some View {
         ScrollView {
             VStack(spacing: BoothifySpacing.md) {
-                Text("Pick a look")
+                Text(Loc.t("Pick a look", pl: "Wybierz styl", de: "Wähle einen Look"))
                     .font(BoothifyType.displayMedium)
                     .foregroundStyle(.white)
                     .padding(.top, BoothifySpacing.sm)
-                Text("Instant, on-device — no waiting.")
+                Text(Loc.t("Instant, on-device — no waiting.", pl: "Natychmiast, na urządzeniu — bez czekania.", de: "Sofort, auf dem Gerät — ohne Warten."))
                     .font(.subheadline)
                     .foregroundStyle(BoothifyTheme.textSecondary)
 
@@ -72,10 +72,10 @@ struct InstantLooksView: View {
                         Image(systemName: "rectangle.split.1x2")
                             .font(.body.weight(.semibold))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Classic photo strip")
+                            Text(Loc.t("Classic photo strip", pl: "Klasyczny pasek zdjęć", de: "Klassischer Fotostreifen"))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
-                            Text("Your photo in 4 looks — printable")
+                            Text(Loc.t("Your photo in 4 looks — printable", pl: "Twoje zdjęcie w 4 stylach — do druku", de: "Dein Foto in 4 Looks — druckbar"))
                                 .font(.caption)
                                 .foregroundStyle(BoothifyTheme.textTertiary)
                         }
@@ -105,10 +105,10 @@ struct InstantLooksView: View {
                         Image(systemName: "film")
                             .font(.body.weight(.semibold))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Look reel · video")
+                            Text(Loc.t("Look reel · video", pl: "Wideo z lookami", de: "Look-Reel · Video"))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
-                            Text("Your photo cycling through 6 looks")
+                            Text(Loc.t("Your photo cycling through 6 looks", pl: "Twoje zdjęcie w 6 stylach", de: "Dein Foto in 6 Looks"))
                                 .font(.caption)
                                 .foregroundStyle(BoothifyTheme.textTertiary)
                         }
@@ -194,7 +194,7 @@ struct InstantLooksView: View {
 
             VStack(spacing: BoothifySpacing.sm) {
                 Button { savePhoto(image) } label: {
-                    Label("Save photo", systemImage: "square.and.arrow.down")
+                    Label(Loc.t("Save photo", pl: "Zapisz zdjęcie", de: "Foto speichern"), systemImage: "square.and.arrow.down")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -202,13 +202,13 @@ struct InstantLooksView: View {
                 HStack(spacing: BoothifySpacing.sm) {
                     if let url = shareURL {
                         ShareLink(item: url) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label(Loc.t("Share", pl: "Udostępnij", de: "Teilen"), systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(SecondaryButtonStyle())
                     }
                     Button { printPhoto(image) } label: {
-                        Label("Print", systemImage: "printer")
+                        Label(Loc.t("Print", pl: "Drukuj", de: "Drucken"), systemImage: "printer")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(SecondaryButtonStyle())
@@ -221,7 +221,7 @@ struct InstantLooksView: View {
                         shareURL = nil
                         selected = nil
                     } label: {
-                        Label("Another look", systemImage: "wand.and.stars")
+                        Label(Loc.t("Another look", pl: "Inny styl", de: "Anderer Look"), systemImage: "wand.and.stars")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(SecondaryButtonStyle())
@@ -230,7 +230,7 @@ struct InstantLooksView: View {
                         Haptics.tap()
                         app.popToRoot()
                     } label: {
-                        Label("Done", systemImage: "checkmark")
+                        Label(Loc.t("Done", pl: "Gotowe", de: "Fertig"), systemImage: "checkmark")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(SecondaryButtonStyle())

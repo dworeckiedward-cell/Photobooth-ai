@@ -310,7 +310,7 @@ struct CameraScreen: View {
             Group {
                 switch captureMode {
                 case .photo:
-                    Text("Tap to capture")
+                    Text(Loc.t("Tap to capture", pl: "Dotknij, aby zrobić zdjęcie", de: "Tippen zum Aufnehmen"))
                 case .boomerang:
                     Text("Tap to record GIF burst")
                 case .slowMo:

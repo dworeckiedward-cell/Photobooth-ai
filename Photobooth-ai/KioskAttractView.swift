@@ -16,7 +16,9 @@ struct KioskAttractView: View {
     private var title: String {
         app.events.first(where: { $0.id == eventId })?.name ?? "Photo Booth"
     }
-    private let subtitle = "Tap anywhere to begin"
+    private var subtitle: String {
+        Loc.t("Tap anywhere to begin", pl: "Dotknij, aby zacząć", de: "Zum Starten tippen")
+    }
 
     var body: some View {
         ZStack {
@@ -51,7 +53,7 @@ struct KioskAttractView: View {
 
                 HStack(spacing: 8) {
                     Image(systemName: "hand.tap.fill")
-                    Text("Tap to start")
+                    Text(Loc.t("Tap to start", pl: "Zacznij", de: "Tippen zum Starten"))
                         .fontWeight(.semibold)
                 }
                 .font(.headline)
