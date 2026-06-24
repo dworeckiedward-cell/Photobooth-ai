@@ -41,10 +41,12 @@
 ## ✅ M3.3b — email white-label — DONE
 - Email send now uses the operator's senderName + subject (from events.settings JSON) → sender display, subject, footer; falls back to event name then Boothify. No contract change. (`15fb805`)
 
-## Remaining roadmap (larger / human-gated)
-- **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline — LARGE, touches capture flow; needs real-device testing (simulator has no camera).
-- **M2.1 full** in-app kiosk nav-lock + attract screen — touches navigation; careful pass.
-- **M4** onboarding/event-templates polish; observability (needs Sentry DSN — human); shared rate-limit (needs Upstash/Redis — human); final HIG/a11y audit + launch gate (`FINISH-PLAN.md` §9).
+## ✅ M2.1 full — Kiosk Mode — DONE (verified)
+- `AppState.kioskEventId` locks the app to one event: branded `KioskAttractView` root, tab bar hidden, guest confined to the capture flow (pops back to attract). Keep-awake + ASAM on appear; discreet long-press exit gated by event Lock PIN / confirm. "Start Kiosk Mode" in the event hub; onboarding suppressed in kiosk. Attract screen screenshot-verified on iPhone 17 Pro. (`716f4b2`)
+
+## Remaining (genuinely needs device or human)
+- **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline — the ONE big item that needs **real-device camera testing** (simulator uses a placeholder image, so the capture pipeline can't be verified). Existing GIF/boomerang/slow-mo already work (end at a share sheet); the gap is routing them through AI + print-strip layouts. Defer to a device session.
+- **M4** observability (needs Sentry DSN — human); shared rate-limit (needs Upstash/Redis — human); final on-device HIG/a11y audit.
 - **Entitlement enforcement** — wire `PremiumFeature.canUse` into flows once App Store products exist (human).
 
 ## Enforcement note (entitlement gating)
