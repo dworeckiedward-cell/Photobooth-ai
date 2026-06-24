@@ -318,33 +318,47 @@ struct ResultView: View {
 
     @ViewBuilder
     private func failedView(photo: Photo) -> some View {
-        VStack(spacing: BoothifySpacing.md) {
+        // The backend writes "<kind>: <message>" into error_message. A
+        // quota_exceeded kind means the AI service is rate-limited/out of quota —
+        // not a real failure of the user's photo, so present it calmly (amber,
+        // "try again later") rather than as a hard error.
+        let raw = photo.errorMessage ?? ""
+        let isQuota = raw.contains("quota_exceeded")
+        let isTimeout = raw.contains("Timed out")
+        let tint = isQuota ? BoothifyTheme.amber : BoothifyTheme.error
+        let symbol = isQuota ? "hourglass" : "exclamationmark.triangle.fill"
+        let title = isQuota ? "AI limit reached" : "Generation failed"
+        let body: String = isQuota
+            ? "We've hit the AI generation limit for now. Please try again in a little while."
+            : (raw.isEmpty ? "Something went wrong. Try a different style or retake." : raw)
+
+        return VStack(spacing: BoothifySpacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                    .fill(BoothifyTheme.error.opacity(0.12))
+                    .fill(tint.opacity(0.12))
                     .frame(width: 72, height: 72)
                     .overlay(
                         RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                            .stroke(BoothifyTheme.error.opacity(0.35), lineWidth: 1)
+                            .stroke(tint.opacity(0.35), lineWidth: 1)
                     )
-                Image(systemName: "exclamationmark.triangle.fill")
+                Image(systemName: symbol)
                     .font(.title.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.error)
+                    .foregroundStyle(tint)
                     .accessibilityHidden(true)
             }
 
             VStack(spacing: BoothifySpacing.xs) {
-                Text("Generation failed")
+                Text(title)
                     .font(.title2.bold())
                     .foregroundStyle(.white)
-                Text(photo.errorMessage ?? "Something went wrong. Try a different style or retake.")
+                Text(body)
                     .font(.subheadline)
                     .foregroundStyle(BoothifyTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, BoothifySpacing.xl)
             }
 
-            if photo.errorMessage?.contains("Timed out") == true {
+            if isTimeout {
                 Button {
                     Haptics.tap(.medium)
                     retryPolling()
@@ -364,7 +378,7 @@ struct ResultView: View {
             }
             .buttonStyle(SecondaryButtonStyle())
             .frame(maxWidth: 260)
-            .padding(.top, photo.errorMessage?.contains("Timed out") == true ? 0 : BoothifySpacing.sm)
+            .padding(.top, isTimeout ? 0 : BoothifySpacing.sm)
         }
         .padding(.horizontal, BoothifySpacing.lg)
     }
