@@ -30,6 +30,9 @@ enum BackgroundReplacer {
         let foreground = CIImage(cgImage: cgImage)
         let extent = foreground.extent
 
+        // Person segmentation requires the Neural Engine and is unavailable in the
+        // iOS Simulator — there it returns nil and we pass the photo through
+        // unchanged. On a real device the mask drives the composite below.
         guard let mask = personMask(for: cgImage, matching: extent) else {
             return imageData
         }

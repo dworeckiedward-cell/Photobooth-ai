@@ -168,6 +168,38 @@ struct InstantLooksView: View {
                 }
                 .frame(maxWidth: 620)
                 .padding(.horizontal, BoothifySpacing.md)
+
+                // On-demand studio backdrops — segment the guest and drop them on
+                // a premium backdrop instantly, no physical green screen needed.
+                VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+                    Text(Loc.t("Studio backdrops", pl: "Tła studyjne", de: "Studio-Hintergründe"))
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    LazyVGrid(columns: columns, spacing: BoothifySpacing.sm) {
+                        ForEach(StudioBackdrop.allCases) { backdrop in
+                            Button {
+                                Haptics.tap(.medium)
+                                applyBackdrop(backdrop)
+                            } label: {
+                                VStack(spacing: 6) {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(backdrop.swatch)
+                                        .frame(height: 80)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                                        )
+                                    Text(backdrop.label)
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .frame(maxWidth: 620)
+                .padding(.horizontal, BoothifySpacing.md)
                 .padding(.bottom, BoothifySpacing.xl)
             }
             .frame(maxWidth: .infinity)
@@ -259,6 +291,33 @@ struct InstantLooksView: View {
             }
             // Write a temp file so ShareLink shares the real JPEG (Messages/Mail/
             // WhatsApp/AirDrop), not a re-encoded screenshot.
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("boothify-\(UUID().uuidString).jpg")
+            try? out.write(to: url)
+            await MainActor.run {
+                processedData = out
+                shareURL = url
+            }
+        }
+    }
+
+    private func applyBackdrop(_ backdrop: StudioBackdrop) {
+        let data = capturedImageData
+        let overlay = app.settings(for: eventId).brandOverlay
+        let eid = eventId
+        let bgSettings = BackgroundRemovalSettings(
+            enabled: true,
+            mode: .replaceImage,
+            backgroundHex: "#0A0A0B",
+            backgroundImageName: backdrop.storageName,
+            applyToAIPortraits: false
+        )
+        Task.detached(priority: .userInitiated) {
+            var out = BackgroundReplacer.process(data, settings: bgSettings)
+            if overlay.enabled, overlay.applyToResults, let img = UIImage(data: out) {
+                out = BrandOverlayRenderer.bake(into: img, settings: overlay, eventId: eid)
+                    .jpegData(compressionQuality: 0.92) ?? out
+            }
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent("boothify-\(UUID().uuidString).jpg")
             try? out.write(to: url)
