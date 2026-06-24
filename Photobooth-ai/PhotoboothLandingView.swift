@@ -203,7 +203,13 @@ struct PhotoboothLandingView: View {
                         EventPresetChip(label: template.label, selected: selectedTemplate == template) {
                             Haptics.tap(.light)
                             selectedTemplate = template
-                            eventName = template.nameSeed
+                            // Only seed the name if the operator hasn't typed one —
+                            // never overwrite their own wording when they tap a chip
+                            // for the config. Seed also replaces a prior chip's seed.
+                            let typed = eventName.trimmingCharacters(in: .whitespaces)
+                            if typed.isEmpty || EventTemplate.allCases.contains(where: { $0.nameSeed == typed }) {
+                                eventName = template.nameSeed
+                            }
                             nameFocused = true
                         }
                         .disabled(creating)

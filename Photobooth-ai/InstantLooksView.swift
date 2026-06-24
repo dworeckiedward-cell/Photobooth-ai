@@ -17,6 +17,9 @@ struct InstantLooksView: View {
     @State private var reelGenerating = false
     @State private var reelURL: URL? = nil
     @State private var showReelShare = false
+    /// Non-nil while a strip/look/backdrop render is in flight — drives the busy
+    /// overlay so the guest gets immediate feedback (Vision backdrops take a beat).
+    @State private var workingLabel: String? = nil
 
     private var eventName: String? {
         app.events.first(where: { $0.id == eventId })?.name
@@ -36,7 +39,12 @@ struct InstantLooksView: View {
             } else {
                 pickerPhase
             }
+
+            if let label = workingLabel {
+                busyOverlay(label)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: workingLabel)
         .navigationTitle("Instant looks")
         .navigationBarTitleDisplayMode(.inline)
         .task { await buildThumbnails() }
@@ -209,6 +217,28 @@ struct InstantLooksView: View {
         }
     }
 
+    // MARK: - Busy overlay
+
+    /// Full-screen scrim + spinner shown while an on-device render is in flight,
+    /// so a tap never looks like it did nothing (Visibility of System Status).
+    private func busyOverlay(_ label: String) -> some View {
+        ZStack {
+            Color.black.opacity(0.55).ignoresSafeArea()
+            VStack(spacing: BoothifySpacing.md) {
+                ProgressView().tint(.white).controlSize(.large)
+                Text(label)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+            }
+            .padding(BoothifySpacing.xl)
+            .background(BoothifyTheme.surface2, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+        }
+        .transition(.opacity)
+        .accessibilityElement()
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
     // MARK: - Result
 
     private func resultPhase(image: UIImage) -> some View {
@@ -281,6 +311,7 @@ struct InstantLooksView: View {
 
     private func apply(_ look: LocalLook) {
         selected = look
+        workingLabel = Loc.t("Applying look…", pl: "Nakładam styl…", de: "Look wird angewendet…")
         let data = capturedImageData
         let overlay = app.settings(for: eventId).brandOverlay
         let eid = eventId
@@ -300,6 +331,7 @@ struct InstantLooksView: View {
             await MainActor.run {
                 processedData = out
                 shareURL = url
+                workingLabel = nil
             }
         }
     }
@@ -316,6 +348,7 @@ struct InstantLooksView: View {
     }
 
     private func applyBackdrop(_ backdrop: StudioBackdrop) {
+        workingLabel = Loc.t("Placing backdrop…", pl: "Wstawiam tło…", de: "Hintergrund wird gesetzt…")
         let data = capturedImageData
         let overlay = app.settings(for: eventId).brandOverlay
         let eid = eventId
@@ -338,6 +371,7 @@ struct InstantLooksView: View {
             await MainActor.run {
                 processedData = out
                 shareURL = url
+                workingLabel = nil
             }
         }
     }
@@ -348,7 +382,7 @@ struct InstantLooksView: View {
         LookReelComposer.compose(from: capturedImageData) { url in
             reelGenerating = false
             guard let url else {
-                saveMessage = "Couldn't make the reel."
+                saveMessage = Loc.t("Couldn't make the reel.", pl: "Nie udało się utworzyć wideo.", de: "Reel konnte nicht erstellt werden.")
                 return
             }
             reelURL = url
@@ -357,17 +391,26 @@ struct InstantLooksView: View {
     }
 
     private func makeStrip() {
+        workingLabel = Loc.t("Building strip…", pl: "Tworzę pasek…", de: "Streifen wird erstellt…")
         let data = capturedImageData
         let title = eventName
         let accent = UIColor(BoothifyTheme.violet)
         Task.detached(priority: .userInitiated) {
-            guard let strip = PhotoStripComposer.compose(from: data, title: title, accent: accent) else { return }
+            let strip = PhotoStripComposer.compose(from: data, title: title, accent: accent)
+            guard let strip else {
+                await MainActor.run {
+                    workingLabel = nil
+                    saveMessage = Loc.t("Couldn't make the strip.", pl: "Nie udało się utworzyć paska.", de: "Streifen konnte nicht erstellt werden.")
+                }
+                return
+            }
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent("boothify-strip-\(UUID().uuidString).jpg")
             try? strip.write(to: url)
             await MainActor.run {
                 processedData = strip
                 shareURL = url
+                workingLabel = nil
             }
         }
     }
@@ -377,7 +420,7 @@ struct InstantLooksView: View {
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             DispatchQueue.main.async {
                 guard status == .authorized || status == .limited else {
-                    saveMessage = "Allow photo access in Settings to save."
+                    saveMessage = Loc.t("Allow photo access in Settings to save.", pl: "Zezwól na dostęp do zdjęć w Ustawieniach, aby zapisać.", de: "Erlaube den Fotozugriff in den Einstellungen zum Speichern.")
                     return
                 }
                 PHPhotoLibrary.shared().performChanges({
@@ -385,7 +428,9 @@ struct InstantLooksView: View {
                 }) { success, _ in
                     DispatchQueue.main.async {
                         Haptics.notify(success ? .success : .error)
-                        saveMessage = success ? "Saved to your photos." : "Couldn't save the photo."
+                        saveMessage = success
+                            ? Loc.t("Saved to your photos.", pl: "Zapisano w zdjęciach.", de: "In deinen Fotos gespeichert.")
+                            : Loc.t("Couldn't save the photo.", pl: "Nie udało się zapisać zdjęcia.", de: "Foto konnte nicht gespeichert werden.")
                     }
                 }
             }
