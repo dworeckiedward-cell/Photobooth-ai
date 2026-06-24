@@ -46,7 +46,9 @@
 
 ## ✅ No-AI mode — Instant Looks — DONE (verified)
 - The booth now works with **zero cloud AI**: `LocalLookProcessor` (12 Core Image looks) + `InstantLooksView` (pick → Save/Print/Share), reachable via "Instant looks · No AI" at the top of the style picker. No Gemini, no upload, offline. Grid screenshot-verified on iPhone 17 Pro. (`00478a4`)
+- **No-AI booth routing**: when the operator disables all AI styles, capture goes straight to Instant Looks (skips the cloud picker); green-screen still applies first. Discoverable hint in AI Portraits settings. (`f1bac2f`, `ff65fe0`)
 - AI styles still available for when Gemini billing is enabled.
+- Minor follow-up: bake the operator brand overlay into Instant Looks save/share (today it's applied on AI results + prints; reusing it needs a small refactor of ResultView's private baker — deferred to avoid risk).
 
 ## Remaining (genuinely needs device or human)
 - **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline — the ONE big item that needs **real-device camera testing** (simulator uses a placeholder image, so the capture pipeline can't be verified). Existing GIF/boomerang/slow-mo already work (end at a share sheet); the gap is routing them through AI + print-strip layouts. Defer to a device session.
