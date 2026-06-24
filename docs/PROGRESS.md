@@ -77,7 +77,7 @@
 - Fixed **#1 (Sev 3)**: onboarding quiz now first-run only (was every launch) — verified no overlay when completed. (`0c9a8d1`)
 - Fixed **#2 (Sev 2)**: localized the result screen (generating/failed/quota/Retry/Save/Retake/Done) into PL+DE.
 - **#3** reviewed = non-issue (both result paths already use ShareLink/system share).
-- Remaining minor (Sev 1–2): extend i18n further, segment the long Instant Looks scroll, first-entry kiosk-exit hint, verify caption contrast (AA). Zero Sev-4.
+- Minor items also done (`4c083b6`): segmented Instant Looks (Create/Looks/Backdrops headers, verified), one-time kiosk exit-gesture hint, bumped caption contrast (textTertiary/textMuted) for AA. Zero Sev-4 remained.
 
 ## ✅ Video stabilization (LumaBooth-grade) — DONE
 - Research confirmed LumaBooth's "stabilization" = iOS AVFoundation `preferredVideoStabilizationMode` + operator toggle (adds latency). Implemented: `configureStabilization` now picks the strongest mode the active format supports (cinematicExtended→cinematic→standard→auto), gated by a new Camera setting `stabilizationEnabled` (Optional, nil=on) with toggle + copy; applied to 360 + slow-mo recording. (`b22f129`) — verify on device (recording feature).
