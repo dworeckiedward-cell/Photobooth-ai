@@ -674,11 +674,20 @@ struct CameraScreen: View {
 
     private func proceedWith(imageData: Data) {
         let bg = app.settings(for: eventId).backgroundRemoval
+        // No-AI booth: when the operator has no AI styles enabled, skip the AI
+        // style picker entirely and go straight to on-device Instant Looks.
+        let noAI = app.settings(for: eventId).aiPortraits.enabledStyles.isEmpty
+        func next(_ data: Data) -> Route {
+            noAI
+                ? .instantLooks(eventId: eventId, capturedImageData: data)
+                : .stylePicker(eventId: eventId, capturedImageData: data)
+        }
+
         // Real green-screen / background replacement (Vision person segmentation),
         // applied on-device before the photo continues. Off → push immediately.
         guard bg.enabled, bg.mode != .off else {
             controller.stop()
-            app.push(.stylePicker(eventId: eventId, capturedImageData: imageData))
+            app.push(next(imageData))
             return
         }
         capturing = true
@@ -687,7 +696,7 @@ struct CameraScreen: View {
             await MainActor.run {
                 capturing = false
                 controller.stop()
-                app.push(.stylePicker(eventId: eventId, capturedImageData: processed))
+                app.push(next(processed))
             }
         }
     }
