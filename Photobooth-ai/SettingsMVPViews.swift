@@ -297,21 +297,34 @@ struct BackgroundRemovalSettingsView: View {
             }
 
             if s.mode == .replaceImage {
-                Section("Replacement image") {
-                    Picker("Asset", selection: Binding(
-                        get: { s.backgroundImageName ?? "" },
-                        set: { newValue in
-                            var all = app.settings(for: eventId)
-                            all.backgroundRemoval.backgroundImageName = newValue.isEmpty ? nil : newValue
-                            app.updateSettings(all, for: eventId)
+                Section("Studio backdrops") {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
+                        ForEach(StudioBackdrop.allCases) { backdrop in
+                            let isSelected = s.backgroundImageName == backdrop.storageName
+                            Button {
+                                Haptics.selection()
+                                var all = app.settings(for: eventId)
+                                all.backgroundRemoval.backgroundImageName = backdrop.storageName
+                                app.updateSettings(all, for: eventId)
+                            } label: {
+                                VStack(spacing: 4) {
+                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                        .fill(backdrop.swatch)
+                                        .frame(height: 50)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                                .stroke(isSelected ? Color.white : Color.white.opacity(0.15), lineWidth: isSelected ? 2.5 : 1)
+                                        )
+                                    Text(backdrop.label)
+                                        .font(.caption2)
+                                        .foregroundStyle(BoothifyTheme.textSecondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(backdrop.label) backdrop")
                         }
-                    )) {
-                        Text("None").tag("")
-                        Text("Style_astronauta").tag("Style_astronauta")
-                        Text("Style_cyberpunk").tag("Style_cyberpunk")
-                        Text("Mode_360").tag("Mode_360")
                     }
-                    Text("Asset picker is a placeholder — per-event background uploads via Supabase Storage come in Sprint 4.")
+                    Text("Premium backdrops generated on-device — no downloads, no assets.")
                         .font(.caption2)
                         .foregroundStyle(BoothifyTheme.textTertiary)
                 }

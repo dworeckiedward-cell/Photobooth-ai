@@ -86,11 +86,15 @@ enum BackgroundReplacer {
     // MARK: - Background
 
     private static func backgroundImage(for settings: BackgroundRemovalSettings, extent: CGRect) -> CIImage {
-        if settings.mode == .replaceImage,
-           let name = settings.backgroundImageName,
-           let asset = UIImage(named: name)?.cgImage {
-            let bg = CIImage(cgImage: asset)
-            return aspectFill(bg, into: extent)
+        if settings.mode == .replaceImage {
+            // Procedural studio backdrop (generated on-device, no asset).
+            if let backdrop = StudioBackdrop.from(storageName: settings.backgroundImageName) {
+                return backdrop.ciImage(extent: extent)
+            }
+            // Bundled image asset.
+            if let name = settings.backgroundImageName, let asset = UIImage(named: name)?.cgImage {
+                return aspectFill(CIImage(cgImage: asset), into: extent)
+            }
         }
         let color = CIColor(color: UIColor(hex: settings.backgroundHex) ?? .black)
         return CIImage(color: color).cropped(to: extent)
