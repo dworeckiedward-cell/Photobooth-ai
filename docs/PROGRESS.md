@@ -50,6 +50,17 @@
 - AI styles still available for when Gemini billing is enabled.
 - Minor follow-up: bake the operator brand overlay into Instant Looks save/share (today it's applied on AI results + prints; reusing it needs a small refactor of ResultView's private baker — deferred to avoid risk).
 
+## ✅ Differentiator — Instant Photo Strip — DONE (verified)
+- `PhotoStripComposer` renders a classic 4-frame photo-booth strip from ONE capture in multiple on-device looks + event title/date footer — instant, offline, printable/shareable. LumaBooth needs a burst of separate captures for a strip; Boothify generates it from a single photo. "Classic photo strip" entry in Instant Looks; strip screenshot-verified on iPhone 17 Pro. (`24a8448`)
+
+## Boothify vs LumaBooth — where Boothify now wins
+- **22 AI cinematic restyle styles** (LumaBooth: only AI *background removal*).
+- **Instant Looks** — 12 on-device looks that work fully **offline / no AI billing** (LumaBooth AI needs internet).
+- **Instant photo strip from ONE photo** (LumaBooth: needs multi-capture burst).
+- **On-device green screen** (Vision) + **Virtual Attendant TTS** + **face-count guard** before AI.
+- Full **Kiosk Mode** (attract + ASAM + PIN exit), **StoreKit 2** tiers, public **/e/<slug>** album, **white-label email**.
+- Parity: multi-channel share + offline queue, surveys/disclaimers, AirPrint strips, 360 booth.
+
 ## Remaining (genuinely needs device or human)
 - **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline — the ONE big item that needs **real-device camera testing** (simulator uses a placeholder image, so the capture pipeline can't be verified). Existing GIF/boomerang/slow-mo already work (end at a share sheet); the gap is routing them through AI + print-strip layouts. Defer to a device session.
 - **M4** observability (needs Sentry DSN — human); shared rate-limit (needs Upstash/Redis — human); final on-device HIG/a11y audit.
