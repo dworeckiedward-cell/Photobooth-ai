@@ -39,6 +39,7 @@ struct RootView: View {
 
     @State private var onboardingPresented: Bool = false
     @State private var selectedTab: BoothifyTab = .home
+    @State private var store = StoreManager()
 
     var body: some View {
         @Bindable var app = app
@@ -51,6 +52,8 @@ struct RootView: View {
                 mainApp(app: app)
             }
         }
+        .environment(store)
+        .task { await store.load() }
     }
 
     @ViewBuilder
@@ -304,7 +307,9 @@ private struct BoothifyTabBar: View {
 
 private struct AppSettingsView: View {
     @Environment(AppState.self) private var app
+    @Environment(StoreManager.self) private var store
     @State private var confirmSignOut = false
+    @State private var paywallPresented = false
 
     private var appVersion: String {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
@@ -353,24 +358,37 @@ private struct AppSettingsView: View {
 
                 // ── Account & Plan ───────────────────────────────────────
                 Section("Account & Plan") {
-                    // Subscription tier
-                    HStack {
-                        Label("Subscription", systemImage: "sparkle")
-                            .foregroundStyle(.white)
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Image(systemName: "crown.fill")
-                                .font(.caption2.weight(.bold))
-                            Text("PRO")
-                                .font(.caption.weight(.bold))
-                                .kerning(0.4)
+                    // Subscription tier — reflects the real StoreKit entitlement,
+                    // not a hardcoded badge. Tapping opens the paywall.
+                    Button {
+                        Haptics.tap(.light)
+                        paywallPresented = true
+                    } label: {
+                        HStack {
+                            Label("Subscription", systemImage: "sparkle")
+                                .foregroundStyle(.white)
+                            Spacer()
+                            let isPaid = store.currentTier != .free
+                            HStack(spacing: 4) {
+                                if isPaid {
+                                    Image(systemName: "crown.fill")
+                                        .font(.caption2.weight(.bold))
+                                }
+                                Text(store.currentTier.displayName.uppercased())
+                                    .font(.caption.weight(.bold))
+                                    .kerning(0.4)
+                            }
+                            .foregroundStyle(isPaid ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background((isPaid ? BoothifyTheme.violet : BoothifyTheme.textMuted).opacity(0.15), in: Capsule())
+                            .overlay(Capsule().stroke((isPaid ? BoothifyTheme.violet : BoothifyTheme.textMuted).opacity(0.35), lineWidth: 0.8))
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.textMuted)
                         }
-                        .foregroundStyle(BoothifyTheme.violet)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(BoothifyTheme.violet.opacity(0.15), in: Capsule())
-                        .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.35), lineWidth: 0.8))
                     }
+                    .buttonStyle(.plain)
                 }
                 .listRowBackground(BoothifyTheme.surface1)
 
@@ -436,6 +454,9 @@ private struct AppSettingsView: View {
         .confirmationDialog("Sign out of Boothify?", isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button("Sign Out", role: .destructive) { app.signOut() }
             Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $paywallPresented) {
+            PaywallView()
         }
     }
 
