@@ -43,6 +43,39 @@ struct StylePickerView: View {
                     .padding(.top, BoothifySpacing.sm)
                     .padding(.horizontal, BoothifySpacing.md)
 
+                    // No-API path — instant on-device looks, always works even
+                    // when the cloud AI is unavailable.
+                    Button {
+                        Haptics.tap()
+                        app.push(.instantLooks(eventId: eventId, capturedImageData: capturedImageData))
+                    } label: {
+                        HStack(spacing: BoothifySpacing.sm) {
+                            Image(systemName: "wand.and.stars.inverse")
+                                .font(.body.weight(.semibold))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Instant looks")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                Text("No AI · ready in a second")
+                                    .font(.caption)
+                                    .foregroundStyle(BoothifyTheme.textTertiary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.textMuted)
+                        }
+                        .foregroundStyle(BoothifyTheme.violet)
+                        .padding(BoothifySpacing.md)
+                        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                                .stroke(BoothifyTheme.violet.opacity(0.35), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, BoothifySpacing.md)
+
                     // MARK: Style grid
                     LazyVGrid(
                         columns: [

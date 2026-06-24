@@ -477,6 +477,7 @@ enum Route: Hashable {
     case eventHub(eventId: UUID)
     case camera(eventId: UUID)
     case stylePicker(eventId: UUID, capturedImageData: Data)
+    case instantLooks(eventId: UUID, capturedImageData: Data)
     case result(eventId: UUID, photoId: UUID)
     case gallery(eventId: UUID)
     case slideshow(eventId: UUID)

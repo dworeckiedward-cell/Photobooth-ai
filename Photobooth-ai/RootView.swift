@@ -146,6 +146,8 @@ struct RootView: View {
                 .toolbar(.hidden, for: .navigationBar)
         case .stylePicker(let eventId, let imageData):
             StylePickerView(eventId: eventId, capturedImageData: imageData)
+        case .instantLooks(let eventId, let imageData):
+            InstantLooksView(eventId: eventId, capturedImageData: imageData)
         case .result(let eventId, let photoId):
             ResultView(eventId: eventId, photoId: photoId)
         case .gallery(let id):
