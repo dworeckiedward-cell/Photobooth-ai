@@ -189,6 +189,10 @@ struct CameraSettings: Codable, Hashable, Sendable {
     var roamingPhotographerMode: Bool = false
     var pal25FpsRecording: Bool = false
     var flash: FlashBehavior = .off
+    /// Video stabilization for 360 / slow-mo recording (smooths platform vibration).
+    /// Optional so older stored settings decode cleanly; nil is treated as ON.
+    /// Adds a little capture latency, so operators on a static rig can turn it off.
+    var stabilizationEnabled: Bool? = true
 
     static let `default` = CameraSettings()
 }

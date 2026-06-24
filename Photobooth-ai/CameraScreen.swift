@@ -530,6 +530,8 @@ struct CameraScreen: View {
         // Honor the operator's mirror-selfie setting (was previously ignored — the
         // front camera was always mirrored). Read live so it reflects the event.
         controller.mirrorFrontCamera = app.settings(for: eventId).camera.mirrorSelfie
+        // Video stabilization (nil = on) for 360 / slow-mo recording.
+        controller.stabilizationEnabled = app.settings(for: eventId).camera.stabilizationEnabled ?? true
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         switch status {
         case .authorized:
@@ -802,6 +804,9 @@ final class CameraController {
     var mirrorFrontCamera: Bool = true
     /// True when the front camera should be mirrored right now.
     var shouldMirror: Bool { isFront && mirrorFrontCamera }
+    /// Operator setting (event.camera.stabilizationEnabled). Drives video
+    /// stabilization for 360 / slow-mo recording.
+    var stabilizationEnabled: Bool = true
     private var currentInput: AVCaptureDeviceInput?
     private let photoDelegate = PhotoCaptureDelegate()
     private let movieDelegate = MovieCaptureDelegate()
@@ -949,9 +954,27 @@ final class CameraController {
     /// `.cinematicExtended` (iOS 13+, A12+) is the right mode for a static
     /// 360° pan — it smooths platform vibration without altering pacing.
     private func configureStabilization() {
-        guard let connection = movieOutput.connection(with: .video) else { return }
-        guard connection.isVideoStabilizationSupported else { return }
-        connection.preferredVideoStabilizationMode = .cinematicExtended
+        guard let connection = movieOutput.connection(with: .video),
+              connection.isVideoStabilizationSupported else { return }
+
+        guard stabilizationEnabled else {
+            connection.preferredVideoStabilizationMode = .off
+            return
+        }
+
+        // Pick the STRONGEST mode the active format actually supports, rather than
+        // blindly requesting cinematicExtended (unsupported on older devices).
+        // cinematic modes are face-aware and keep the subject stable as the rig
+        // spins — exactly what a 360 / slow-mo booth needs.
+        let preferred: [AVCaptureVideoStabilizationMode] = [
+            .cinematicExtended, .cinematic, .standard, .auto,
+        ]
+        if let format = currentInput?.device.activeFormat {
+            connection.preferredVideoStabilizationMode =
+                preferred.first { format.isVideoStabilizationModeSupported($0) } ?? .auto
+        } else {
+            connection.preferredVideoStabilizationMode = .auto
+        }
     }
 
     /// Reconfigure the active camera device to record at 240fps (slow-motion).

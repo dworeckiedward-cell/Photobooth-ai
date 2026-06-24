@@ -128,6 +128,19 @@ struct CameraSettingsView: View {
                     }
                     SettingsDivider()
                     SettingsToggle("Mirror selfie", isOn: app.binding(eventId: eventId, keyPath: \.camera.mirrorSelfie))
+                    SettingsDivider()
+                    SettingsToggle("Video stabilization", isOn: Binding(
+                        get: { app.settings(for: eventId).camera.stabilizationEnabled ?? true },
+                        set: { newValue in
+                            var all = app.settings(for: eventId)
+                            all.camera.stabilizationEnabled = newValue
+                            app.updateSettings(all, for: eventId)
+                        }
+                    ))
+                    Text("Smooths 360 / slow-mo footage on a moving rig (cinematic stabilization). Adds a little capture latency — turn off for a static camera.")
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textMuted)
+                        .padding(.top, BoothifySpacing.xs)
                 }
 
                 SettingsCard(title: "Framing") {

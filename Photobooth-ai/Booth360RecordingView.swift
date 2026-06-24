@@ -387,6 +387,9 @@ struct Booth360RecordingView: View {
             return
         }
 
+        // Honor the operator's stabilization setting (nil = on) before the session
+        // configures the recording connection. Smooths the spinning 360 footage.
+        controller.stabilizationEnabled = app.settings(for: eventId).camera.stabilizationEnabled ?? true
         await controller.start(mode: .video)
     }
 
