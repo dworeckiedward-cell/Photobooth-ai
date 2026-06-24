@@ -29,11 +29,17 @@
 
 ---
 
+## ✅ M3.2 — Face-count detection + group UX — DONE
+- Vision `FaceDetector` counts faces once off-main; picking an AI style on a 0/2+-face photo confirms "best with one person — continue anyway?". (`bd4a6aa`)
+
+## ✅ M3.3 — Public guest event gallery — DONE
+- `/e/<slug>` public album, gated by `share_mode` (grid when public, private notice otherwise); proxy allows `/e/`. (`386993d`)
+
 ## Remaining roadmap
-- **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline (large).
-- **M2.1 full** in-app kiosk nav-lock + attract screen.
-- **M3** consent RODO end-to-end; face-count detection + group UX; email white-label; guest gallery `/e/<slug>`.
-- **M4** onboarding + event templates; observability; final HIG/a11y audit + launch gate (`FINISH-PLAN.md` §9).
+- **M1.2** multi-capture (GIF/boomerang/strip) → AI/print pipeline (large; touches capture flow — do with device testing).
+- **M2.1 full** in-app kiosk nav-lock + attract screen (touches navigation — careful pass).
+- **M3.1** extend consent (AI/likeness + marketing + retention/delete); **M3.3b** email white-label (pass operator templates through to send).
+- **M4** onboarding + event templates; observability (Sentry DSN — human); final HIG/a11y audit + launch gate (`FINISH-PLAN.md` §9).
 
 ## Enforcement note (entitlement gating)
 `PremiumFeature.canUse` exists but premium features are NOT yet hard-gated in the
