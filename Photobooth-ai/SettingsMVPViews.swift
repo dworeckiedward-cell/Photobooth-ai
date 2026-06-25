@@ -1126,6 +1126,7 @@ struct SurveySettingsView: View {
 
     @State private var csvShareURL: URL?
     @State private var showCSVShare = false
+    @State private var csvError: String?
 
     private var s: SurveySettings { app.settings(for: eventId).survey }
     private var responses: [SurveyResponse] { app.surveyResponses(for: eventId) }
@@ -1136,6 +1137,10 @@ struct SurveySettingsView: View {
         if let url = CSVExporter.writeTemp(csv, name: "boothify-\(eventName)-responses") {
             csvShareURL = url
             showCSVShare = true
+        } else {
+            // Don't fail silently — the operator tapped Export and expects feedback.
+            Haptics.notify(.error)
+            csvError = "Couldn't write the CSV. Check that the device has free storage and try again."
         }
     }
 
@@ -1213,6 +1218,9 @@ struct SurveySettingsView: View {
                 ActivityShareSheet(items: [url])
             }
         }
+        .alert("Export failed", isPresented: Binding(get: { csvError != nil }, set: { if !$0 { csvError = nil } })) {
+            Button("OK") { csvError = nil }
+        } message: { Text(csvError ?? "") }
     }
 
     private var averageRatingLabel: String {

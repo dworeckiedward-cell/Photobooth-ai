@@ -320,6 +320,7 @@ private struct BoothifyTabBar: View {
 private struct AppSettingsView: View {
     @Environment(AppState.self) private var app
     @Environment(StoreManager.self) private var store
+    @Environment(\.openURL) private var openURL
     @State private var confirmSignOut = false
     @State private var paywallPresented = false
 
@@ -425,7 +426,13 @@ private struct AppSettingsView: View {
                 // ── Support ──────────────────────────────────────────────
                 Section("Support") {
                     globalSettingsRow(icon: "questionmark.circle", title: "Help Center", subtitle: "Guides & tutorials")
-                    globalSettingsRow(icon: "envelope", title: "Contact Support", subtitle: "support@boothify.app")
+                    globalSettingsRow(icon: "envelope", title: "Contact Support", subtitle: "support@boothify.app") {
+                        let subject = "Boothify support (v\(appVersion))"
+                            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        if let url = URL(string: "mailto:support@boothify.app?subject=\(subject)") {
+                            openURL(url)
+                        }
+                    }
                     globalSettingsRow(icon: "sparkles", title: "What's New", subtitle: "v\(appVersion)")
                 }
                 .listRowBackground(BoothifyTheme.surface1)
@@ -472,9 +479,18 @@ private struct AppSettingsView: View {
         }
     }
 
+    /// Global settings row. Pass an `action` only when the row actually does
+    /// something — the disclosure chevron is shown *only* then, so informational
+    /// rows (version, language, defaults summary) don't promise navigation that
+    /// never happens (no false affordance).
     @ViewBuilder
-    private func globalSettingsRow(icon: String, title: String, subtitle: String?) -> some View {
-        HStack(spacing: 14) {
+    private func globalSettingsRow(
+        icon: String,
+        title: String,
+        subtitle: String?,
+        action: (() -> Void)? = nil
+    ) -> some View {
+        let content = HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(BoothifyTheme.surface2)
@@ -495,13 +511,25 @@ private struct AppSettingsView: View {
                 }
             }
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.textMuted)
-                .accessibilityHidden(true)
+            if action != nil {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textMuted)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+
+        if let action {
+            Button {
+                Haptics.tap()
+                action()
+            } label: { content }
+            .buttonStyle(.plain)
+        } else {
+            content
+        }
     }
 }
 

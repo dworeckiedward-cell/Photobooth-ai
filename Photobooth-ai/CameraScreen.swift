@@ -312,15 +312,15 @@ struct CameraScreen: View {
                 case .photo:
                     Text(Loc.t("Tap to capture", pl: "Dotknij, aby zrobić zdjęcie", de: "Tippen zum Aufnehmen"))
                 case .boomerang:
-                    Text("Tap to record GIF burst")
+                    Text(Loc.t("Tap to record GIF burst", pl: "Dotknij, aby nagrać GIF", de: "Tippen für GIF-Aufnahme"))
                 case .slowMo:
                     if !controller.supportsSlowMotion {
-                        Text("Requires iPhone with 240fps camera")
+                        Text(Loc.t("Requires iPhone with 240fps camera", pl: "Wymaga iPhone'a z kamerą 240 kl./s", de: "Erfordert iPhone mit 240-fps-Kamera"))
                             .foregroundStyle(BoothifyTheme.amber)
                     } else if slowMoRecording {
-                        Text("Recording… tap to stop early")
+                        Text(Loc.t("Recording… tap to stop early", pl: "Nagrywanie… dotknij, aby zatrzymać", de: "Aufnahme… zum Stoppen tippen"))
                     } else {
-                        Text("Tap to record 2s at 240fps — 8× slower playback")
+                        Text(Loc.t("Tap to record 2s at 240fps — 8× slower playback", pl: "Nagraj 2 s w 240 kl./s — 8× wolniejsze odtwarzanie", de: "2 s bei 240 fps — 8× langsamere Wiedergabe"))
                     }
                 }
             }

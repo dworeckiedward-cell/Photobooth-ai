@@ -1206,12 +1206,12 @@ struct QRSheet: View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
             VStack(spacing: BoothifySpacing.md) {
-                Text("Scan with your phone")
+                Text(Loc.t("Scan with your phone", pl: "Zeskanuj telefonem", de: "Mit dem Handy scannen"))
                     .font(.title2.bold())
                     .foregroundStyle(.white)
                     .padding(.top, BoothifySpacing.lg)
 
-                Text("Opens your photo on the device's browser")
+                Text(Loc.t("Opens your photo on the device's browser", pl: "Otwiera Twoje zdjęcie w przeglądarce", de: "Öffnet dein Foto im Browser"))
                     .font(.footnote)
                     .foregroundStyle(BoothifyTheme.textSecondary)
 
