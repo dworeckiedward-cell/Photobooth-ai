@@ -82,6 +82,16 @@
 ## ✅ Event templates (1-tap setup) — DONE (verified)
 - `EventTemplate` (Wedding / Birthday / Brand Event): tapping a chip on the setup screen names AND pre-configures the new event on create — disclaimer/consent, survey (lead capture for corporate), brand overlay, email sender/subject. Only touches wired fields (no guessing). Selected chip highlights + shows a hint. Screenshot-verified: Brand Event selected → "Lead capture survey + branding + consent." (`6d8d5bf`)
 
+## ✅ Finalization audit sweep (every area) — DONE (build green both repos)
+- 3-way audit (guest iOS / operator iOS / web). Fixed the highest-confidence quality gaps:
+  - **iOS guest localization**: camera boomerang/slow-mo prompts + Result QR sheet strings now EN/PL/DE (were leaking English on the localized guest flow).
+  - **iOS Settings tab "beta smell"**: rows showed a disclosure chevron but did nothing (false affordance) → chevron only on rows that act; Contact Support opens a real mail composer (mailto + version). Informational rows render chevron-less.
+  - **iOS robustness**: Survey CSV export no longer fails silently (alert + error haptic on temp-write failure).
+  - **Web**: Polish toast on the English video-capture flow → English; slideshow photo alt text (a11y); Result email Send disabled until '@' AND '.'; removed chatty file-import console.log.
+  - (`9d32c58` iOS, `5d5d08d` web)
+- **Deliberately NOT auto-changed** (judgment): "Quick Setup" duplicate rows = intentional shortcut, left as designed; `/video` zinc theme left intact (cohesive sub-system, half-restyle would worsen it); 360 booth mock pipeline = deferred by design.
+- **Still needs a human** (App Store / content / device): Privacy Policy + Terms of Service + Help Center need real URLs (App Store requirement — currently honest info rows, not dead links); entitlement enforcement waits on live products; device-only verification items unchanged.
+
 ## ✅ Operator analytics — accurate counts + capacity meter — DONE (build green)
 - Event Hub stats now read server-accurate totals from the refreshed `event` (totalPhotos/completedPhotos/failedPhotos) instead of a 30-row slice that undercounted at scale. Surfaces a **Failed** tile only when failures > 0 (calmer otherwise). Added a **capacity meter** (used / max with a fill bar that goes emerald→amber→red and a "cap reached" warning) so operators see when an event nears its photo limit — the point at which capture stops. Live numbers need a real backend event to view; the capacity/fraction logic is deterministic.
 
