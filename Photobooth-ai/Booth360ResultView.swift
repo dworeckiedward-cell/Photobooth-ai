@@ -763,9 +763,11 @@ private struct Booth360SMSSheet: View {
                 }
                 let emailSMS = app.settings(for: eventId).emailSMS
                 let event = app.event(id: eventId)
-                let body = emailSMS.smsBodyTemplate
-                    .replacingOccurrences(of: "{{link}}", with: publicURL.absoluteString)
-                    .replacingOccurrences(of: "{{eventName}}", with: event?.name ?? "")
+                let body = DeliveryPolicy.smsBody(
+                    template: emailSMS.smsBodyTemplate,
+                    link: publicURL,
+                    eventName: event?.name ?? ""
+                )
                 let override = emailSMS.smsFromOverride.trimmingCharacters(in: .whitespaces)
                 let trimmedPhone = phone.trimmingCharacters(in: .whitespaces)
 

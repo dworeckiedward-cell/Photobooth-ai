@@ -100,8 +100,13 @@ final class Booth360CloudUploader {
 
         // Persist storage path even if PUT fails — next attempt reuses it
         // because the backend is idempotent on (event, client_job_id).
+        // Phase 7 (deferred-resolve, the moat): the sign response already
+        // carries the FINAL public link (idempotent per clientJobId), so the
+        // guest can take the QR NOW — the page resolves once the upload lands.
+        // The guest never waits on a live upload.
         if var live = app.job(id: jobId) {
             live.cloudStoragePath = signed.storagePath
+            live.publicShareURL = signed.publicShareURL
             app.upsertJob(live)
         }
 

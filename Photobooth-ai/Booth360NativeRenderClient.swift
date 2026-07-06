@@ -46,7 +46,11 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
             $0.progress = 0.05
         }
 
-        let spec = RenderSpec.default
+        var spec = RenderSpec.default
+        if let raw = job.settingsSnapshot.exportPreset,
+           let preset = RenderSpec.Preset(rawValue: raw) {
+            spec.preset = preset
+        }
         do {
             update { $0.currentStep = .slowMotion; $0.progress = 0.1 }
 
@@ -98,6 +102,28 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
             )
 
             if Task.isCancelled { return }
+
+            // Phase 7 — file-size targeting: an oversized Best-Quality master
+            // auto-falls back to Fast Share for the share copy (blueprint
+            // "oversized → auto Fast Share"). Loud, never silent.
+            let bytes = (try? FileManager.default
+                .attributesOfItem(atPath: masterURL.path)[.size] as? Int) ?? 0
+            if DeliveryPolicy.shouldFallbackToFastShare(bytes: bytes, preset: spec.preset) {
+                SentryClient.shared.breadcrumb(
+                    "auto fast-share fallback", category: "render",
+                    data: ["bytes": "\(bytes)"]
+                )
+                var fastSpec = spec
+                fastSpec.preset = .fastShare
+                try await Booth360RenderEngine.render(
+                    input: rawURL, timeline: motion.timeline, spec: fastSpec,
+                    decorations: RenderDecorationsBuilder.build(
+                        eventId: job.eventId, settings: app.settings(for: job.eventId), spec: fastSpec
+                    ),
+                    to: masterURL
+                )
+            }
+
             update { $0.currentStep = .sharePage; $0.progress = 0.95 }
 
             // Success bookkeeping — master in place, raw is disposable now.

@@ -216,3 +216,30 @@ PIXEL-verified composite (translucent overlay measurably brightens frames).
 exclusion (incl. v2 lock), migration + effective-preset precedence.
 
 **Gate B → HANDOFF:** real smoothness/crop tradeoff on a vibrating rig (L3).
+
+---
+
+## PHASE 7 — Delivery & reliability (moat) — ✅ GATE GREEN
+
+**Changed:**
+- **Deferred-resolve QR (the moat move):** the sign response already carries the
+  FINAL public link (idempotent per clientJobId) — the uploader now sets
+  `job.publicShareURL` at SIGN time, before the PUT. The guest takes the QR
+  immediately; the page resolves when the background upload lands. Network down
+  mid-handoff → queue + replay (existing) → same link resolves later. Guest
+  NEVER waits on a live upload.
+- **DeliveryPolicy** (pure, tested): SMS body fills the operator template AND
+  defensively guarantees the link is present (a template without {{link}}
+  delivers nothing); size targeting — Best-Quality master >16 MB auto re-exports
+  the share copy at Fast Share (loud breadcrumb, never silent).
+- **exportPreset** operator setting (Optional, decode-safe); client honors it.
+- Delivery instrumentation: existing upload start/success/fail breadcrumbs kept;
+  auto-fallback + stabilization/capture crumbs added earlier phases.
+
+**Gate A:** 44/44 — SMS-is-link routing (incl. dropped-placeholder guarantee),
+size-fallback thresholds, and the deferred-resolve WIRE CONTRACT (sign response
+must carry public_share_url — if the backend ever drops it, this test fails and
+the moat regression is caught).
+
+**DoD:** offline-at-handoff → guest holds a QR that resolves post-reconnect
+(sign-time link + queue replay). Gate B (real phones, venue wifi) → HANDOFF.

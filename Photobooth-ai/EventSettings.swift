@@ -240,6 +240,8 @@ struct AI360Settings: Codable, Hashable, Sendable {
     var motionTemplate: String? = nil
     /// Phase 4 — ramp curve raw value (`RampCurve`). nil = gentle.
     var rampCurve: String? = nil
+    /// Phase 7 — `RenderSpec.Preset` raw value. nil = fastShare (share-ready).
+    var exportPreset: String? = nil
     var clipSpeed: Double = 1.0              // 0.25…2.0 typical
     var soundtrackName: String? = nil        // placeholder — pick from library later
     /// M4: relative path under `Documents/events/<eventId>/audio/` to the

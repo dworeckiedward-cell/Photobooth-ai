@@ -112,3 +112,13 @@
     strongest, for the same reason.
 27. **Cinematic Extended ships v2-locked but visible** — operators see the
     roadmap; supportedPresets() hard-excludes it from v1 selection.
+
+## Phase 7
+
+28. **publicShareURL set at SIGN, not confirm.** The sign endpoint mints the
+    final short-code link idempotently — waiting for confirm only delayed the
+    guest for zero correctness gain. Upload status still gates "delivered"
+    messaging; the link itself is handed out immediately.
+29. **Size fallback re-exports the SHARE copy at Fast Share when a Best master
+    exceeds 16 MB** — master quality is the operator's choice, deliverability
+    is the guest's guarantee.
