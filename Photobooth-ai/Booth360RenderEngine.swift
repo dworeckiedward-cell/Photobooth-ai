@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import CoreGraphics
+import CoreImage
 import os.log
 
 /// Phase 3 — the native on-device render core (blueprint §7): raw capture →
@@ -47,7 +48,9 @@ struct Booth360RenderEngine: Sendable {
         asset: AVAsset,
         timeline: RenderTimeline,
         spec: RenderSpec,
-        reversedIntermediates: [Int: AVAsset] = [:]
+        reversedIntermediates: [Int: AVAsset] = [:],
+        intro: AVAsset? = nil,
+        outro: AVAsset? = nil
     ) async throws -> (composition: AVMutableComposition, videoComposition: AVMutableVideoComposition) {
         guard let sourceVideo = try await asset.loadTracks(withMediaType: .video).first else {
             throw Booth360RenderEngineError.noVideoTrack
@@ -68,6 +71,35 @@ struct Booth360RenderEngine: Sendable {
         let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
 
         var cursor = CMTime.zero
+
+        /// Insert a whole standalone clip (intro/outro) at the cursor with its
+        /// own aspect-fill transform key. Its audio rides along when present.
+        @Sendable func insertStandalone(_ clip: AVAsset) async throws {
+            guard let clipVideo = try await clip.loadTracks(withMediaType: .video).first else { return }
+            let clipDuration = try await clip.load(.duration)
+            let clipNatural = try await clipVideo.load(.naturalSize)
+            let clipTransform = try await clipVideo.load(.preferredTransform)
+            try videoTrack.insertTimeRange(
+                CMTimeRange(start: .zero, duration: clipDuration), of: clipVideo, at: cursor
+            )
+            if let audioTrack {
+                if let clipAudio = try await clip.loadTracks(withMediaType: .audio).first {
+                    try? audioTrack.insertTimeRange(
+                        CMTimeRange(start: .zero, duration: clipDuration), of: clipAudio, at: cursor
+                    )
+                } else {
+                    audioTrack.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: clipDuration))
+                }
+            }
+            layerInstruction.setTransform(
+                aspectFillTransform(sourceSize: clipNatural, preferred: clipTransform, spec: spec),
+                at: cursor
+            )
+            cursor = CMTimeAdd(cursor, clipDuration)
+        }
+
+        if let intro { try await insertStandalone(intro) }
+
         for (index, segment) in timeline.segments.enumerated() {
             let segmentOutputStart = cursor
 
@@ -130,6 +162,8 @@ struct Booth360RenderEngine: Sendable {
             }
         }
 
+        if let outro { try await insertStandalone(outro) }
+
         // Hard duration cap (spec of record).
         let cap = CMTime(seconds: spec.maxDurationSeconds, preferredTimescale: 600)
         if composition.duration > cap {
@@ -166,6 +200,61 @@ struct Booth360RenderEngine: Sendable {
         return transform
     }
 
+    // MARK: - Soundtrack (Phase 5, §7.6)
+
+    /// Add `soundtrack` as its own audio track trimmed to the composition,
+    /// with fade-in/out ramps; ORIGINAL audio tracks are muted (booth output
+    /// convention — reversed spans are silent anyway). Returns the mix the
+    /// export's audio reader must consume.
+    static func addSoundtrack(
+        _ soundtrack: AVAsset,
+        to composition: AVMutableComposition,
+        fadeSeconds: Double = 0.8
+    ) async throws -> AVAudioMix? {
+        guard let sourceTrack = try await soundtrack.loadTracks(withMediaType: .audio).first else {
+            return nil
+        }
+        let target = composition.duration
+        guard target > .zero,
+              let musicTrack = composition.addMutableTrack(
+                withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid
+              ) else { return nil }
+
+        // Trim (or loop) the soundtrack to the video length.
+        let soundtrackDuration = try await soundtrack.load(.duration)
+        var written = CMTime.zero
+        while written < target {
+            let remaining = CMTimeSubtract(target, written)
+            let chunk = min(soundtrackDuration, remaining)
+            try musicTrack.insertTimeRange(
+                CMTimeRange(start: .zero, duration: chunk), of: sourceTrack, at: written
+            )
+            written = CMTimeAdd(written, chunk)
+        }
+
+        let mix = AVMutableAudioMix()
+        var params: [AVMutableAudioMixInputParameters] = []
+
+        // Music: fade in over the first `fadeSeconds`, out over the last.
+        let music = AVMutableAudioMixInputParameters(track: musicTrack)
+        let fade = CMTime(seconds: min(fadeSeconds, target.seconds / 2), preferredTimescale: 600)
+        music.setVolumeRamp(fromStartVolume: 0, toEndVolume: 1,
+                            timeRange: CMTimeRange(start: .zero, duration: fade))
+        music.setVolumeRamp(fromStartVolume: 1, toEndVolume: 0,
+                            timeRange: CMTimeRange(start: CMTimeSubtract(target, fade), duration: fade))
+        params.append(music)
+
+        // Original capture audio: muted when a soundtrack is present.
+        for track in composition.tracks(withMediaType: .audio) where track != musicTrack {
+            let original = AVMutableAudioMixInputParameters(track: track)
+            original.setVolume(0, at: .zero)
+            params.append(original)
+        }
+
+        mix.inputParameters = params
+        return mix
+    }
+
     // MARK: - Export (reader → writer, VideoToolbox H.264)
 
     /// Export the composition to `outputURL` per spec. Streams frame-by-frame
@@ -176,6 +265,8 @@ struct Booth360RenderEngine: Sendable {
         videoComposition: AVMutableVideoComposition,
         spec: RenderSpec,
         to outputURL: URL,
+        overlay: CGImage? = nil,
+        audioMix: AVAudioMix? = nil,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws {
         try? FileManager.default.removeItem(at: outputURL)
@@ -201,6 +292,7 @@ struct Booth360RenderEngine: Sendable {
             let out = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: [
                 AVFormatIDKey: kAudioFormatLinearPCM
             ])
+            out.audioMix = audioMix   // Phase 5: soundtrack fades + original mute
             if reader.canAdd(out) { reader.add(out); audioReaderOutput = out }
         }
 
@@ -224,6 +316,27 @@ struct Booth360RenderEngine: Sendable {
             if writer.canAdd(input) { writer.add(input); audioInput = input }
         }
 
+        // Phase 5 — overlay compositing. CoreAnimationTool does NOT run in the
+        // reader→writer path, so a static overlay is composited per frame on
+        // the GPU via CoreImage into pool buffers (adaptor append).
+        let adaptor: AVAssetWriterInputPixelBufferAdaptor? = overlay == nil ? nil :
+            AVAssetWriterInputPixelBufferAdaptor(
+                assetWriterInput: videoInput,
+                sourcePixelBufferAttributes: [
+                    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                    kCVPixelBufferWidthKey as String: spec.width,
+                    kCVPixelBufferHeightKey as String: spec.height,
+                ]
+            )
+        let overlayCI: CIImage? = overlay.map { cg in
+            let img = CIImage(cgImage: cg)
+            // Scale (aspect-validated upstream) to the render size.
+            let sx = spec.size.width / img.extent.width
+            let sy = spec.size.height / img.extent.height
+            return img.transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+        }
+        let ciContext = CIContext()
+
         guard reader.startReading() else {
             throw Booth360RenderEngineError.readerFailed(reader.error?.localizedDescription ?? "unknown")
         }
@@ -233,6 +346,7 @@ struct Booth360RenderEngine: Sendable {
         writer.startSession(atSourceTime: .zero)
 
         let totalSeconds = max(composition.duration.seconds, 0.001)
+
 
         // Video pump.
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
@@ -250,7 +364,24 @@ struct Booth360RenderEngine: Sendable {
                         if let sample = readerOutput.copyNextSampleBuffer() {
                             let pts = CMSampleBufferGetPresentationTimeStamp(sample)
                             progress?(min(pts.seconds / totalSeconds, 1))
-                            if !videoInput.append(sample) { stop = true }
+                            if let adaptor, let overlayCI,
+                               let sourceBuffer = CMSampleBufferGetImageBuffer(sample) {
+                                // Composite overlay over the frame.
+                                let frame = CIImage(cvPixelBuffer: sourceBuffer)
+                                let composited = overlayCI.composited(over: frame)
+                                var outBuffer: CVPixelBuffer?
+                                if let pool = adaptor.pixelBufferPool {
+                                    CVPixelBufferPoolCreatePixelBuffer(nil, pool, &outBuffer)
+                                }
+                                if let outBuffer {
+                                    ciContext.render(composited, to: outBuffer)
+                                    if !adaptor.append(outBuffer, withPresentationTime: pts) { stop = true }
+                                } else {
+                                    stop = true
+                                }
+                            } else if !videoInput.append(sample) {
+                                stop = true
+                            }
                         } else {
                             stop = true
                         }
@@ -307,6 +438,17 @@ struct Booth360RenderEngine: Sendable {
         Self.log.info("export complete → \(outputURL.lastPathComponent, privacy: .public)")
     }
 
+    /// Phase 5 — optional decorations layered onto a render (§7.5–7.6).
+    struct RenderDecorations: Sendable {
+        var overlay: CGImage? = nil
+        var introURL: URL? = nil
+        var outroURL: URL? = nil
+        var soundtrackURL: URL? = nil
+        var soundtrackFadeSeconds: Double = 0.8
+
+        init() {}
+    }
+
     /// Convenience: full pipeline (composition + export) from a raw file.
     /// Reversed segments are pre-flattened into upright intermediates here
     /// (reverse doubles cost — expected, blueprint §7.3); temp files are
@@ -315,6 +457,7 @@ struct Booth360RenderEngine: Sendable {
         input: URL,
         timeline: RenderTimeline? = nil,
         spec: RenderSpec = .default,
+        decorations: RenderDecorations = RenderDecorations(),
         to outputURL: URL,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws {
@@ -338,11 +481,25 @@ struct Booth360RenderEngine: Sendable {
 
         let (composition, videoComposition) = try await buildComposition(
             asset: asset, timeline: effectiveTimeline, spec: spec,
-            reversedIntermediates: intermediates
+            reversedIntermediates: intermediates,
+            intro: decorations.introURL.map { AVURLAsset(url: $0) },
+            outro: decorations.outroURL.map { AVURLAsset(url: $0) }
         )
+
+        var audioMix: AVAudioMix?
+        if let soundtrackURL = decorations.soundtrackURL {
+            audioMix = try await addSoundtrack(
+                AVURLAsset(url: soundtrackURL), to: composition,
+                fadeSeconds: decorations.soundtrackFadeSeconds
+            )
+        }
+
         try await export(
             composition: composition, videoComposition: videoComposition,
-            spec: spec, to: outputURL, progress: progress
+            spec: spec, to: outputURL,
+            overlay: decorations.overlay,
+            audioMix: audioMix,
+            progress: progress
         )
     }
 }

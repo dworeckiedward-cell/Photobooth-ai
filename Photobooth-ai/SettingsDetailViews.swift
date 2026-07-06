@@ -134,6 +134,26 @@ struct AI360SettingsView: View {
                         .foregroundStyle(BoothifyTheme.textTertiary)
                 }
 
+                SettingsCard(title: "Soundtrack & bumpers") {
+                    LabeledRow(
+                        "Soundtrack",
+                        value: app.settings(for: eventId).ai360.soundtrackRelativePath == nil
+                            ? "None — pick on the recording screen"
+                            : "Attached"
+                    )
+                    LabeledRow(
+                        "Intro clip",
+                        value: app.settings(for: eventId).ai360.introRelativePath == nil ? "None" : "Attached"
+                    )
+                    LabeledRow(
+                        "Outro clip",
+                        value: app.settings(for: eventId).ai360.outroRelativePath == nil ? "None" : "Attached"
+                    )
+                    Text(SoundtrackLicensing.copy())
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+
                 SettingsCard(title: "Recording") {
                     SettingsStepper(
                         "Countdown",

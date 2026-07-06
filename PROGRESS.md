@@ -164,3 +164,31 @@ reversed frames == hue of last input frames).
 
 **Gate B → HANDOFF:** does the motion look PRO on real spinning footage (ramp
 feel, motion blur) — L3 calibration.
+
+---
+
+## PHASE 5 — Overlays, intro/outro, audio — ✅ GATE GREEN
+
+**Changed:**
+- **OverlaySpec**: size-match validation (exact ok / same-aspect scale+WARN /
+  aspect-mismatch REJECT — never stretch) + real-transparency probe (CIAreaMinimum);
+  operator-legible messages per verdict.
+- **Engine**: CoreAnimationTool doesn't run in reader→writer, so overlays are
+  composited PER FRAME on the GPU (CoreImage → pool buffers → adaptor). Fixed a
+  real heap-corruption crash: the pixel-buffer adaptor MUST be created before
+  `startWriting` (found by the gate, not by luck). Intro/outro insert as
+  standalone clips with their own time-keyed aspect-fill transforms + audio.
+  `addSoundtrack`: music track trimmed/looped to composition, fade-in/out ramps,
+  ORIGINAL audio muted; export's audio reader consumes the AVAudioMix.
+- **RenderDecorationsBuilder**: brand settings → full-frame transparent canvas
+  (sample logo / uploaded PNG validated / TEXT fallback rasterized), position/
+  size/opacity/padding honored; soundtrack/intro/outro resolved from
+  `Documents/events/<id>/` (missing → warn + skip, never crash).
+- **Model**: `introRelativePath`/`outroRelativePath` (Optionals, decode-safe).
+  Settings: "Soundtrack & bumpers" card + tri-lingual licensing guardrail.
+
+**Gate A:** 35/35 — validation matrix, licensing EN/PL/DE, intro/outro duration
+math, soundtrack ramps (start silent → 1 → end silent) + original-mute, and a
+PIXEL-verified composite (translucent overlay measurably brightens frames).
+
+**Gate B → HANDOFF:** overlay alignment on real spinning footage.

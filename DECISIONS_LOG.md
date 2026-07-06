@@ -87,3 +87,18 @@
     30 fps output without exploding composition complexity.
 21. **Template/curve stored as raw-value Optionals on AI360Settings** so
     pre-Phase-4 blobs decode untouched (same pattern as stabilizationEnabled).
+
+## Phase 5
+
+22. **Per-frame CI compositing instead of CoreAnimationTool** — the tool is
+    ignored on the AVAssetReader path; GPU CIImage composite into pool buffers
+    keeps the offline pipeline honest and testable.
+23. **Adaptor-before-startWriting**: AVAssetWriterInputPixelBufferAdaptor
+    created after startWriting corrupts the heap ("freed pointer was not the
+    last allocation"). Gate caught it; creation reordered.
+24. **Soundtrack mutes original audio** (booth convention; reversed spans were
+    silent anyway). Ducking as an operator knob can come later without engine
+    changes (mix params).
+25. **Text-fallback branding is rasterized** so overlay parity holds across
+    logo sources; opaque FULL-FRAME uploads rejected, small opaque logos are
+    fine (canvas supplies transparency).

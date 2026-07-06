@@ -243,6 +243,11 @@ struct AI360Settings: Codable, Hashable, Sendable {
     /// soundtrack picked via fileImporter. nil = no soundtrack. Stored as
     /// relative path (not absolute URL) so it survives app container changes.
     var soundtrackRelativePath: String? = nil
+    /// Phase 5: relative path under `Documents/events/<eventId>/` to an
+    /// operator intro clip (played before the spin). Optional — decode-safe.
+    var introRelativePath: String? = nil
+    /// Phase 5: outro clip (played after the spin).
+    var outroRelativePath: String? = nil
     var imageOverlayName: String? = nil      // placeholder
     var animatedOverlayName: String? = nil   // placeholder
     var beforeRecordingOverlayName: String? = nil

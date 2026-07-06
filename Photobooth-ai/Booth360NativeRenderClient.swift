@@ -72,11 +72,19 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
                 )
             }
 
+            // Phase 5 — operator decorations (brand overlay canvas, intro/
+            // outro, faded soundtrack) built from the event's settings.
+            let eventSettings = app.settings(for: job.eventId)
+            let decorations = RenderDecorationsBuilder.build(
+                eventId: job.eventId, settings: eventSettings, spec: spec
+            )
+
             // Progress callbacks arrive off-main; hop back for the observable job.
             try await Booth360RenderEngine.render(
                 input: rawURL,
                 timeline: motion.timeline,
                 spec: spec,
+                decorations: decorations,
                 to: masterURL,
                 progress: { fraction in
                     Task { @MainActor in

@@ -20,3 +20,7 @@
 - Real-footage render quality (Gate B): motion, aspect-fill crop on spinning
   subject, export size window 8–15 MB.
 - Consent sheet + kiosk "Next guest" end-to-end on hardware.
+
+## Phase 5
+- Overlay alignment/crispness on real spinning footage (L3).
+- Soundtrack fade feel against real ambient audio.
