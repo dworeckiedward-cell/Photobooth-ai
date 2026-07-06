@@ -433,6 +433,39 @@ final class AppState {
 
     func upsertJob(_ job: Booth360Job) { booth360Jobs[job.id] = job }
 
+    /// Phase 2 — hydrate this event's jobs from the backend listing so clip
+    /// history survives reinstall / device change. Merge policy: a local job
+    /// always wins (it knows file URLs + upload state); server-only jobs are
+    /// inserted; a local job missing its share URL gets it backfilled.
+    /// Graceful no-op offline / when the backend isn't live.
+    func hydrateJobs(forEvent eventId: UUID, slug: String) async {
+        guard !isDemoMode else { return }
+        do {
+            let dtos = try await BoothifyAPI.shared.listEventBooth360Jobs(slug: slug)
+            let snap = settings(for: eventId)
+            for dto in dtos {
+                if let existing = booth360Jobs[dto.id] {
+                    if existing.publicShareURL == nil,
+                       let url = dto.publicShareUrl.flatMap(URL.init(string:)) {
+                        var e = existing
+                        e.publicShareURL = url
+                        e.cloudUploadStatus = .uploaded
+                        booth360Jobs[dto.id] = e
+                    }
+                } else {
+                    booth360Jobs[dto.id] = Booth360Job(
+                        dto: dto,
+                        settingsSnapshot: snap.ai360,
+                        brandOverlay: snap.brandOverlay
+                    )
+                }
+            }
+        } catch {
+            // Offline / backend absent — the local in-memory view stays. Queues
+            // and retry handle uploads; nothing to surface to the operator here.
+        }
+    }
+
     func jobs(for eventId: UUID) -> [Booth360Job] {
         booth360Jobs.values
             .filter { $0.eventId == eventId }

@@ -127,6 +127,34 @@ struct Booth360Job: Identifiable, Codable, Hashable, Sendable {
         self.clientJobId = UUID().uuidString
         self.cloudUploadStatus = .notStarted
     }
+
+    /// Phase 2 — hydrate a job from the backend listing
+    /// (`GET /api/events/{slug}/booth360-jobs`). Server-side jobs have no local
+    /// file URLs or upload bookkeeping; unknown status strings map to `.failed`
+    /// with the raw value preserved in `errorMessage` (loud, not silent).
+    init(dto: Booth360JobDTO, settingsSnapshot: AI360Settings, brandOverlay: BrandOverlaySettings) {
+        self.id = dto.id
+        self.eventId = dto.eventId
+        if let mapped = Booth360RenderStatus(rawValue: dto.status) {
+            self.status = mapped
+        } else {
+            self.status = .failed
+            self.errorMessage = "Unknown job status from server: \(dto.status)"
+        }
+        self.currentStep = dto.currentStep.flatMap(Booth360ProcessingStep.init(rawValue:))
+        self.progress = dto.progress
+        self.finalVideoURL = dto.finalVideoUrl.flatMap(URL.init(string:))
+        self.uploadedRawVideoURL = dto.rawVideoUrl.flatMap(URL.init(string:))
+        self.publicShareURL = dto.publicShareUrl.flatMap(URL.init(string:))
+        self.settingsSnapshot = settingsSnapshot
+        self.brandOverlay = brandOverlay
+        self.createdAt = dto.createdAt ?? .now
+        self.completedAt = dto.completedAt
+        if self.errorMessage == nil { self.errorMessage = dto.errorMessage }
+        self.clientJobId = dto.id.uuidString
+        // A job that exists server-side with a public URL is already uploaded.
+        self.cloudUploadStatus = dto.publicShareUrl != nil ? .uploaded : .notStarted
+    }
 }
 
 /// BM0 — per-job cloud upload state. Independent of `Booth360RenderStatus`

@@ -103,6 +103,7 @@ struct Booth360EventHubView: View {
             CrashRestoreManager.setActiveEvent(eventId)
             if let slug = event?.slug {
                 await app.refreshEvent(slug: slug)
+                await app.hydrateJobs(forEvent: eventId, slug: slug)
             }
         }
         .sheet(isPresented: $sharePresented) {

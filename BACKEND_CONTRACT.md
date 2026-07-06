@@ -28,11 +28,13 @@ progress, `publicShareUrl`, video URLs, timestamps. Upload idempotency via
 
 ## GAPS — human must deliver (see also OUT OF SCOPE, blueprint §16)
 
-1. **GAP #1 — `GET /api/booth360/jobs` (collection listing) does not exist.**
-   Job lists live only in-memory (`AppState.booth360Jobs`) → operator loses
-   clip history on reinstall/device change. **Prerequisite for the persistent
-   360 gallery; needed before Phase 7.** Suggested shape:
-   `GET /api/booth360/jobs?eventId=…` → `[{ id, event_id, status, public_share_url, created_at, duration_s, size_bytes }]`, bearer-authed, owner-scoped.
+1. **GAP #1 — CLOSED (Phase 2).** Job listing exists as
+   `GET /api/events/{slug}/booth360-jobs` (events-scoped, not under
+   /api/booth360 — which is why the original audit missed it). iOS already had
+   `listEventBooth360Jobs(slug:)`; Phase 2 wired it: the 360 hub hydrates
+   `AppState.booth360Jobs` from the server on load (merge policy: local job
+   wins, server-only inserted, missing share URLs backfilled). Clip history now
+   survives reinstall for uploaded clips.
 2. **Retention / delete:** no DELETE for a 360 clip, no retention policy.
    Needed for GDPR delete path (PRIVACY.md).
 3. **CDN/storage provisioning** for hosted clips (Section 3): clips are

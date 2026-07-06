@@ -74,3 +74,26 @@ launches to 360 entry (Booth360LandingView home tab) · KEEP tests green.
 - Session gallery = hub's recent-recordings list; persistent gallery gated on GAP #1.
 
 **Deferred to v2:** none new (test-send rebuild is Phase 7, not v2).
+
+---
+
+## PHASE 2 — Data & backend contract — ✅ GATE GREEN
+
+**Changed:**
+- **GAP #1 closed, not built:** the job-listing endpoint already exists
+  (`GET /api/events/{slug}/booth360-jobs`) — the audit missed it because it
+  lives under /api/events. Wired it: `Booth360Job(dto:…)` hydration init
+  (unknown status → .failed + loud errorMessage) + `AppState.hydrateJobs` (local
+  wins / insert server-only / backfill share URL) + hub calls it on load. Clip
+  history survives reinstall. Graceful no-op offline.
+- **StorageLifecycle** (blueprint §8, Decision 6): raw/{jobId}.mov purged
+  post-render, masters/{eventId}/ capped (default 50, newest win), low-storage
+  responder (raws first, then halve masters), `isStorageLow` fail-safe.
+  4 unit tests green. Phase 3 wires purge into the real render path.
+- Decode-compat: Phase 0's legacy-blob test already proves post-cut safety
+  (ran green through the Phase 1 cut) — nothing extra to build.
+- Migrations: nothing to feature-detect app-side (14 = AI-photo slots, likely
+  obsolete; 15 = backend-internal auth). Documented in BACKEND_CONTRACT.md.
+
+**Gate:** build green · 11/11 tests · purge policy unit-tested · app tolerant
+of absent backend (hydrate/queues catch; demo mode).

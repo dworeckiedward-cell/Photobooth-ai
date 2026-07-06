@@ -48,3 +48,15 @@
 12. **VirtualAttendant + CaptureSettings/CameraSettings sections kept in the model**
     (camera prefs are 360-relevant; attendant re-wires to the 360 countdown later).
     PrintPaperSize-type orphan enums swept only where they blocked compile.
+
+## Phase 2
+
+13. **GAP #1 declared closed** — endpoint found at
+    `/api/events/{slug}/booth360-jobs` (both sides existed; nobody called it).
+    Hydration merge policy: LOCAL job always wins (knows file URLs + upload
+    bookkeeping); server-only jobs inserted; share URL backfilled onto local
+    jobs missing it. Unknown server status strings map to .failed with the raw
+    value in errorMessage — loud, not silent.
+14. **Master cap = count-based (50/event), not size-based** — simpler to reason
+    about at an event; size pressure is handled by the low-storage responder.
+    Caps configurable via StorageLifecycle init.
