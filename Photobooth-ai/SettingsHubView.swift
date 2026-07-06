@@ -97,9 +97,10 @@ struct SettingsHubView: View {
                     SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
                         app.push(.settingsStickers(eventId: eventId))
                     }
-                    SettingsRow(icon: "sparkles", title: "Effects", subtitle: effectsSubtitle, badge: .demo) {
-                        app.push(.settingsEffects(eventId: eventId))
-                    }
+                    // Effects (beautify/filter/grain/vignette) is hidden until it's
+                    // wired into the capture pipeline — the settings persisted but
+                    // never altered output, i.e. a non-functional feature. The view
+                    // and route stay in code; re-surface once effects are applied.
                     SettingsRow(icon: "wand.and.stars", title: "AI Portraits", subtitle: "\(app.settings(for: eventId).aiPortraits.enabledStyles.count) styles enabled", badge: .beta) {
                         app.push(.settingsAIPortraits(eventId: eventId))
                     }
@@ -111,9 +112,7 @@ struct SettingsHubView: View {
                     SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
                         app.push(.settingsStickers(eventId: eventId))
                     }
-                    SettingsRow(icon: "sparkles", title: "Effects", subtitle: effectsSubtitle, badge: .demo) {
-                        app.push(.settingsEffects(eventId: eventId))
-                    }
+                    // Effects hidden until wired (see photobooth branch above).
                 }
             }
             .listRowBackground(BoothifyTheme.surface1)
@@ -170,16 +169,6 @@ struct SettingsHubView: View {
         parts.append(s.preferredCamera == .front ? "Front" : "Back")
         if s.mirrorSelfie { parts.append("Mirrored") }
         return parts.joined(separator: " · ")
-    }
-
-    private var effectsSubtitle: String {
-        let s = app.settings(for: eventId).effects
-        var bits: [String] = []
-        if s.beautifyEnabled { bits.append("Beautify") }
-        if let f = s.filterName { bits.append(f.capitalized) }
-        if s.grainEnabled { bits.append("Grain") }
-        if s.vignetteEnabled { bits.append("Vignette") }
-        return bits.isEmpty ? "Off" : bits.joined(separator: " · ")
     }
 
     private var ai360Subtitle: String {

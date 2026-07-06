@@ -897,6 +897,8 @@ private struct ComingSoonRow: View {
         }
         .font(.subheadline)
         .opacity(0.55)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(value), coming soon")
     }
 }
 

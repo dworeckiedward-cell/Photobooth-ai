@@ -78,7 +78,8 @@ Google Gemini (AI image generation), Apple/Stripe (payments), email/SMS provider
 ## Pre-submit sweep (Section 14 / 17)
 
 - [ ] No dead buttons / placeholder screens visible (Settings info rows no longer
-      show a disclosure chevron; legal rows open real pages).
+      show a disclosure chevron; legal rows open real pages; the **Effects** panel
+      is hidden until wired — it persisted settings that never altered output).
 - [ ] The 360 AI Booth is hidden from the guest entry until its backend ships
       (`MVP_HIDE_AI360_FROM_GUESTS`) — reviewers won't hit an unfinished feature.
 - [ ] Dark mode: the app is dark-first by design; verify no unreadable contrast.
