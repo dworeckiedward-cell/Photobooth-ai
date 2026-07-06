@@ -27,6 +27,9 @@ final class CameraController {
     /// Operator setting (event.camera.stabilizationEnabled). Drives video
     /// stabilization for 360 / slow-mo recording.
     var stabilizationEnabled: Bool = true
+    /// Phase 6: preset drives the connection mode; unsupported → .off + honest
+    /// breadcrumb (never a silent strongest-mode ladder).
+    var stabilizationPreset: StabilizationPreset = .standard
     private var currentInput: AVCaptureDeviceInput?
     private let photoDelegate = PhotoCaptureDelegate()
     private let movieDelegate = MovieCaptureDelegate()
@@ -234,27 +237,23 @@ final class CameraController {
         guard let connection = movieOutput.connection(with: .video),
               connection.isVideoStabilizationSupported else { return }
 
-        guard stabilizationEnabled else {
+        // Phase 6 — the OPERATOR's preset decides; unsupported on the active
+        // format → .off with a breadcrumb. No silent strongest-mode ladder:
+        // stabilization costs crop, and the crop was previewed for THIS preset.
+        guard stabilizationEnabled, stabilizationPreset != .off else {
             connection.preferredVideoStabilizationMode = .off
             return
         }
-
-        // Pick the STRONGEST mode the active format actually supports, rather than
-        // blindly requesting cinematicExtended (unsupported on older devices).
-        // cinematic modes are face-aware and keep the subject stable as the rig
-        // spins — exactly what a 360 / slow-mo booth needs.
-        var preferred: [AVCaptureVideoStabilizationMode] = [
-            .cinematicExtended, .cinematic, .standard, .auto,
-        ]
-        // iOS 18+: the strongest (Apple's newest) — prefer it when available.
-        if #available(iOS 18.0, *) {
-            preferred.insert(.cinematicExtendedEnhanced, at: 0)
-        }
-        if let format = currentInput?.device.activeFormat {
-            connection.preferredVideoStabilizationMode =
-                preferred.first { format.isVideoStabilizationModeSupported($0) } ?? .auto
+        let requested = stabilizationPreset.avMode
+        if let format = currentInput?.device.activeFormat,
+           format.isVideoStabilizationModeSupported(requested) {
+            connection.preferredVideoStabilizationMode = requested
         } else {
-            connection.preferredVideoStabilizationMode = .auto
+            connection.preferredVideoStabilizationMode = .off
+            SentryClient.shared.breadcrumb(
+                "stabilization unsupported on active format", category: "capture",
+                data: ["requested": stabilizationPreset.rawValue]
+            )
         }
     }
 

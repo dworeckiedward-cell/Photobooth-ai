@@ -164,6 +164,9 @@ struct CameraSettings: Codable, Hashable, Sendable {
     /// Optional so older stored settings decode cleanly; nil is treated as ON.
     /// Adds a little capture latency, so operators on a static rig can turn it off.
     var stabilizationEnabled: Bool? = true
+    /// Phase 6: `StabilizationPreset` raw value. Optional (decode-safe);
+    /// nil → migrated from the legacy bool (false→off, true/nil→standard).
+    var stabilizationPreset: String? = nil
 
     static let `default` = CameraSettings()
 }

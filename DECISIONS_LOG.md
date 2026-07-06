@@ -102,3 +102,13 @@
 25. **Text-fallback branding is rasterized** so overlay parity holds across
     logo sources; opaque FULL-FRAME uploads rejected, small opaque logos are
     fine (canvas supplies transparency).
+
+## Phase 6
+
+26. **Silent strongest-mode ladder removed.** Pre-Phase-6 code auto-selected the
+    strongest supported stabilization when "ON" — spending frame crop the
+    operator never saw. §7.4's honesty rule wins: the chosen preset or .off,
+    never a silent upgrade. Legacy true/nil migrates to STANDARD (middle), not
+    strongest, for the same reason.
+27. **Cinematic Extended ships v2-locked but visible** — operators see the
+    roadmap; supportedPresets() hard-excludes it from v1 selection.

@@ -24,3 +24,7 @@
 ## Phase 5
 - Overlay alignment/crispness on real spinning footage (L3).
 - Soundtrack fade feel against real ambient audio.
+
+## Phase 6
+- Real crop/smoothness per preset on a physical rig (estimates are documented
+  approximations; L3 calibration).

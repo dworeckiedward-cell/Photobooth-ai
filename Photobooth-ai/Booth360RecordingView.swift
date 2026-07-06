@@ -423,7 +423,9 @@ struct Booth360RecordingView: View {
 
         // Honor the operator's stabilization setting (nil = on) before the session
         // configures the recording connection. Smooths the spinning 360 footage.
-        controller.stabilizationEnabled = app.settings(for: eventId).camera.stabilizationEnabled ?? true
+        let cameraSettings = app.settings(for: eventId).camera
+        controller.stabilizationEnabled = cameraSettings.stabilizationEnabled ?? true
+        controller.stabilizationPreset = StabilizationPreset.effective(from: cameraSettings)
         await controller.start(mode: .video)
         // Blueprint 7.1: 120 fps quality path — logged fallback, never a
         // silent pretend. NEEDS-DEVICE for real verification.

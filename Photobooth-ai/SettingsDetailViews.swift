@@ -40,15 +40,37 @@ struct CameraSettingsView: View {
                     SettingsDivider()
                     SettingsToggle("Mirror selfie", isOn: app.binding(eventId: eventId, keyPath: \.camera.mirrorSelfie))
                     SettingsDivider()
-                    SettingsToggle("Video stabilization", isOn: Binding(
-                        get: { app.settings(for: eventId).camera.stabilizationEnabled ?? true },
+                    // Phase 6 — preset picker with honest crop preview and
+                    // device-gated availability (unsupported = disabled + why).
+                    let supported = StabilizationPreset.supportedOnCurrentDevice()
+                    let current = StabilizationPreset.effective(from: app.settings(for: eventId).camera)
+                    SettingsPicker("Stabilization", selection: Binding<StabilizationPreset>(
+                        get: { current },
                         set: { newValue in
                             var all = app.settings(for: eventId)
-                            all.camera.stabilizationEnabled = newValue
+                            all.camera.stabilizationPreset = newValue.rawValue
+                            all.camera.stabilizationEnabled = newValue != .off
                             app.updateSettings(all, for: eventId)
                         }
-                    ))
-                    Text("Smooths 360 / slow-mo footage on a moving rig (cinematic stabilization). Adds a little capture latency — turn off for a static camera.")
+                    )) {
+                        ForEach(StabilizationPreset.allCases.filter { !$0.isV2Locked }) { preset in
+                            Text(supported.contains(preset) ? preset.label : "\(preset.label) — unavailable")
+                                .tag(preset)
+                        }
+                    }
+                    if let cropText = current.cropPreviewText {
+                        Text("\(cropText) — stabilization trades frame edges for smoothness.")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.amber)
+                            .padding(.top, 2)
+                    }
+                    if !supported.contains(current) && current != .off {
+                        Text("This device's camera doesn't support \(current.label) — recording falls back to Off.")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.error)
+                            .padding(.top, 2)
+                    }
+                    Text(current.guidance)
                         .font(.caption)
                         .foregroundStyle(BoothifyTheme.textMuted)
                         .padding(.top, BoothifySpacing.xs)

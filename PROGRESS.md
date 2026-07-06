@@ -192,3 +192,27 @@ math, soundtrack ramps (start silent → 1 → end silent) + original-mute, and 
 PIXEL-verified composite (translucent overlay measurably brightens frames).
 
 **Gate B → HANDOFF:** overlay alignment on real spinning footage.
+
+---
+
+## PHASE 6 — Stabilization — ✅ GATE GREEN
+
+**Changed:**
+- **StabilizationPreset** (Off/Standard/Cinematic; Cinematic Extended visible-
+  but-v2-locked): AV-mode mapping, documented crop ESTIMATES (0/10/20/25%),
+  "~N% tighter frame" pre-render preview, operator guidance per preset
+  (Off = rigid arms, Standard/Cinematic = vibrating rigs).
+- **Honest capture behavior**: the operator's preset decides; unsupported on
+  the active format → .off + breadcrumb. The old silent strongest-mode ladder
+  (which quietly grabbed cinematicExtendedEnhanced) is GONE — it spent crop the
+  operator never approved.
+- **Settings**: preset picker with device-gated availability (simulator = Off
+  only, honest), amber crop-preview line, red fallback note when the current
+  device can't do the chosen preset.
+- **Migration**: legacy `stabilizationEnabled` bool → preset (false→off,
+  true/nil→standard); new field wins; garbage raw values fall back safely.
+
+**Gate A:** 40/40 — mapping, crop monotonicity + preview text, unavailable-mode
+exclusion (incl. v2 lock), migration + effective-preset precedence.
+
+**Gate B → HANDOFF:** real smoothness/crop tradeoff on a vibrating rig (L3).
