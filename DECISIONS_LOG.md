@@ -60,3 +60,19 @@
 14. **Master cap = count-based (50/event), not size-based** — simpler to reason
     about at an event; size pressure is handled by the low-storage responder.
     Caps configurable via StorageLifecycle init.
+
+## Phase 3
+
+15. **Upload-initiation regression found & fixed.** Removing
+    Booth360FFmpegRenderClient (Phase 0) silently removed the ONLY call that
+    kicked Booth360CloudUploader after a render. Passthrough never enqueued.
+    Native client restores it. Window: phase-0..2 tags (no user-facing release).
+16. **Mock share links eliminated.** Passthrough fabricated
+    boothify.app/v/… URLs. Native client leaves publicShareURL nil until the
+    uploader confirms the real one — delivery honesty is the moat.
+17. **Raw purge targets job.rawVideoLocalURL** (recorder's Documents path), not
+    only the StorageLifecycle canonical path — recordings pre-date the new
+    layout. Raw KEPT on render failure (retry without re-shoot).
+18. **E2E size floor = "non-empty/valid" (20 KB), not the 8–15 MB window** —
+    synthetic solid-color frames legitimately compress far below the average
+    bitrate; the marketing window is asserted in Phase 7 on realistic footage.

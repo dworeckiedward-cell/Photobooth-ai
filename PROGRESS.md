@@ -97,3 +97,40 @@ launches to 360 entry (Booth360LandingView home tab) · KEEP tests green.
 
 **Gate:** build green · 11/11 tests · purge policy unit-tested · app tolerant
 of absent backend (hydrate/queues catch; demo mode).
+
+---
+
+## PHASE 3 — Render core + non-blocking flow — ✅ GATE GREEN (make-or-break)
+
+**Changed:**
+- **RenderSpec** (spec of record: 1080×1920/30/H.264; Fast 8 Mbps / Best 14 Mbps;
+  15 s hard cap) + **RenderTimeline** (Phase 3: full-range 1×; Phase 4 swaps the
+  builder, not the export path).
+- **Booth360RenderEngine** (pure, sim-testable): composition builder (segment
+  insert + scaleTimeRange, duration cap, aspect-FILL — crop never stretch) +
+  AVAssetReader→AVAssetWriter export (VideoToolbox H.264 + AAC, autoreleasepool
+  pumps, cancellation).
+- **Booth360NativeRenderClient** = new default behind the protocol: job
+  bookkeeping, StorageLifecycle (master placement, ACTUAL raw purged on success
+  only, per-event cap), **honest links** (publicShareURL nil until uploader
+  confirms — mock links gone), **upload-initiation regression fixed** (deleted
+  FFmpeg client was the only enqueue trigger; found by verification).
+- **Non-blocking kiosk:** renders owned by `AppState.startRender` (idempotent);
+  ProcessingView can't kill an export by navigation; kiosk "Next guest" button
+  (localized) returns to attract mid-export.
+- **Consent gate wired into the 360 recording path** (GDPR risk from Phase 1
+  closed): DisclaimerConsentSheet before camera when required; decline → pop.
+- **120 fps capture path**: `configureHighFrameRate` (≥1080p formats, smallest
+  format that reaches the rate, honest fallback + Sentry breadcrumb); pure
+  `bestFrameRate` policy unit-tested. **Low-storage block** before recording.
+
+**Gate A:** 18/18 green — e2e synthetic→MP4 (duration/dims/fps/codec asserted),
+composition assembly, hard cap, timeline math, writer settings per preset,
+fps-fallback policy, MainActor-responsive under 3 concurrent renders.
+
+**Gate B → HANDOFF:** real 120/240 capture, real-footage output quality,
+consent+kiosk loop on hardware, iOS 17 runtime.
+
+**Note:** e2e size floor calibrated to synthetic content (solid frames compress
+below average bitrate); the real 8–15 MB window is Phase 7's file-size test on
+realistic footage.

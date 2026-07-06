@@ -14,3 +14,9 @@
 - Kiosk attract → 360 recording flow on a real device (camera).
 - Template-chip apply + kiosk button: sim-verifiable visually, but full guest loop
   (record → process → result) needs camera hardware.
+
+## Phase 3
+- Real 120 fps (and 240 v2) capture: format availability + achieved rate.
+- Real-footage render quality (Gate B): motion, aspect-fill crop on spinning
+  subject, export size window 8–15 MB.
+- Consent sheet + kiosk "Next guest" end-to-end on hardware.

@@ -173,6 +173,63 @@ final class CameraController {
     /// mode for the device, so we just request the strongest one we want.
     /// `.cinematicExtended` (iOS 13+, A12+) is the right mode for a static
     /// 360° pan — it smooths platform vibration without altering pacing.
+    /// Phase 3 (blueprint 7.1): pick the best supported frame rate for the
+    /// 360 quality path. Pure so the fallback policy is unit-testable:
+    /// smallest supported rate ≥ target wins (least bandwidth for the goal);
+    /// none ≥ target → highest available (honest fallback, caller logs).
+    nonisolated static func bestFrameRate(supportedMaxRates: [Double], target: Double) -> Double? {
+        let eligible = supportedMaxRates.filter { $0 >= target }
+        if let best = eligible.min() { return best }
+        return supportedMaxRates.max()
+    }
+
+    /// Configure the active device for high-fps video capture (default 120).
+    /// Falls back to the highest available rate — NEVER silently pretends the
+    /// target was hit; returns the rate actually configured.
+    @discardableResult
+    func configureHighFrameRate(target: Double = 120) async -> Double? {
+        guard currentMode == .video,
+              let input = session.inputs.first as? AVCaptureDeviceInput else { return nil }
+        let device = input.device
+
+        // Candidate formats: support ≥1080p and expose their max frame rate.
+        struct Candidate { let format: AVCaptureDevice.Format; let maxRate: Double }
+        let candidates: [Candidate] = device.formats.compactMap { format in
+            let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            guard dims.width >= 1920, dims.height >= 1080 else { return nil }
+            guard let maxRate = format.videoSupportedFrameRateRanges.map(\.maxFrameRate).max() else { return nil }
+            return Candidate(format: format, maxRate: maxRate)
+        }
+        guard !candidates.isEmpty else { return nil }
+
+        guard let chosenRate = Self.bestFrameRate(
+            supportedMaxRates: candidates.map(\.maxRate), target: target
+        ) else { return nil }
+        // Among formats reaching the chosen rate, prefer the smallest ≥1080p
+        // (memory discipline — no 4K buffers for a 1080-output pipeline).
+        let format = candidates
+            .filter { $0.maxRate >= chosenRate }
+            .min { a, b in
+                let da = CMVideoFormatDescriptionGetDimensions(a.format.formatDescription)
+                let db = CMVideoFormatDescriptionGetDimensions(b.format.formatDescription)
+                return Int(da.width) * Int(da.height) < Int(db.width) * Int(db.height)
+            }!.format
+
+        do {
+            try device.lockForConfiguration()
+            device.activeFormat = format
+            let duration = CMTime(value: 1, timescale: CMTimeScale(chosenRate))
+            device.activeVideoMinFrameDuration = duration
+            device.activeVideoMaxFrameDuration = duration
+            device.unlockForConfiguration()
+        } catch {
+            return nil
+        }
+        // Format switch resets the connection preferences.
+        configureStabilization()
+        return chosenRate
+    }
+
     private func configureStabilization() {
         guard let connection = movieOutput.connection(with: .video),
               connection.isVideoStabilizationSupported else { return }

@@ -14,6 +14,9 @@ struct Booth360RecordingView: View {
     let eventId: UUID
 
     @State private var controller = CameraController()
+    @State private var showConsentSheet: Bool = false
+    @State private var consentResolved: Bool = false
+    @State private var storageBlocked: Bool = false
     @State private var countdown: Int? = nil
     @State private var recording: Bool = false
     @State private var recordingElapsed: TimeInterval = 0
@@ -74,6 +77,30 @@ struct Booth360RecordingView: View {
         }
         .navigationBarHidden(true)
         .task { await prepareCamera() }
+        .sheet(isPresented: $showConsentSheet, onDismiss: {
+            if !consentResolved { app.pop() }   // decline/dismiss = leave
+        }) {
+            DisclaimerConsentSheet(
+                settings: app.settings(for: eventId).disclaimer,
+                onAccept: {
+                    consentResolved = true
+                    app.recordConsent(for: eventId)
+                    showConsentSheet = false
+                    Task { await prepareCamera() }
+                },
+                onDecline: {
+                    consentResolved = false
+                    showConsentSheet = false
+                    app.pop()
+                }
+            )
+            .interactiveDismissDisabled(true)
+        }
+        .alert("Not enough storage", isPresented: $storageBlocked) {
+            Button("OK") { app.pop() }
+        } message: {
+            Text("Free up space on this device before recording — high-speed 360 captures are large.")
+        }
         .onDisappear {
             controller.stop()
             recordingTask?.cancel()
@@ -371,6 +398,13 @@ struct Booth360RecordingView: View {
     // MARK: - Actions
 
     private func prepareCamera() async {
+        // GDPR (blueprint §8): the consent gate now guards the 360 path too —
+        // it used to live only on the removed photo CameraScreen.
+        let disclaimer = app.settings(for: eventId).disclaimer
+        if disclaimer.enabled && disclaimer.requireConsentBeforeCapture && !consentResolved {
+            showConsentSheet = true
+            return
+        }
         // Need BOTH camera + microphone for video recording. We surface a single
         // permission overlay covering whichever one is missing.
         let cameraOK = await ensurePermission(for: .video)
@@ -391,6 +425,15 @@ struct Booth360RecordingView: View {
         // configures the recording connection. Smooths the spinning 360 footage.
         controller.stabilizationEnabled = app.settings(for: eventId).camera.stabilizationEnabled ?? true
         await controller.start(mode: .video)
+        // Blueprint 7.1: 120 fps quality path — logged fallback, never a
+        // silent pretend. NEEDS-DEVICE for real verification.
+        let achieved = await controller.configureHighFrameRate(target: 120)
+        if let achieved, achieved < 120 {
+            SentryClient.shared.breadcrumb(
+                "high-fps fallback", category: "capture",
+                data: ["achieved_fps": "\(Int(achieved))"]
+            )
+        }
     }
 
     /// Returns true when the user already granted (or now grants) access. False
@@ -421,6 +464,11 @@ struct Booth360RecordingView: View {
     }
 
     private func startRecording() {
+        // Low storage → block with a clear message (blueprint 7.1 edge).
+        guard !StorageLifecycle.shared.isStorageLow() else {
+            storageBlocked = true
+            return
+        }
         recording = true
         recordingElapsed = 0
         Haptics.notify(.success)

@@ -70,6 +70,9 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
             update { $0.currentStep = .sharePage; $0.progress = 0.95 }
 
             // Success bookkeeping — master in place, raw is disposable now.
+            // The raw lives wherever the recorder put it (job.rawVideoLocalURL),
+            // so purge THAT file; StorageLifecycle paths cover future captures.
+            try? FileManager.default.removeItem(at: rawURL)
             storage.purgeRaw(jobId: jobId)
             let evicted = storage.enforceMasterCap(eventId: job.eventId)
             if evicted > 0 {
