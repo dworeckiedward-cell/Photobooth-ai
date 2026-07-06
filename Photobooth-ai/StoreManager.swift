@@ -45,15 +45,27 @@ enum SubscriptionTier: String, CaseIterable, Sendable {
 /// Premium capabilities gated by tier. Single source of truth so UI and flows
 /// agree on what each plan unlocks.
 enum PremiumFeature {
-    case aiPortraits, booth360, printing, whiteLabel, multiDevice, kioskFleet
+    // Phase 8 — 360-only tier map (blueprint Decision 2):
+    // Free/trial: watermark, limited templates, single device.
+    // Pro: watermark removal, all motion templates, custom overlays.
+    // Business: multi-device, white-label.
+    case watermarkRemoval, allMotionTemplates, customOverlays, whiteLabel, multiDevice, kioskFleet
 
     var minimumTier: SubscriptionTier {
         switch self {
-        case .aiPortraits, .printing: return .pro
-        case .booth360, .whiteLabel:  return .pro
-        case .multiDevice:            return .pro
-        case .kioskFleet:             return .business
+        case .watermarkRemoval, .allMotionTemplates, .customOverlays: return .pro
+        case .whiteLabel, .multiDevice: return .business
+        case .kioskFleet: return .business
         }
+    }
+
+    /// PURE gating rule (testable): a feature is allowed when the tier covers
+    /// it — OR when the store has no configured products yet. Blueprint
+    /// Decision 2: "never ship a build that locks because products are
+    /// absent" — gating self-activates only once real ASC products load.
+    static func allowed(_ feature: PremiumFeature, tier: SubscriptionTier, storeConfigured: Bool) -> Bool {
+        guard storeConfigured else { return true }
+        return tier.rank >= feature.minimumTier.rank
     }
 }
 
@@ -62,6 +74,10 @@ enum PremiumFeature {
 @Observable
 @MainActor
 final class StoreManager {
+    /// Phase 8 — the app's live instance (RootView owns it). Render-layer
+    /// gating reads it; nil (tests / early boot) = ungated (sandbox-safe).
+    static private(set) var current: StoreManager?
+
     /// Loaded products, ordered by tier rank.
     private(set) var products: [Product] = []
     /// The highest tier the user currently has an active entitlement for.
@@ -70,6 +86,7 @@ final class StoreManager {
     private(set) var lastError: String?
 
     init() {
+        StoreManager.current = self
         // Start listening for transactions (renewals, refunds, purchases made on
         // other devices) immediately, before any UI asks. StoreManager lives for
         // the whole app lifetime (a single @State in RootView), so the listener
@@ -83,7 +100,7 @@ final class StoreManager {
 
     /// Does the current plan unlock `feature`?
     func canUse(_ feature: PremiumFeature) -> Bool {
-        currentTier.rank >= feature.minimumTier.rank
+        PremiumFeature.allowed(feature, tier: currentTier, storeConfigured: !products.isEmpty)
     }
 
     /// Load products from the App Store and refresh entitlements.

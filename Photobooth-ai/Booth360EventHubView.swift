@@ -60,6 +60,24 @@ struct Booth360EventHubView: View {
                 VStack(spacing: BoothifySpacing.md) {
                     if event != nil {
                         compactHeader
+                        if let warning = PerfBudget.evaluate(settings: app.settings(for: eventId)).operatorMessage {
+                            HStack(spacing: BoothifySpacing.sm) {
+                                Image(systemName: "gauge.with.needle")
+                                    .font(.body.weight(.semibold))
+                                Text(warning)
+                                    .font(.caption)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .foregroundStyle(BoothifyTheme.amber)
+                            .padding(BoothifySpacing.md)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(BoothifyTheme.amber.opacity(0.10), in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                                    .stroke(BoothifyTheme.amber.opacity(0.30), lineWidth: 1)
+                            )
+                            .accessibilityLabel("Performance warning: \(warning)")
+                        }
                         primaryCard
                         kioskButton
                         CloudStatusPanel(eventId: eventId)

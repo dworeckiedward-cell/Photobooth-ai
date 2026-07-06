@@ -122,3 +122,15 @@
 29. **Size fallback re-exports the SHARE copy at Fast Share when a Best master
     exceeds 16 MB** — master quality is the operator's choice, deliverability
     is the guest's guarantee.
+
+## Phase 8
+
+30. **Gating self-activates on product load** — `storeConfigured == products
+    non-empty` is the sandbox flag. No debug toggles to strip before release.
+31. **Motion trigger adds a 1 s sync countdown** after threshold-crossing so
+    capture starts mid-spin, not on the wobble (choreography tunable via
+    `motionThreshold`).
+32. **Crash recovery = notify + preserve, not resume.** AVAssetWriter state is
+    unresumable; the honest contract is a loud notice + raw kept on disk.
+33. **PerfBudget fails open on unknown hardware** — a device we've never seen
+    is likelier NEW than weak; warning it would be a false alarm at setup.

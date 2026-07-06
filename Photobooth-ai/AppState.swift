@@ -80,6 +80,17 @@ final class AppState {
         }
         isAuthLoading = false
 
+        // Phase 8 — a render was mid-flight when the app died. The raw take
+        // survives on disk; tell the operator instead of losing a clip silently.
+        if let interrupted = CrashRestoreManager.interruptedRenderId() {
+            CrashRestoreManager.clearActiveRender()
+            SentryClient.shared.breadcrumb(
+                "render interrupted by relaunch", category: "render",
+                data: ["job_id": String(interrupted.uuidString.prefix(8))]
+            )
+            topLevelError = "A 360 video was interrupted mid-render. The raw take is kept — open the event and record controls to retry."
+        }
+
         // BM1: re-fire any 360 uploads that didn't make it to the cloud
         // before the app was killed. Persistent queue lives in
         // Application Support; dead entries (local file gone) are dropped.
@@ -445,10 +456,12 @@ final class AppState {
     func startRender(jobId: UUID) {
         if let existing = renderTasks[jobId], !existing.isCancelled { return }
         guard let job = job(id: jobId), !job.status.isTerminal else { return }
+        CrashRestoreManager.setActiveRender(jobId)
         renderTasks[jobId] = Task { [weak self] in
             guard let self else { return }
             await Booth360NativeRenderClient.shared.runPipeline(jobId: jobId, app: self)
             self.renderTasks[jobId] = nil
+            CrashRestoreManager.clearActiveRender()
         }
     }
 

@@ -243,3 +243,38 @@ the moat regression is caught).
 
 **DoD:** offline-at-handoff → guest holds a QR that resolves post-reconnect
 (sign-time link + queue replay). Gate B (real phones, venue wifi) → HANDOFF.
+
+---
+
+## PHASE 8 — Triggers, paywall, perf budget, hardening — ✅ GATE GREEN (FINAL)
+
+**Changed:**
+- **TriggerStateMachine** (pure, tested): manual/timer/motion-start flows,
+  threshold-gated motion arming with a 1 s sync countdown (hero lands mid-spin),
+  illegal transitions ignored (never crash a booth), Bluetooth = v2 seam
+  (`BluetoothSpinnerAdapter` protocol stub).
+- **Tier gating, sandbox-safe (Decision 2):** PremiumFeature remapped to the
+  360 product (watermarkRemoval/allMotionTemplates/customOverlays = Pro;
+  whiteLabel/multiDevice = Business). PURE rule `allowed(_:tier:storeConfigured:)`:
+  everything unlocked until real ASC products load. Enforced in the render
+  path: Free = Boothify watermark + Hero Slow only (breadcrumbed).
+- **PerfBudget estimator**: device score (major-number parsing — a test caught
+  the naive-prefix bug that would have flagged an "iPhone99" as weak; fail-open
+  for unknown devices), template cost model (reverse 2×, overlay 1.2×, bumpers
+  1.15×, best 1.25×), verdicts at 3×/6× realtime; amber banner on the 360 hub
+  BEFORE the event.
+- **Crash recovery in-flight**: active-render marker (set/cleared around
+  exports); relaunch after a mid-render death → loud operator notice + crumb;
+  raw takes persist on disk for retry.
+- **App Store prep (§17):** `PrivacyInfo.xcprivacy` (photos/email/phone/userID/
+  crash + UserDefaults CA92.1, FileTimestamp C617.1, DiskSpace E174.1, no
+  tracking), `README.md` at root.
+- **HANDOFF.md** — full pack (§14 A–G).
+
+**Gate A (final regression):** 54/54 — trigger machine, gating matrix,
+perf-budget verdicts + fail-open, crash marker round-trip, plus all prior
+phases' suites.
+
+**Gate B → HANDOFF §A** (device script, 14 ordered items).
+
+## v1 COMPLETE — blueprint §2 scope shipped; v2 items logged, untouched.

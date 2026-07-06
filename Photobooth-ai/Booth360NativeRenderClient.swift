@@ -61,7 +61,16 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
             let captureDuration = (try? await rawAsset.load(.duration).seconds) ?? 0
             let captureFPS = (try? await rawAsset.loadTracks(withMediaType: .video)
                 .first?.load(.nominalFrameRate)).flatMap { Double($0) } ?? 30
-            let template = MotionTemplate(rawValue: job.settingsSnapshot.motionTemplate ?? "") ?? .heroSlow
+            var template = MotionTemplate(rawValue: job.settingsSnapshot.motionTemplate ?? "") ?? .heroSlow
+            // Phase 8 gating (sandbox-safe): Free tier = Hero Slow only.
+            let store = StoreManager.current
+            if let store, !store.canUse(.allMotionTemplates), template != .heroSlow {
+                SentryClient.shared.breadcrumb(
+                    "template gated to heroSlow", category: "gating",
+                    data: ["requested": template.rawValue]
+                )
+                template = .heroSlow
+            }
             let curve = RampCurve(rawValue: job.settingsSnapshot.rampCurve ?? "") ?? .gentle
             let motion = template.timeline(
                 captureDuration: captureDuration,
@@ -79,9 +88,28 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
             // Phase 5 — operator decorations (brand overlay canvas, intro/
             // outro, faded soundtrack) built from the event's settings.
             let eventSettings = app.settings(for: job.eventId)
-            let decorations = RenderDecorationsBuilder.build(
+            var decorations = RenderDecorationsBuilder.build(
                 eventId: job.eventId, settings: eventSettings, spec: spec
             )
+            // Phase 8 gating: custom overlays are Pro; Free renders carry the
+            // Boothify watermark (Decision 2) — honest tier, never a lock-out.
+            if let store {
+                if !store.canUse(.customOverlays) || !store.canUse(.watermarkRemoval) {
+                    var freeBrand = BrandOverlaySettings.default
+                    freeBrand.enabled = true
+                    freeBrand.applyToResults = true
+                    freeBrand.logoSource = .boothifySample
+                    freeBrand.logoAssetName = "BoothifyLogo"
+                    freeBrand.position = .bottomRight
+                    freeBrand.size = 0.16
+                    freeBrand.opacity = 0.85
+                    freeBrand.padding = 0.03
+                    decorations.overlay = RenderDecorationsBuilder.overlayCanvas(
+                        brand: freeBrand, spec: spec,
+                        eventDir: RenderDecorationsBuilder.eventDirectory(eventId: job.eventId)
+                    )
+                }
+            }
 
             // Progress callbacks arrive off-main; hop back for the observable job.
             try await Booth360RenderEngine.render(

@@ -37,4 +37,25 @@ enum CrashRestoreManager {
         guard let raw = UserDefaults.standard.string(forKey: key) else { return nil }
         return UUID(uuidString: raw)
     }
+
+    // MARK: - Phase 8: in-flight render (blueprint §8 crash recovery)
+
+    private static let renderKey = "boothify.activeRenderJob"
+
+    /// Stash while an export runs; cleared on completion/failure/cancel.
+    static func setActiveRender(_ jobId: UUID) {
+        UserDefaults.standard.set(jobId.uuidString, forKey: renderKey)
+    }
+
+    static func clearActiveRender() {
+        UserDefaults.standard.removeObject(forKey: renderKey)
+    }
+
+    /// Non-nil at launch ⇒ the app died mid-export. The in-memory job is gone,
+    /// but raw takes persist under Documents/events/<id>/ — the operator is
+    /// told, loudly, instead of a clip vanishing silently.
+    static func interruptedRenderId() -> UUID? {
+        guard let raw = UserDefaults.standard.string(forKey: renderKey) else { return nil }
+        return UUID(uuidString: raw)
+    }
 }
