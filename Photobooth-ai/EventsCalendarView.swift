@@ -50,7 +50,7 @@ struct EventsCalendarView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Haptics.tap(.light)
-                    app.push(.photoboothLanding)
+                    app.push(.booth360Landing)
                 } label: {
                     Image(systemName: "plus")
                         .font(.body.weight(.semibold))
@@ -217,7 +217,7 @@ struct EventsCalendarView: View {
                     ForEach(events) { event in
                         CalendarEventRow(event: event) {
                             Haptics.tap()
-                            app.push(.eventHub(eventId: event.id))
+                            app.push(.booth360EventHub(eventId: event.id))
                         }
                     }
                 }
@@ -233,7 +233,7 @@ struct EventsCalendarView: View {
             title: "No events",
             subtitle: "No photobooth events on this day.",
             actionLabel: "New Event",
-            action: { app.push(.photoboothLanding) }
+            action: { app.push(.booth360Landing) }
         )
         .padding(.top, BoothifySpacing.sm)
     }

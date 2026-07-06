@@ -72,7 +72,7 @@ struct RootView: View {
                     KioskAttractView(eventId: kioskId)
                 } else {
                     switch selectedTab {
-                    case .home:     ModeSelectionView()
+                    case .home:     Booth360LandingView()
                     case .events:   EventsCalendarView()
                     case .settings: AppSettingsView()
                     }

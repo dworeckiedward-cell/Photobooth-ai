@@ -73,7 +73,7 @@ struct KioskAttractView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             Haptics.tap(.medium)
-            app.push(.camera(eventId: eventId))
+            app.push(.booth360Recording(eventId: eventId))
         }
         // Discreet exit — long-press the top-left corner.
         .overlay(alignment: .topLeading) {

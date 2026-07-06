@@ -111,11 +111,8 @@ final class AppState {
             CrashRestoreManager.clearActiveEvent()
             return
         }
-        // Push the hub. Use the generic event hub route since we don't
-        // remember whether the operator was in photo or 360 mode last —
-        // EventHubView handles photo; Booth360EventHubView handles 360.
-        // Default to photo (more common today); operator can swap if needed.
-        path.append(Route.eventHub(eventId: stashed))
+        // 360-only app: the hub IS the 360 hub.
+        path.append(Route.booth360EventHub(eventId: stashed))
     }
 
     /// Persist a freshly minted session (from Apple sign-in). Updates both

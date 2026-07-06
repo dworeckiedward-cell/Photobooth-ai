@@ -16,6 +16,42 @@ struct Booth360EventHubView: View {
     private var completed: [Booth360Job] { jobs.filter { $0.status == .completed } }
     private var processing: [Booth360Job] { jobs.filter { !$0.status.isTerminal } }
 
+    // MARK: - Kiosk Mode (ported from the photo hub — blueprint 4.D/5)
+
+    private var kioskButton: some View {
+        Button {
+            guard let event else { return }
+            Haptics.tap(.medium)
+            app.enterKiosk(eventId: event.id)
+        } label: {
+            HStack(spacing: BoothifySpacing.sm) {
+                Image(systemName: "lock.display")
+                    .font(.body.weight(.semibold))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Start Kiosk Mode")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text("Hand the device to guests — locks to the booth")
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textMuted)
+            }
+            .foregroundStyle(BoothifyTheme.amber)
+            .padding(BoothifySpacing.md)
+            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Locks the app into the guest 360 booth for this event")
+    }
+
     var body: some View {
         ZStack {
             BoothifyTheme.bg.ignoresSafeArea()
@@ -25,6 +61,7 @@ struct Booth360EventHubView: View {
                     if event != nil {
                         compactHeader
                         primaryCard
+                        kioskButton
                         CloudStatusPanel(eventId: eventId)
                         recentRecordingsSection
                         statsRow

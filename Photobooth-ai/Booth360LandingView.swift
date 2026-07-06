@@ -11,6 +11,7 @@ struct Booth360LandingView: View {
     @State private var eventName: String = ""
     @State private var creating: Bool = false
     @State private var createError: String? = nil
+    @State private var selectedTemplate: EventTemplate? = nil
     @FocusState private var nameFocused: Bool
 
     var body: some View {
@@ -130,6 +131,32 @@ struct Booth360LandingView: View {
             .textInputAutocapitalization(.words)
             .disabled(creating)
 
+            // 1-tap templates (ported from the photo landing per blueprint 4.G):
+            // a chip names AND pre-configures the event on create.
+            HStack(spacing: BoothifySpacing.xs) {
+                ForEach(EventTemplate.allCases) { template in
+                    Booth360TemplateChip(label: template.label, selected: selectedTemplate == template) {
+                        Haptics.tap(.light)
+                        selectedTemplate = template
+                        // Never overwrite a name the operator typed; only seed an
+                        // empty field or replace a prior chip's seed.
+                        let typed = eventName.trimmingCharacters(in: .whitespaces)
+                        if typed.isEmpty || EventTemplate.allCases.contains(where: { $0.nameSeed == typed }) {
+                            eventName = template.nameSeed
+                        }
+                        nameFocused = true
+                    }
+                    .disabled(creating)
+                }
+            }
+            .padding(.top, 2)
+
+            if let t = selectedTemplate {
+                Text(templateHint(t))
+                    .font(.caption2)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+            }
+
             Button {
                 startSession()
             } label: {
@@ -202,6 +229,14 @@ struct Booth360LandingView: View {
 
     // MARK: - Actions
 
+    private func templateHint(_ t: EventTemplate) -> String {
+        switch t {
+        case .wedding:   return "Sets up branding + photo consent. No survey."
+        case .birthday:  return "Low-friction fun: no forms."
+        case .corporate: return "Lead capture survey + branding + consent."
+        }
+    }
+
     private func startSession() {
         let trimmed = eventName.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else { return }
@@ -209,12 +244,19 @@ struct Booth360LandingView: View {
         createError = nil
         nameFocused = false
         Haptics.tap(.medium)
+        let template = selectedTemplate
         Task {
             do {
                 let event = try await app.createEvent(name: trimmed)
+                // 1-tap template: pre-configure the new event's settings.
+                if let template {
+                    let configured = template.apply(to: app.settings(for: event.id), eventName: trimmed)
+                    app.updateSettings(configured, for: event.id)
+                }
                 Haptics.notify(.success)
                 creating = false
                 eventName = ""
+                selectedTemplate = nil
                 app.push(.booth360EventHub(eventId: event.id))
                 app.push(.booth360Recording(eventId: event.id))
             } catch {
@@ -223,6 +265,35 @@ struct Booth360LandingView: View {
                 creating = false
             }
         }
+    }
+}
+
+// MARK: - Template chip (ported from the photo landing, 360 accent)
+
+private struct Booth360TemplateChip: View {
+    let label: String
+    var selected: Bool = false
+    let action: () -> Void
+    @State private var pressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(selected ? .black : BoothifyTheme.amber)
+                .padding(.horizontal, BoothifySpacing.sm + 2)
+                .padding(.vertical, 7)
+                .background(BoothifyTheme.amber.opacity(selected ? 1.0 : 0.14), in: Capsule())
+                .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(selected ? 0 : 0.32), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(pressed ? 0.95 : 1)
+        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.7), value: pressed)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: 30, perform: {}, onPressingChanged: { pressed = $0 })
+        .accessibilityLabel("\(label) template")
+        .accessibilityHint("Names and pre-configures the event")
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }
 
