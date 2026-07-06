@@ -425,7 +425,9 @@ private struct AppSettingsView: View {
 
                 // ── Support ──────────────────────────────────────────────
                 Section("Support") {
-                    globalSettingsRow(icon: "questionmark.circle", title: "Help Center", subtitle: "Guides & tutorials")
+                    globalSettingsRow(icon: "questionmark.circle", title: "Help Center", subtitle: "Guides & tutorials") {
+                        openURL(BoothifyAPI.shared.baseURL.appending(path: "support"))
+                    }
                     globalSettingsRow(icon: "envelope", title: "Contact Support", subtitle: "support@boothify.app") {
                         let subject = "Boothify support (v\(appVersion))"
                             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
@@ -443,8 +445,12 @@ private struct AppSettingsView: View {
                         Label("About Boothify", systemImage: "info.circle")
                             .foregroundStyle(.white)
                     }
-                    globalSettingsRow(icon: "hand.raised", title: "Privacy Policy", subtitle: nil)
-                    globalSettingsRow(icon: "doc.text", title: "Terms of Service", subtitle: nil)
+                    globalSettingsRow(icon: "hand.raised", title: "Privacy Policy", subtitle: nil) {
+                        openURL(BoothifyAPI.shared.baseURL.appending(path: "privacy"))
+                    }
+                    globalSettingsRow(icon: "doc.text", title: "Terms of Service", subtitle: nil) {
+                        openURL(BoothifyAPI.shared.baseURL.appending(path: "terms"))
+                    }
                 }
                 .listRowBackground(BoothifyTheme.surface1)
 

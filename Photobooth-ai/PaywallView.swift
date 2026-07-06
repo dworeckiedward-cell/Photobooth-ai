@@ -7,7 +7,11 @@ import StoreKit
 struct PaywallView: View {
     @Environment(StoreManager.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var working = false
+
+    private var privacyURL: URL { BoothifyAPI.shared.baseURL.appending(path: "privacy") }
+    private var termsURL: URL { BoothifyAPI.shared.baseURL.appending(path: "terms") }
 
     var body: some View {
         NavigationStack {
@@ -40,6 +44,15 @@ struct PaywallView: View {
                             .foregroundStyle(BoothifyTheme.textTertiary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, BoothifySpacing.lg)
+
+                        // Required by App Review: reachable Privacy Policy + Terms (EULA).
+                        HStack(spacing: BoothifySpacing.sm) {
+                            Button("Privacy Policy") { openURL(privacyURL) }
+                            Text("·").foregroundStyle(BoothifyTheme.textMuted)
+                            Button("Terms of Use") { openURL(termsURL) }
+                        }
+                        .font(.caption2.weight(.medium))
+                        .tint(BoothifyTheme.textSecondary)
                     }
                     .frame(maxWidth: 560)
                     .padding(BoothifySpacing.md)
@@ -98,7 +111,7 @@ struct PaywallView: View {
                     Text(product.displayPrice)
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text(isCurrent ? "Current" : "/ month")
+                    Text(isCurrent ? "Current" : periodLabel(product))
                         .font(.caption2)
                         .foregroundStyle(isCurrent ? BoothifyTheme.emerald : BoothifyTheme.textMuted)
                 }
@@ -113,6 +126,21 @@ struct PaywallView: View {
         .buttonStyle(.plain)
         .disabled(working || isCurrent)
         .opacity(isCurrent ? 0.7 : 1)
+    }
+
+    /// Derive the billing period from the product so an annual plan never shows
+    /// "/ month" (accurate pricing is an App Review requirement).
+    private func periodLabel(_ product: Product) -> String {
+        guard let period = product.subscription?.subscriptionPeriod else { return "" }
+        let unit: String
+        switch period.unit {
+        case .day:   unit = "day"
+        case .week:  unit = "week"
+        case .month: unit = "month"
+        case .year:  unit = "year"
+        @unknown default: unit = "period"
+        }
+        return period.value == 1 ? "/ \(unit)" : "/ \(period.value) \(unit)s"
     }
 
     private var emptyState: some View {

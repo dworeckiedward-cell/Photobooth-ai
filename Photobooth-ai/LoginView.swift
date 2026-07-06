@@ -167,6 +167,11 @@ struct LoginView: View {
                 )
             }
 
+            // One-time authorization code — the backend exchanges it for an Apple
+            // refresh token it can revoke on account deletion (guideline 5.1.1(v)).
+            let authorizationCode = credential.authorizationCode
+                .flatMap { String(data: $0, encoding: .utf8) }
+
             let nonce = rawNonce
             isSigningIn = true
             Task {
@@ -174,6 +179,7 @@ struct LoginView: View {
                     let session = try await AuthClient.shared.signInWithApple(
                         identityToken: identityToken,
                         nonce: nonce,
+                        authorizationCode: authorizationCode,
                         firstLoginEmail: firstLoginEmail,
                         firstLoginFullName: firstLoginFullName,
                     )

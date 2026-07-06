@@ -33,17 +33,20 @@ final class AuthClient {
     func signInWithApple(
         identityToken: String,
         nonce: String,
+        authorizationCode: String? = nil,
         firstLoginEmail: String? = nil,
         firstLoginFullName: String? = nil
     ) async throws -> AuthSession {
         struct Body: Encodable {
             let identityToken: String
             let nonce: String
+            let authorizationCode: String?
             let firstLoginEmail: String?
             let firstLoginFullName: String?
             enum CodingKeys: String, CodingKey {
                 case identityToken
                 case nonce
+                case authorizationCode = "authorization_code"
                 case firstLoginEmail = "first_login_email"
                 case firstLoginFullName = "first_login_full_name"
             }
@@ -53,6 +56,7 @@ final class AuthClient {
             body: Body(
                 identityToken: identityToken,
                 nonce: nonce,
+                authorizationCode: authorizationCode,
                 firstLoginEmail: firstLoginEmail,
                 firstLoginFullName: firstLoginFullName
             )
