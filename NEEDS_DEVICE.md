@@ -9,3 +9,8 @@
 ## Phase 0
 - Passthrough render output on a real recording (simulator can exercise the
   code path but not a real capture file end-to-end with camera input).
+
+## Phase 1
+- Kiosk attract → 360 recording flow on a real device (camera).
+- Template-chip apply + kiosk button: sim-verifiable visually, but full guest loop
+  (record → process → result) needs camera hardware.

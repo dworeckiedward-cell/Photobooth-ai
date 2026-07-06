@@ -59,9 +59,6 @@ struct SettingsHubView: View {
                 SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
                     app.push(.settingsCamera(eventId: eventId))
                 }
-                SettingsRow(icon: "wand.and.stars", title: "AI Portraits", subtitle: "\(app.settings(for: eventId).aiPortraits.enabledStyles.count) styles enabled", badge: .beta) {
-                    app.push(.settingsAIPortraits(eventId: eventId))
-                }
                 SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off", badge: .available) {
                     app.push(.settingsLockPin(eventId: eventId))
                 }
@@ -81,38 +78,14 @@ struct SettingsHubView: View {
             // Set Up — rows are filtered by the current event's BoothMode so each
             // panel stays focused on what the operator actually configures here.
             Section("Set Up") {
-                if mode == .photobooth {
-                    SettingsRow(icon: "slider.horizontal.3", title: "Capture Settings", subtitle: "Countdown, output, GIF", badge: .available) {
-                        app.push(.settingsCapture(eventId: eventId))
-                    }
-                    SettingsRow(icon: "printer", title: "Print Setup", subtitle: printSubtitle, badge: .available) {
-                        app.push(.settingsPrint(eventId: eventId))
-                    }
-                    SettingsRow(icon: "person.crop.rectangle.badge.xmark", title: "Background Removal", subtitle: backgroundRemovalSubtitle, badge: .available) {
-                        app.push(.settingsBackgroundRemoval(eventId: eventId))
-                    }
-                    SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
-                        app.push(.settingsCamera(eventId: eventId))
-                    }
-                    SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
-                        app.push(.settingsStickers(eventId: eventId))
-                    }
-                    // Effects (beautify/filter/grain/vignette) is hidden until it's
-                    // wired into the capture pipeline — the settings persisted but
-                    // never altered output, i.e. a non-functional feature. The view
-                    // and route stay in code; re-surface once effects are applied.
-                    SettingsRow(icon: "wand.and.stars", title: "AI Portraits", subtitle: "\(app.settings(for: eventId).aiPortraits.enabledStyles.count) styles enabled", badge: .beta) {
-                        app.push(.settingsAIPortraits(eventId: eventId))
-                    }
-                } else {
-                    // 360 mode — surface AI 360 settings + the universal pieces.
-                    SettingsRow(icon: "video.fill", title: "AI 360 Booth", subtitle: ai360Subtitle, badge: .beta) {
-                        app.push(.settingsAI360(eventId: eventId))
-                    }
-                    SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
-                        app.push(.settingsStickers(eventId: eventId))
-                    }
-                    // Effects hidden until wired (see photobooth branch above).
+                SettingsRow(icon: "video.fill", title: "360 Booth", subtitle: ai360Subtitle, badge: .available) {
+                    app.push(.settingsAI360(eventId: eventId))
+                }
+                SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
+                    app.push(.settingsCamera(eventId: eventId))
+                }
+                SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
+                    app.push(.settingsStickers(eventId: eventId))
                 }
             }
             .listRowBackground(BoothifyTheme.surface1)
@@ -142,7 +115,7 @@ struct SettingsHubView: View {
 
             // More
             Section("More") {
-                SettingsRow(icon: "antenna.radiowaves.left.and.right", title: "Delivery Status", subtitle: "Channels & test sends", badge: .available) {
+                SettingsRow(icon: "antenna.radiowaves.left.and.right", title: "Delivery Status", subtitle: "Delivery channels", badge: .available) {
                     app.push(.settingsSharingStatus(eventId: eventId))
                 }
                 SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off", badge: .available) {
@@ -176,16 +149,7 @@ struct SettingsHubView: View {
         return "\(Int(s.recordingDurationSeconds))s · \(s.videoQuality.label)"
     }
 
-    private var printSubtitle: String {
-        let s = app.settings(for: eventId).print
-        if !s.enabled { return "Off" }
-        return "\(s.paperSize.label) · \(s.layout.label)"
-    }
 
-    private var backgroundRemovalSubtitle: String {
-        let s = app.settings(for: eventId).backgroundRemoval
-        return s.enabled ? s.mode.label : "Off"
-    }
 
     private var brandOverlaySubtitle: String {
         let s = app.settings(for: eventId).brandOverlay

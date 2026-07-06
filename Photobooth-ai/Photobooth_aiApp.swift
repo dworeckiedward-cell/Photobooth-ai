@@ -23,9 +23,9 @@ struct Photobooth_aiApp: App {
                 .tint(BoothifyTheme.violet)
                 .task { await appState.bootstrapAuth() }
                 .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
-                    // When network is restored, replay any photos queued while offline.
+                    // When network is restored, replay any 360 uploads queued offline.
                     if isConnected && !wasConnected {
-                        PhotoUploadQueue.shared.replayPending(app: appState)
+                        Booth360UploadQueue.shared.replayPending(app: appState)
                     }
                 }
         }

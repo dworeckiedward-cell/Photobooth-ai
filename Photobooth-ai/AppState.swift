@@ -80,9 +80,6 @@ final class AppState {
         }
         isAuthLoading = false
 
-        // Photo offline queue: replay any photos captured without network.
-        PhotoUploadQueue.shared.replayPending(app: self)
-
         // BM1: re-fire any 360 uploads that didn't make it to the cloud
         // before the app was killed. Persistent queue lives in
         // Application Support; dead entries (local file gone) are dropped.
@@ -206,30 +203,6 @@ final class AppState {
         } else {
             event = try await BoothifyAPI.shared.createEvent(name: name)
             events.insert(event, at: 0)
-        }
-
-        // IM3: seed per-event settings from onboarding answers (if any) so
-        // the operator's stated preferences actually take effect on the very
-        // first event without them having to dig through settings.
-        if let answers = OnboardingStore.lastAnswers {
-            var settings = EventSettings.default
-            if let raw = answers.preferredTemplateRawDuration {
-                settings.ai360.recordingDurationSeconds = raw
-            }
-            if let branding = answers.branding {
-                switch branding {
-                case .clientLogo:
-                    settings.brandOverlay.enabled = true
-                    settings.brandOverlay.logoSource = .uploaded
-                case .eventName:
-                    settings.brandOverlay.enabled = true
-                    settings.brandOverlay.logoSource = .textFallback
-                    settings.brandOverlay.overlayText = name.uppercased()
-                case .none:
-                    break
-                }
-            }
-            updateSettings(settings, for: event.id)
         }
 
         return event
@@ -470,30 +443,15 @@ final class AppState {
 // MARK: - Routes for NavigationStack
 
 enum Route: Hashable {
-    case photoboothLanding
-    case eventHub(eventId: UUID)
-    case camera(eventId: UUID)
-    case stylePicker(eventId: UUID, capturedImageData: Data)
-    case instantLooks(eventId: UUID, capturedImageData: Data)
-    case result(eventId: UUID, photoId: UUID)
-    case gallery(eventId: UUID)
-    case slideshow(eventId: UUID)
 
     // Settings tree — each subsection has its own dedicated route so deep links work.
-    case settingsHub(eventId: UUID)
-    case settingsCapture(eventId: UUID)
     case settingsCamera(eventId: UUID)
-    case settingsAIPortraits(eventId: UUID)
     case settingsAI360(eventId: UUID)
-    case settingsEffects(eventId: UUID)
     case settingsSharing(eventId: UUID)
     case settingsEmailSMS(eventId: UUID)
     case settingsLockPin(eventId: UUID)
-    case settingsGallerySlideshow(eventId: UUID)
 
     // MVP add-ons (formerly Coming Soon)
-    case settingsPrint(eventId: UUID)
-    case settingsBackgroundRemoval(eventId: UUID)
     case settingsStickers(eventId: UUID)
     case settingsVirtualAttendant(eventId: UUID)
     case settingsDisclaimer(eventId: UUID)

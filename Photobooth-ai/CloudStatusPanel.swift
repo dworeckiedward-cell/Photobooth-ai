@@ -117,15 +117,15 @@ struct CloudStatusPanel: View {
                     .padding(.top, BoothifySpacing.xs)
                 }
 
-                // Offline photo queue indicator — green = safe, not a warning
-                let offlineCount = PhotoUploadQueue.shared.pendingCount
+                // Offline 360-upload queue indicator — green = safe, not a warning
+                let offlineCount = Booth360UploadQueue.shared.pendingCount
                 if offlineCount > 0 {
                     HStack(spacing: BoothifySpacing.xs) {
                         Image(systemName: "checkmark.icloud.fill")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(BoothifyTheme.emerald)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("\(offlineCount) photo\(offlineCount == 1 ? "" : "s") saved locally")
+                            Text("\(offlineCount) clip\(offlineCount == 1 ? "" : "s") saved locally")
                                 .font(BoothifyType.captionEmphasis)
                                 .foregroundStyle(.white)
                             Text("Will sync automatically when back online")

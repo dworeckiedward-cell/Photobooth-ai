@@ -26,95 +26,6 @@ private extension AppState {
 
 // MARK: - Capture Settings
 
-struct CaptureSettingsView: View {
-    @Environment(AppState.self) private var app
-    let eventId: UUID
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: BoothifySpacing.md) {
-                SettingsCard(title: "Mode") {
-                    SettingsPicker("Capture mode", selection: app.binding(eventId: eventId, keyPath: \.capture.mode)) {
-                        ForEach(CaptureMode.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                }
-
-                SettingsCard(title: "Countdown") {
-                    SettingsStepper(
-                        "First photo",
-                        value: app.binding(eventId: eventId, keyPath: \.capture.countdownFirstPhoto),
-                        range: 0...10,
-                        valueLabel: "\(app.settings(for: eventId).capture.countdownFirstPhoto)s"
-                    )
-                    SettingsDivider()
-                    SettingsStepper(
-                        "Other photos",
-                        value: app.binding(eventId: eventId, keyPath: \.capture.countdownOtherPhotos),
-                        range: 0...10,
-                        valueLabel: "\(app.settings(for: eventId).capture.countdownOtherPhotos)s"
-                    )
-                }
-
-                SettingsCard(title: "Multi-photo") {
-                    SettingsStepper(
-                        "Number of photos",
-                        value: app.binding(eventId: eventId, keyPath: \.capture.numberOfPhotos),
-                        range: 1...12,
-                        valueLabel: "\(app.settings(for: eventId).capture.numberOfPhotos)"
-                    )
-                    SettingsDivider()
-                    SettingsSlider(
-                        "Delay between frames",
-                        value: app.binding(eventId: eventId, keyPath: \.capture.delayBetweenFrames),
-                        in: 0.0...3.0,
-                        step: 0.1,
-                        valueLabel: String(format: "%.1fs", app.settings(for: eventId).capture.delayBetweenFrames)
-                    )
-                    SettingsDivider()
-                    SettingsStepper(
-                        "Each photo display",
-                        value: app.binding(eventId: eventId, keyPath: \.capture.displayEachPhotoDuration),
-                        range: 1...10,
-                        valueLabel: "\(app.settings(for: eventId).capture.displayEachPhotoDuration)s"
-                    )
-                }
-
-                SettingsCard(title: "Output") {
-                    SettingsPicker("Aspect ratio", selection: app.binding(eventId: eventId, keyPath: \.capture.outputSize)) {
-                        ForEach(OutputSize.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    SettingsDivider()
-                    SettingsSlider(
-                        "JPEG quality",
-                        value: app.binding(eventId: eventId, keyPath: \.capture.quality),
-                        in: 0.4...1.0,
-                        step: 0.05,
-                        valueLabel: "\(Int(app.settings(for: eventId).capture.quality * 100))%"
-                    )
-                }
-
-                SettingsCard(title: "Animated") {
-                    SettingsToggle("Also generate GIF", isOn: app.binding(eventId: eventId, keyPath: \.capture.alsoGenerateGif))
-                    SettingsDivider()
-                    SettingsToggle("Reverse GIF", isOn: app.binding(eventId: eventId, keyPath: \.capture.reverseGif))
-                        .disabled(!app.settings(for: eventId).capture.alsoGenerateGif)
-                }
-
-                SettingsCard(title: "Modes") {
-                    SettingsToggle("Roaming photographer", isOn: app.binding(eventId: eventId, keyPath: \.capture.roamingPhotographerMode))
-                }
-            }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.md)
-        }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
-        .navigationTitle("Capture Settings")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Camera Settings
-
 struct CameraSettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
@@ -179,106 +90,6 @@ struct CameraSettingsView: View {
 }
 
 // MARK: - AI Portraits
-
-struct AIPortraitsSettingsView: View {
-    @Environment(AppState.self) private var app
-    let eventId: UUID
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: BoothifySpacing.md) {
-                SettingsCard {
-                    SettingsToggle("Face fidelity prompt", isOn: app.binding(eventId: eventId, keyPath: \.aiPortraits.faceFidelityEnabled))
-                    Text("Adds a master prompt to every style that keeps the guest's face recognizable.")
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                        .padding(.top, BoothifySpacing.xs)
-                }
-
-                SettingsCard {
-                    HStack(alignment: .top, spacing: BoothifySpacing.sm) {
-                        Image(systemName: "wand.and.stars.inverse")
-                            .foregroundStyle(BoothifyTheme.violet)
-                        Text("Turn every style off below to run a no-AI booth — guests skip the cloud and go straight to instant on-device looks (works offline, no AI billing).")
-                            .font(.caption)
-                            .foregroundStyle(BoothifyTheme.textSecondary)
-                    }
-                }
-
-                SettingsCard(title: "Generation") {
-                    SettingsStepper(
-                        "Timeout",
-                        value: app.binding(eventId: eventId, keyPath: \.aiPortraits.generationTimeoutSeconds),
-                        range: 15...180,
-                        step: 15,
-                        valueLabel: "\(app.settings(for: eventId).aiPortraits.generationTimeoutSeconds)s"
-                    )
-                }
-
-                SettingsCard(title: "Prompt overlay") {
-                    SettingsToggle("Add custom prompt fragment", isOn: app.binding(eventId: eventId, keyPath: \.aiPortraits.customPromptOverlayEnabled))
-                    if app.settings(for: eventId).aiPortraits.customPromptOverlayEnabled {
-                        SettingsDivider()
-                        TextField("e.g. brand-themed colour palette", text: app.binding(eventId: eventId, keyPath: \.aiPortraits.customPromptOverlay), axis: .vertical)
-                            .lineLimit(2...4)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.white)
-                    }
-                }
-
-                SettingsCard(title: "Enabled styles") {
-                    ForEach(Array(PhotoStyle.allCases.enumerated()), id: \.offset) { idx, style in
-                        let isOn = Binding(
-                            get: { app.settings(for: eventId).aiPortraits.enabledStyles.contains(style) },
-                            set: { newValue in
-                                var all = app.settings(for: eventId)
-                                if newValue { all.aiPortraits.enabledStyles.insert(style) }
-                                else { all.aiPortraits.enabledStyles.remove(style) }
-                                app.updateSettings(all, for: eventId)
-                            }
-                        )
-                        if idx > 0 { SettingsDivider() }
-                        Toggle(isOn: isOn) {
-                            HStack(spacing: BoothifySpacing.sm + 4) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
-                                        .fill(BoothifyTheme.surface2)
-                                    if let asset = style.previewAsset {
-                                        Image(asset)
-                                            .resizable()
-                                            .scaledToFill()
-                                    } else {
-                                        Image(systemName: style.iconSymbol)
-                                            .font(.body.weight(.semibold))
-                                            .foregroundStyle(BoothifyTheme.violet)
-                                    }
-                                }
-                                .frame(width: 40, height: 40)
-                                .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(style.label)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(.white)
-                                    Text(style.descriptionText)
-                                        .font(.caption2)
-                                        .foregroundStyle(BoothifyTheme.textTertiary)
-                                }
-                            }
-                        }
-                        .tint(BoothifyTheme.violet)
-                    }
-                }
-            }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.md)
-        }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
-        .navigationTitle("AI Portraits")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - AI 360
 
 struct AI360SettingsView: View {
     @Environment(AppState.self) private var app
@@ -418,109 +229,14 @@ struct AI360SettingsView: View {
 
 // MARK: - Effects
 
-struct EffectsSettingsView: View {
-    @Environment(AppState.self) private var app
-    let eventId: UUID
-
-    private let filters = ["", "Vintage", "Noir", "Cinematic", "Warm", "Cool"]
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: BoothifySpacing.md) {
-                SettingsCard(title: "Beauty") {
-                    SettingsToggle("Beautify", isOn: app.binding(eventId: eventId, keyPath: \.effects.beautifyEnabled))
-                    if app.settings(for: eventId).effects.beautifyEnabled {
-                        SettingsDivider()
-                        SettingsSlider(
-                            "Intensity",
-                            value: app.binding(eventId: eventId, keyPath: \.effects.beautifyIntensity),
-                            in: 0...1,
-                            valueLabel: "\(Int(app.settings(for: eventId).effects.beautifyIntensity * 100))%"
-                        )
-                    }
-                }
-
-                SettingsCard(title: "Filter") {
-                    SettingsPicker("Filter", selection: Binding(
-                        get: { app.settings(for: eventId).effects.filterName ?? "" },
-                        set: { newValue in
-                            var all = app.settings(for: eventId)
-                            all.effects.filterName = newValue.isEmpty ? nil : newValue
-                            app.updateSettings(all, for: eventId)
-                        }
-                    )) {
-                        Text("None").tag("")
-                        ForEach(filters.filter { !$0.isEmpty }, id: \.self) { Text($0).tag($0) }
-                    }
-                }
-
-                SettingsCard(title: "Grain & vignette") {
-                    SettingsToggle("Grain", isOn: app.binding(eventId: eventId, keyPath: \.effects.grainEnabled))
-                    SettingsDivider()
-                    SettingsToggle("Vignette", isOn: app.binding(eventId: eventId, keyPath: \.effects.vignetteEnabled))
-                }
-            }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.md)
-        }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
-        .navigationTitle("Effects")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Sharing
-
 struct SharingSettingsView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
 
-    @State private var saveShareModeError: String? = nil
-    @State private var savingShareMode: Bool = false
-
-    private var currentShareMode: ShareMode {
-        app.event(id: eventId)?.effectiveShareMode ?? .private
-    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: BoothifySpacing.md) {
-                SettingsCard(title: "Album privacy") {
-                    SettingsPicker("Share mode", selection: Binding<ShareMode>(
-                        get: { currentShareMode },
-                        set: { applyShareMode($0) }
-                    )) {
-                        ForEach(ShareMode.allCases, id: \.self) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    if savingShareMode {
-                        HStack(spacing: BoothifySpacing.xs) {
-                            ProgressView().scaleEffect(0.7)
-                            Text("Saving…")
-                                .font(.footnote)
-                                .foregroundStyle(BoothifyTheme.textTertiary)
-                        }
-                        .padding(.top, BoothifySpacing.xs)
-                    }
-                    if let saveShareModeError {
-                        HStack(spacing: BoothifySpacing.xs) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption)
-                            Text(saveShareModeError)
-                        }
-                        .font(.footnote)
-                        .foregroundStyle(BoothifyTheme.error)
-                        .padding(.top, BoothifySpacing.xs)
-                    }
-                    Text(currentShareMode == .private
-                         ? "Each guest receives a link to only their own photo or 360 video."
-                         : "All photos and 360 videos from this event are visible via a single album link.")
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                        .padding(.top, BoothifySpacing.xs)
-                }
-
                 SettingsCard(title: "Channels") {
                     ForEach(Array(SharingChannel.allCases.enumerated()), id: \.offset) { idx, ch in
                         let isOn = Binding(
@@ -578,33 +294,6 @@ struct SharingSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func applyShareMode(_ mode: ShareMode) {
-        guard let event = app.event(id: eventId), event.effectiveShareMode != mode else { return }
-
-        var optimistic = event
-        optimistic.shareMode = mode
-        if let idx = app.events.firstIndex(where: { $0.id == event.id }) {
-            app.events[idx] = optimistic
-        }
-
-        guard app.isAuthenticated else {
-            saveShareModeError = nil
-            return
-        }
-        savingShareMode = true
-        saveShareModeError = nil
-        Task {
-            do {
-                let updated = try await BoothifyAPI.shared.updateEventShareMode(slug: event.slug, shareMode: mode)
-                if let idx = app.events.firstIndex(where: { $0.id == updated.id }) {
-                    app.events[idx] = updated
-                }
-            } catch {
-                saveShareModeError = (error as? APIError)?.errorDescription ?? error.localizedDescription
-            }
-            savingShareMode = false
-        }
-    }
 }
 
 // MARK: - Email / SMS
@@ -799,41 +488,6 @@ struct LockPinSettingsView: View {
 }
 
 // MARK: - Gallery / Slideshow
-
-struct GallerySlideshowSettingsView: View {
-    @Environment(AppState.self) private var app
-    let eventId: UUID
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: BoothifySpacing.md) {
-                SettingsCard(title: "Slideshow") {
-                    SettingsStepper(
-                        "Interval",
-                        value: app.binding(eventId: eventId, keyPath: \.gallerySlideshow.slideIntervalSeconds),
-                        range: 2...30,
-                        valueLabel: "\(app.settings(for: eventId).gallerySlideshow.slideIntervalSeconds)s"
-                    )
-                    SettingsDivider()
-                    SettingsPicker("Transition", selection: app.binding(eventId: eventId, keyPath: \.gallerySlideshow.transitionStyle)) {
-                        ForEach(SlideTransition.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    SettingsDivider()
-                    SettingsToggle("Randomize order", isOn: app.binding(eventId: eventId, keyPath: \.gallerySlideshow.randomizeOrder))
-                    SettingsDivider()
-                    SettingsToggle("Show style label", isOn: app.binding(eventId: eventId, keyPath: \.gallerySlideshow.showStyleLabel))
-                }
-            }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.vertical, BoothifySpacing.md)
-        }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
-        .navigationTitle("Gallery & Slideshow")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Reusable settings card
 
 private struct SettingsCard<Content: View>: View {
     var title: String? = nil

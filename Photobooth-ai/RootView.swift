@@ -37,7 +37,6 @@ private enum BoothifyTab: Int, CaseIterable, Hashable {
 struct RootView: View {
     @Environment(AppState.self) private var app
 
-    @State private var onboardingPresented: Bool = false
     @State private var selectedTab: BoothifyTab = .home
     @State private var store = StoreManager()
 
@@ -115,24 +114,6 @@ struct RootView: View {
         .overlay(alignment: .top) {
             StatusOverlay().allowsHitTesting(false)
         }
-        .sheet(isPresented: $onboardingPresented) {
-            OnboardingQuizSheet { answers in applyOnboardingDefaults(answers) }
-                .interactiveDismissDisabled(false)
-        }
-        .task {
-            try? await Task.sleep(for: .milliseconds(350))
-            // First-run only: don't force the setup quiz on every launch (respects
-            // the operator's time). It marks itself complete on Finish/Skip.
-            // (OnboardingStore.reset() re-enables it.) Never shown in kiosk.
-            guard !Task.isCancelled, !app.isKiosk, !OnboardingStore.hasCompleted else { return }
-            onboardingPresented = true
-        }
-    }
-
-    // MARK: - Onboarding defaults
-
-    private func applyOnboardingDefaults(_ answers: OnboardingAnswers) {
-        OnboardingStore.save(answers)
     }
 
     // MARK: - Navigation destinations (unchanged)
@@ -140,49 +121,17 @@ struct RootView: View {
     @ViewBuilder
     private func destination(for route: Route) -> some View {
         switch route {
-        case .photoboothLanding:
-            PhotoboothLandingView()
-        case .eventHub(let id):
-            EventHubView(eventId: id)
-        case .camera(let id):
-            CameraScreen(eventId: id)
-                .toolbar(.hidden, for: .navigationBar)
-        case .stylePicker(let eventId, let imageData):
-            StylePickerView(eventId: eventId, capturedImageData: imageData)
-        case .instantLooks(let eventId, let imageData):
-            InstantLooksView(eventId: eventId, capturedImageData: imageData)
-        case .result(let eventId, let photoId):
-            ResultView(eventId: eventId, photoId: photoId)
-        case .gallery(let id):
-            GalleryView(eventId: id)
-        case .slideshow(let id):
-            SlideshowView(eventId: id)
-                .toolbar(.hidden, for: .navigationBar)
 
-        case .settingsHub(let id):
-            SettingsHubView(eventId: id)
-        case .settingsCapture(let id):
-            CaptureSettingsView(eventId: id)
         case .settingsCamera(let id):
             CameraSettingsView(eventId: id)
-        case .settingsAIPortraits(let id):
-            AIPortraitsSettingsView(eventId: id)
         case .settingsAI360(let id):
             AI360SettingsView(eventId: id)
-        case .settingsEffects(let id):
-            EffectsSettingsView(eventId: id)
         case .settingsSharing(let id):
             SharingSettingsView(eventId: id)
         case .settingsEmailSMS(let id):
             EmailSMSSettingsView(eventId: id)
         case .settingsLockPin(let id):
             LockPinSettingsView(eventId: id)
-        case .settingsGallerySlideshow(let id):
-            GallerySlideshowSettingsView(eventId: id)
-        case .settingsPrint(let id):
-            PrintSetupSettingsView(eventId: id)
-        case .settingsBackgroundRemoval(let id):
-            BackgroundRemovalSettingsView(eventId: id)
         case .settingsStickers(let id):
             BrandOverlaySettingsView(eventId: id)
         case .settingsVirtualAttendant(let id):
@@ -408,7 +357,6 @@ private struct AppSettingsView: View {
                 // ── Default Booth Settings ───────────────────────────────
                 Section("Default Booth Settings") {
                     globalSettingsRow(icon: "camera.rotate", title: "Default Camera", subtitle: "Back · Mirrored selfie off")
-                    globalSettingsRow(icon: "wand.and.stars", title: "Default AI Styles", subtitle: "22 styles available")
                     globalSettingsRow(icon: "rosette", title: "Default Branding", subtitle: "Logo watermark off")
                     globalSettingsRow(icon: "square.and.arrow.up", title: "Default Sharing", subtitle: "Email + SMS templates")
                 }

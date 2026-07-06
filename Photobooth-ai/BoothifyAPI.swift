@@ -60,17 +60,7 @@ final class BoothifyAPI {
 
     // MARK: - Public URLs (no API call — just builds the string the webapp serves at /p/...)
 
-    /// Build the public guest-facing result page URL. iOS uses this for the QR code.
-    func publicResultURL(photoId: UUID) -> URL {
-        baseURL.appending(path: "p").appending(path: photoId.uuidString.lowercased())
-    }
 
-    /// Build the public event-album URL the webapp serves at `/e/<slug>`.
-    /// Used by the Event Wall QR so guests scan once to see every photo.
-    /// Only meaningful when the event's share mode is `.public`.
-    func publicAlbumURL(slug: String) -> URL {
-        baseURL.appending(path: "e").appending(path: slug)
-    }
 
     // MARK: - Events
 
@@ -100,97 +90,16 @@ final class BoothifyAPI {
         return wrapper.event
     }
 
-    /// `GET /api/events/[slug]/photos` — photos in an event.
-    func listEventPhotos(
-        slug: String,
-        status: PhotoStatusQuery = .completed,
-        limit: Int = 100,
-        offset: Int = 0
-    ) async throws -> PhotoList {
-        let q = "?status=\(status.rawValue)&limit=\(limit)&offset=\(offset)"
-        return try await request("/api/events/\(slug)/photos\(q)")
-    }
 
     // MARK: - Photos
 
-    /// `POST /api/photos/upload` — multipart upload. Returns the new photoId.
-    func uploadPhoto(
-        imageData: Data,
-        eventId: UUID,
-        style: PhotoStyle
-    ) async throws -> UUID {
-        let boundary = "boothify-\(UUID().uuidString)"
-        var req = try makeRequest(path: "/api/photos/upload", method: "POST")
-        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        req.httpBody = buildMultipartBody(
-            boundary: boundary,
-            fields: [
-                "eventId": eventId.uuidString,
-                "style": style.rawValue,
-            ],
-            files: [
-                .init(name: "file", filename: "capture.jpg", mimeType: "image/jpeg", data: imageData)
-            ]
-        )
-
-        struct Wrapper: Decodable { let photoId: UUID }
-        let wrapper: Wrapper = try await performDecoding(req)
-        return wrapper.photoId
-    }
 
     /// `POST /api/photos/generate` — fires Gemini synchronously (up to 60s).
     @discardableResult
-    func generatePhoto(photoId: UUID, style: PhotoStyle) async throws -> GenerateResult {
-        struct Body: Encodable { let photoId: String; let style: String }
-        return try await request(
-            "/api/photos/generate",
-            method: "POST",
-            body: Body(photoId: photoId.uuidString, style: style.rawValue)
-        )
-    }
 
-    /// `GET /api/photos/[id]` — poll once.
-    func getPhoto(id: UUID) async throws -> Photo {
-        try await request("/api/photos/\(id.uuidString)")
-    }
 
-    /// Polls `getPhoto` until status reaches `completed` or `failed`.
-    func pollUntilCompleted(
-        photoId: UUID,
-        intervalSeconds: Double = 1.0,
-        maxAttempts: Int = 60
-    ) async throws -> Photo {
-        for _ in 0..<maxAttempts {
-            let photo = try await getPhoto(id: photoId)
-            if photo.status == .completed || photo.status == .failed {
-                return photo
-            }
-            try await Task.sleep(for: .seconds(intervalSeconds))
-        }
-        throw APIError.pollingTimedOut
-    }
 
-    /// `POST /api/photos/[id]/email`
-    func sendEmail(photoId: UUID, email: String) async throws {
-        struct Body: Encodable { let email: String }
-        struct Resp: Decodable { let success: Bool; let mode: String? }
-        let _: Resp = try await request(
-            "/api/photos/\(photoId.uuidString)/email",
-            method: "POST",
-            body: Body(email: email)
-        )
-    }
 
-    /// `POST /api/photos/[id]/sms`
-    func sendSMS(photoId: UUID, phone: String) async throws {
-        struct Body: Encodable { let phone: String }
-        struct Resp: Decodable { let success: Bool; let mode: String? }
-        let _: Resp = try await request(
-            "/api/photos/\(photoId.uuidString)/sms",
-            method: "POST",
-            body: Body(phone: phone)
-        )
-    }
 
     // MARK: - 360 jobs (M3)
 
@@ -422,26 +331,9 @@ final class BoothifyAPI {
     /// `PATCH /api/events/{slug}` — currently only used for share mode toggle.
     /// Returns the updated event.
     @discardableResult
-    func updateEventShareMode(slug: String, shareMode: ShareMode) async throws -> Event {
-        struct Body: Encodable {
-            let shareMode: String
-            enum CodingKeys: String, CodingKey { case shareMode = "share_mode" }
-        }
-        struct Wrapper: Decodable { let event: Event }
-        let wrapper: Wrapper = try await request(
-            "/api/events/\(slug)",
-            method: "PATCH",
-            body: Body(shareMode: shareMode.rawValue)
-        )
-        return wrapper.event
-    }
 
     // MARK: - Quota
 
-    /// `GET /api/quota/gemini` — usage + budget snapshot.
-    func getGeminiQuota() async throws -> GeminiQuota {
-        try await request("/api/quota/gemini")
-    }
 
     // MARK: - Core request plumbing
 

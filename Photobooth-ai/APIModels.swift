@@ -4,13 +4,6 @@ import Foundation
 /// canonical iOS domain types — there is no separate "domain model" layer. The webapp
 /// is the source of truth; iOS adapts to whatever shape the API returns.
 
-// MARK: - Query helper
-
-/// Query parameter values for `GET /api/events/[slug]/photos?status=...`.
-enum PhotoStatusQuery: String, Sendable {
-    case all, completed, generating, failed, uploaded, pending
-}
-
 // MARK: - Event
 
 /// How an event's media (photos + 360 videos) gets shared.
@@ -96,47 +89,6 @@ struct Event: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
-// MARK: - Photo
-
-struct Photo: Codable, Identifiable, Hashable, Sendable {
-    let id: UUID
-    var style: PhotoStyle
-    var status: PhotoStatus
-    var generatedUrl: String?
-    var errorMessage: String?
-    var generationTimeMs: Int?
-    var createdAt: Date?
-
-    /// Convenience: returns generated URL as a real `URL` if parseable.
-    var generatedURL: URL? {
-        guard let s = generatedUrl, !s.isEmpty else { return nil }
-        return URL(string: s)
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case id, style, status
-        case generatedUrl = "generated_url"
-        case errorMessage = "error_message"
-        case generationTimeMs = "generation_time_ms"
-        case createdAt = "created_at"
-    }
-}
-
-struct PhotoList: Codable, Sendable {
-    let photos: [Photo]
-    let total: Int
-    let limit: Int
-    let offset: Int
-}
-
-// MARK: - Generate
-
-struct GenerateResult: Codable, Sendable {
-    let success: Bool
-    let generatedUrl: String?
-    let generationTimeMs: Int?
-}
-
 // MARK: - 360 jobs (M3)
 
 /// Wire response for `POST /api/booth360/jobs` and `GET /api/booth360/jobs/{id}`.
@@ -167,50 +119,5 @@ struct Booth360JobDTO: Codable, Sendable {
         case createdAt = "created_at"
         case completedAt = "completed_at"
         case errorMessage = "error_message"
-    }
-}
-
-// MARK: - Quota
-
-struct GeminiQuota: Codable, Sendable {
-    let today: Window
-    let month: Window
-    let photosRemaining: Int
-    let constraint: Constraint
-
-    struct Window: Codable, Sendable {
-        let tokens: Int
-        let tokensLimit: Int?
-        let generations: Int?
-        let successful: Int?
-        let costUsd: Double?
-        let budgetLimitUsd: Double?
-
-        enum CodingKeys: String, CodingKey {
-            case tokens
-            case tokensLimit = "tokens_limit"
-            case generations, successful
-            case costUsd = "cost_usd"
-            case budgetLimitUsd = "budget_limit_usd"
-        }
-    }
-
-    struct Constraint: Codable, Sendable {
-        let type: String
-        let usagePct: Double
-        let warning: Bool
-        let critical: Bool
-
-        enum CodingKeys: String, CodingKey {
-            case type
-            case usagePct = "usage_pct"
-            case warning, critical
-        }
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case today, month
-        case photosRemaining = "photos_remaining"
-        case constraint
     }
 }

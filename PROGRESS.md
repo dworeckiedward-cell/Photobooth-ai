@@ -36,3 +36,41 @@ physical iOS 17 device is NEEDS-DEVICE. Passthrough output = raw recording
 (no montage) until Phase 3; this is intentional.
 
 **Deferred to v2:** (none yet)
+
+---
+
+## PHASE 1 — CUT — ✅ GATE GREEN
+
+**Changed:**
+- **21 files deleted** (AI/photo surface): StylePicker, InstantLooks + LocalLookProcessor
+  + strip/reel composers, green screen (BackgroundReplacer/StudioBackdrop), FaceDetector,
+  PhotoUploadQueue, ResultView, Gallery, Slideshow, EventHubView, PhotoboothLanding,
+  ModeSelection, CameraScreen (screen; controller extracted), PrintEngine, GIFEncoder,
+  BrandOverlayRenderer, OnboardingQuiz, Models.swift.
+- **Extractions (before deletions):** `CameraController.swift` (class + delegates +
+  preview, KEEP), `DeliverySheets.swift` (ShareSheet — used by 360 hub + settings).
+- **Ports:** EventTemplate chips → Booth360LandingView (no-clobber seeding, apply-on-
+  create); Start Kiosk Mode → Booth360EventHubView.
+- **Repoints:** home tab → Booth360LandingView; kiosk attract → .booth360Recording;
+  EventsCalendar + crash-restore → booth360 routes; CloudStatusPanel offline indicator →
+  Booth360UploadQueue; app-level network-restore replay → 360 queue.
+- **Model (4.E):** EventSettings dropped aiPortraits/effects/stickers/print/
+  backgroundRemoval; legacy-blob-with-AI-keys decode test STILL GREEN (no operator
+  data loss). APIModels dropped Photo/PhotoList/PhotoStatusQuery/GenerateResult/
+  GeminiQuota. BoothifyAPI dropped 11 photo/AI functions.
+- **Route enum: 34 → 19 cases**; RootView switch pruned in lockstep; exhaustiveness
+  test updated. SettingsHub pruned to 360 reality; share-mode "Album privacy" card cut
+  (web photo-album semantics); test-send mechanism removed (returns in Phase 7 on 360
+  links); "Default AI Styles" row removed.
+
+**Gate:** build green · 7/7 tests · zero references to cut symbols (grep-verified) ·
+launches to 360 entry (Booth360LandingView home tab) · KEEP tests green.
+
+**Risks / carried forward:**
+- **Consent gate is NOT wired into the 360 recording path** (it lived in CameraScreen).
+  Phase 3 MUST enforce DisclaimerSettings before capture (GDPR, PRIVACY.md).
+- `listEventBooth360Jobs(slug:)` exists app-side — verify against backend in Phase 2
+  (may shrink GAP #1).
+- Session gallery = hub's recent-recordings list; persistent gallery gated on GAP #1.
+
+**Deferred to v2:** none new (test-send rebuild is Phase 7, not v2).

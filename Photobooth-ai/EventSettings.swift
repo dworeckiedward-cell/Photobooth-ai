@@ -10,21 +10,12 @@ import SwiftUI
 struct EventSettings: Codable, Hashable, Sendable {
     var capture: CaptureSettings
     var camera: CameraSettings
-    var aiPortraits: AIPortraitSettings
     var ai360: AI360Settings
-    var effects: EffectsSettings
     var sharing: SharingSettings
     var emailSMS: EmailSMSSettings
     var lockPin: LockPinSettings
     var gallerySlideshow: GallerySlideshowSettings
 
-    // MVP add-ons (Sprint: post-MVP settings hub feature out)
-    var print: PrintSetupSettings
-    var backgroundRemoval: BackgroundRemovalSettings
-    /// Legacy sticker pack settings. Superseded by `brandOverlay` — kept on the
-    /// model for backward-compat decoding of older persisted JSON. Not surfaced
-    /// in the operator UI anymore.
-    var stickers: StickerSettings
     var virtualAttendant: VirtualAttendantSettings
     var disclaimer: DisclaimerSettings
     var survey: SurveySettings
@@ -33,16 +24,11 @@ struct EventSettings: Codable, Hashable, Sendable {
     static let `default` = EventSettings(
         capture: .default,
         camera: .default,
-        aiPortraits: .default,
         ai360: .default,
-        effects: .default,
         sharing: .default,
         emailSMS: .default,
         lockPin: .default,
         gallerySlideshow: .default,
-        print: .default,
-        backgroundRemoval: .default,
-        stickers: .default,
         virtualAttendant: .default,
         disclaimer: .default,
         survey: .default,
@@ -57,16 +43,11 @@ struct EventSettings: Codable, Hashable, Sendable {
         let d = Self.default
         self.capture            = (try? c.decode(CaptureSettings.self,           forKey: .capture))            ?? d.capture
         self.camera             = (try? c.decode(CameraSettings.self,            forKey: .camera))             ?? d.camera
-        self.aiPortraits        = (try? c.decode(AIPortraitSettings.self,        forKey: .aiPortraits))        ?? d.aiPortraits
         self.ai360              = (try? c.decode(AI360Settings.self,             forKey: .ai360))              ?? d.ai360
-        self.effects            = (try? c.decode(EffectsSettings.self,           forKey: .effects))            ?? d.effects
         self.sharing            = (try? c.decode(SharingSettings.self,           forKey: .sharing))            ?? d.sharing
         self.emailSMS           = (try? c.decode(EmailSMSSettings.self,          forKey: .emailSMS))           ?? d.emailSMS
         self.lockPin            = (try? c.decode(LockPinSettings.self,           forKey: .lockPin))            ?? d.lockPin
         self.gallerySlideshow   = (try? c.decode(GallerySlideshowSettings.self,  forKey: .gallerySlideshow))   ?? d.gallerySlideshow
-        self.print              = (try? c.decode(PrintSetupSettings.self,        forKey: .print))              ?? d.print
-        self.backgroundRemoval  = (try? c.decode(BackgroundRemovalSettings.self, forKey: .backgroundRemoval))  ?? d.backgroundRemoval
-        self.stickers           = (try? c.decode(StickerSettings.self,           forKey: .stickers))           ?? d.stickers
         self.virtualAttendant   = (try? c.decode(VirtualAttendantSettings.self,  forKey: .virtualAttendant))   ?? d.virtualAttendant
         self.disclaimer         = (try? c.decode(DisclaimerSettings.self,        forKey: .disclaimer))         ?? d.disclaimer
         self.survey             = (try? c.decode(SurveySettings.self,            forKey: .survey))             ?? d.survey
@@ -77,16 +58,11 @@ struct EventSettings: Codable, Hashable, Sendable {
     init(
         capture: CaptureSettings,
         camera: CameraSettings,
-        aiPortraits: AIPortraitSettings,
         ai360: AI360Settings,
-        effects: EffectsSettings,
         sharing: SharingSettings,
         emailSMS: EmailSMSSettings,
         lockPin: LockPinSettings,
         gallerySlideshow: GallerySlideshowSettings,
-        print: PrintSetupSettings,
-        backgroundRemoval: BackgroundRemovalSettings,
-        stickers: StickerSettings,
         virtualAttendant: VirtualAttendantSettings,
         disclaimer: DisclaimerSettings,
         survey: SurveySettings,
@@ -94,16 +70,11 @@ struct EventSettings: Codable, Hashable, Sendable {
     ) {
         self.capture = capture
         self.camera = camera
-        self.aiPortraits = aiPortraits
         self.ai360 = ai360
-        self.effects = effects
         self.sharing = sharing
         self.emailSMS = emailSMS
         self.lockPin = lockPin
         self.gallerySlideshow = gallerySlideshow
-        self.print = print
-        self.backgroundRemoval = backgroundRemoval
-        self.stickers = stickers
         self.virtualAttendant = virtualAttendant
         self.disclaimer = disclaimer
         self.survey = survey
@@ -199,21 +170,6 @@ struct CameraSettings: Codable, Hashable, Sendable {
 
 // MARK: - AI Portraits
 
-struct AIPortraitSettings: Codable, Hashable, Sendable {
-    var enabledStyles: Set<PhotoStyle>
-    var styleOrder: [PhotoStyle]
-    var faceFidelityEnabled: Bool = true
-    var generationTimeoutSeconds: Int = 60
-    /// When true, additionally include an extra free-text prompt operators can edit.
-    var customPromptOverlayEnabled: Bool = false
-    var customPromptOverlay: String = ""
-
-    static let `default` = AIPortraitSettings(
-        enabledStyles: Set(PhotoStyle.allCases),
-        styleOrder: PhotoStyle.allCases
-    )
-}
-
 // MARK: - AI 360
 
 enum VideoQuality: String, Codable, CaseIterable, Hashable, Sendable {
@@ -235,6 +191,35 @@ enum ClipDirection: String, Codable, CaseIterable, Hashable, Sendable {
         }
     }
 }
+
+// MARK: - Sharing
+
+enum SharingChannel: String, Codable, CaseIterable, Hashable, Sendable {
+    case download, email, sms, whatsapp, qr, airdrop
+
+    var label: String {
+        switch self {
+        case .download: "Download"
+        case .email:    "Email"
+        case .sms:      "SMS"
+        case .whatsapp: "WhatsApp"
+        case .qr:       "QR Code"
+        case .airdrop:  "AirDrop"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .download: "square.and.arrow.down"
+        case .email:    "envelope.fill"
+        case .sms:      "message.fill"
+        case .whatsapp: "phone.bubble.fill"
+        case .qr:       "qrcode"
+        case .airdrop:  "airplayaudio"
+        }
+    }
+}
+
 
 struct AI360Settings: Codable, Hashable, Sendable {
     var countdownSeconds: Int = 3
@@ -335,44 +320,6 @@ struct CaptureTemplate: Codable, Hashable, Sendable, Identifiable {
 
 // MARK: - Effects
 
-struct EffectsSettings: Codable, Hashable, Sendable {
-    var beautifyEnabled: Bool = false
-    var beautifyIntensity: Double = 0.4
-    var filterName: String? = nil   // e.g. "vintage", "noir", "cinematic"
-    var grainEnabled: Bool = false
-    var vignetteEnabled: Bool = false
-
-    static let `default` = EffectsSettings()
-}
-
-// MARK: - Sharing
-
-enum SharingChannel: String, Codable, CaseIterable, Hashable, Sendable {
-    case download, email, sms, whatsapp, qr, airdrop
-
-    var label: String {
-        switch self {
-        case .download: "Download"
-        case .email:    "Email"
-        case .sms:      "SMS"
-        case .whatsapp: "WhatsApp"
-        case .qr:       "QR Code"
-        case .airdrop:  "AirDrop"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .download: "square.and.arrow.down"
-        case .email:    "envelope.fill"
-        case .sms:      "message.fill"
-        case .whatsapp: "phone.bubble.fill"
-        case .qr:       "qrcode"
-        case .airdrop:  "airplayaudio"
-        }
-    }
-}
-
 struct SharingSettings: Codable, Hashable, Sendable {
     var enabledChannels: Set<SharingChannel>
     var requireGuestOptIn: Bool = false
@@ -466,44 +413,6 @@ enum PrintLayout: String, Codable, CaseIterable, Hashable, Sendable {
     }
 }
 
-struct PrintSetupSettings: Codable, Hashable, Sendable {
-    var enabled: Bool = false
-    var autoPrintAfterCapture: Bool = false
-    var copiesPerSession: Int = 1
-    var paperSize: PrintPaperSize = .fourBySix
-    var layout: PrintLayout = .single
-    var includeQRCode: Bool = true
-    var includeEventName: Bool = true
-
-    static let `default` = PrintSetupSettings()
-}
-
-// MARK: - Background Removal
-
-enum BackgroundMode: String, Codable, CaseIterable, Hashable, Sendable {
-    case off, remove, replaceColor, replaceImage
-
-    var label: String {
-        switch self {
-        case .off:           "Off"
-        case .remove:        "Remove background (transparent)"
-        case .replaceColor:  "Replace with color"
-        case .replaceImage:  "Replace with image"
-        }
-    }
-}
-
-struct BackgroundRemovalSettings: Codable, Hashable, Sendable {
-    var enabled: Bool = false
-    var mode: BackgroundMode = .off
-    /// Stored as hex `#RRGGBB`. Empty means use systemBackground.
-    var backgroundHex: String = "#0A0A0B"
-    var backgroundImageName: String? = nil   // placeholder — picks an asset name later
-    var applyToAIPortraits: Bool = false
-
-    static let `default` = BackgroundRemovalSettings()
-}
-
 // MARK: - Stickers
 
 enum StickerPack: String, Codable, CaseIterable, Hashable, Sendable {
@@ -525,18 +434,6 @@ enum StickerPack: String, Codable, CaseIterable, Hashable, Sendable {
         case .corporate: ["briefcase.fill", "checkmark.seal.fill", "trophy.fill", "chart.line.uptrend.xyaxis"]
         }
     }
-}
-
-struct StickerSettings: Codable, Hashable, Sendable {
-    var enabled: Bool = false
-    var enabledPacks: Set<StickerPack> = [.wedding]
-    var allowGuestStickers: Bool = true
-    var maxStickersPerPhoto: Int = 6
-    /// When true, the result page shows the active sticker pack as applied
-    /// decoration. MVP: surface only — full editor ships in Sprint 5.
-    var applyToResults: Bool = false
-
-    static let `default` = StickerSettings()
 }
 
 // MARK: - Virtual Attendant
