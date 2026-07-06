@@ -433,6 +433,34 @@ final class AppState {
 
     func upsertJob(_ job: Booth360Job) { booth360Jobs[job.id] = job }
 
+    // MARK: - Render coordination (Phase 3 — non-blocking kiosk)
+    //
+    // Render tasks are owned HERE, not by Booth360ProcessingView, so leaving
+    // the screen (kiosk "Next guest" → attract) never cancels an export.
+
+    private var renderTasks: [UUID: Task<Void, Never>] = [:]
+
+    /// Idempotent: the first call starts the pipeline; later calls (view
+    /// re-appear, navigation churn) are no-ops while it runs.
+    func startRender(jobId: UUID) {
+        if let existing = renderTasks[jobId], !existing.isCancelled { return }
+        guard let job = job(id: jobId), !job.status.isTerminal else { return }
+        renderTasks[jobId] = Task { [weak self] in
+            guard let self else { return }
+            await Booth360NativeRenderClient.shared.runPipeline(jobId: jobId, app: self)
+            self.renderTasks[jobId] = nil
+        }
+    }
+
+    /// Explicit cancel (operator abandons a job). Not called on navigation.
+    func cancelRender(jobId: UUID) {
+        renderTasks[jobId]?.cancel()
+        renderTasks[jobId] = nil
+    }
+
+    /// True while any export is running — kiosk/status surfaces use this.
+    var hasActiveRenders: Bool { !renderTasks.isEmpty }
+
     /// Phase 2 — hydrate this event's jobs from the backend listing so clip
     /// history survives reinstall / device change. Merge policy: a local job
     /// always wins (it knows file URLs + upload state); server-only jobs are

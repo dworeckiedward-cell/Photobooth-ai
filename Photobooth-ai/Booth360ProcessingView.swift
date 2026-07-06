@@ -10,7 +10,6 @@ struct Booth360ProcessingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let jobId: UUID
 
-    @State private var pipelineTask: Task<Void, Never>?
     @State private var didNavigate: Bool = false
     @State private var tipIndex: Int = 0
     @State private var tipTimer: Timer? = nil
@@ -56,19 +55,10 @@ struct Booth360ProcessingView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .navigationBar)
         .task(id: jobId) {
-            // Kick off the render pipeline once; subsequent appears (e.g. swipe-back
-            // during nav animation) shouldn't restart it.
-            //
-            // PIPELINE-REBUILD (Phase 0): Passthrough surfaces the raw recording
-            // as the final output (real file, no transcode) until the native
-            // AVFoundation/VideoToolbox client lands in Phase 3. This is the ONLY
-            // concrete render call-site — the Phase 3 client swaps in here,
-            // behind the Booth360RenderClient protocol.
-            if pipelineTask == nil, let j = job, !j.status.isTerminal {
-                pipelineTask = Task {
-                    await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
-                }
-            }
+            // Phase 3: the render is owned by AppState.startRender (idempotent,
+            // detached from this view) so kiosk "Next guest" / navigation never
+            // kills an in-flight export. Native AVFoundation client.
+            app.startRender(jobId: jobId)
         }
         .onAppear {
             tipTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
@@ -78,11 +68,29 @@ struct Booth360ProcessingView: View {
             }
         }
         .onDisappear {
-            // Once we've navigated forward, leave the task to finish naturally.
-            // If the user backs out, cancel it.
-            if !didNavigate { pipelineTask?.cancel() }
+            // Render is AppState-owned — navigating away must NOT cancel it
+            // (non-blocking kiosk). Explicit cancel lives on the failed-state
+            // Back button only.
             tipTimer?.invalidate()
             tipTimer = nil
+        }
+        .safeAreaInset(edge: .bottom) {
+            if app.isKiosk, job?.status.isTerminal != true {
+                Button {
+                    Haptics.tap(.medium)
+                    app.popToRoot()   // attract; export continues in background
+                } label: {
+                    Label(
+                        Loc.t("Next guest", pl: "Następny gość", de: "Nächster Gast"),
+                        systemImage: "person.badge.plus"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(SecondaryButtonStyle())
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
+                .accessibilityHint("Returns to the start screen while the video finishes in the background")
+            }
         }
         .onChange(of: job?.status) { _, newValue in
             guard let newValue, newValue == .completed, !didNavigate else { return }
@@ -225,7 +233,7 @@ struct Booth360ProcessingView: View {
                 .multilineTextAlignment(.center)
             Button("Back") {
                 Haptics.tap()
-                pipelineTask?.cancel()
+                app.cancelRender(jobId: jobId)
                 app.pop()
             }
             .buttonStyle(SecondaryButtonStyle())
