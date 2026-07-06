@@ -108,6 +108,32 @@ struct AI360SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: BoothifySpacing.md) {
+                SettingsCard(title: "Motion") {
+                    SettingsPicker("Template", selection: Binding<MotionTemplate>(
+                        get: { MotionTemplate(rawValue: app.settings(for: eventId).ai360.motionTemplate ?? "") ?? .heroSlow },
+                        set: { newValue in
+                            var all = app.settings(for: eventId)
+                            all.ai360.motionTemplate = newValue.rawValue
+                            app.updateSettings(all, for: eventId)
+                        }
+                    )) {
+                        ForEach(MotionTemplate.allCases) { Text($0.label).tag($0) }
+                    }
+                    SettingsPicker("Ramp feel", selection: Binding<RampCurve>(
+                        get: { RampCurve(rawValue: app.settings(for: eventId).ai360.rampCurve ?? "") ?? .gentle },
+                        set: { newValue in
+                            var all = app.settings(for: eventId)
+                            all.ai360.rampCurve = newValue.rawValue
+                            app.updateSettings(all, for: eventId)
+                        }
+                    )) {
+                        ForEach(RampCurve.allCases, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
+                    }
+                    Text("One clear hero beat with eased ramps. Slow-motion always uses real captured frames — on cameras without high-speed capture the hero is gently limited, never faked.")
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                }
+
                 SettingsCard(title: "Recording") {
                     SettingsStepper(
                         "Countdown",

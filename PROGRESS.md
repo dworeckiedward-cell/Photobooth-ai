@@ -134,3 +134,33 @@ consent+kiosk loop on hardware, iOS 17 runtime.
 **Note:** e2e size floor calibrated to synthetic content (solid frames compress
 below average bitrate); the real 8–15 MB window is Phase 7's file-size test on
 realistic footage.
+
+---
+
+## PHASE 4 — Timeline & motion — ✅ GATE GREEN
+
+**Changed:**
+- **MotionTemplates**: Hero Slow / Reverse Bounce / Loop Promo emit multi-segment
+  `RenderTimeline`s; ramp curves gentle/punchy/dramatic; eased ramps approximated
+  by 0.1 s-source sub-segment stepping (documented constant); **interpolation
+  clamp** — hero speed floors at outputFPS/captureFPS, `clamped` flag surfaces a
+  breadcrumb (never fake smoothness). Loop Promo's intro/outro speeds match for
+  clean social loops.
+- **Real reverse** (`Booth360ReverseEncoder`): chunked (0.2 s) last→first
+  re-encode into an upright intermediate — bounded memory, autoreleasepool per
+  chunk, cancellation. Reversed spans are silent (soundtrack lands in Phase 5).
+- **Engine**: composition builder handles reversed segments via intermediates on
+  the SAME track with time-keyed aspect-fill transforms; audio inserts stay
+  aligned (empty ranges under reversed spans).
+- **Client**: reads `ai360.motionTemplate`/`rampCurve` (Optional — decode-safe),
+  measures real capture fps from the asset, renders through the template.
+- **Settings**: "Motion" card (template + ramp feel pickers + honest copy).
+
+**Gate A:** 27/27 — clamp policy, 120fps honest hero, template structures
+(single hero plateau, contiguous source tiling, loop-matched ends), ramp step
+resolution + monotonicity, curve differentiation, speed→duration through the
+real engine, and **reverse frame order verified on real pixels** (hue of first
+reversed frames == hue of last input frames).
+
+**Gate B → HANDOFF:** does the motion look PRO on real spinning footage (ramp
+feel, motion blur) — L3 calibration.

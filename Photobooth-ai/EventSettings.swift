@@ -232,6 +232,11 @@ struct AI360Settings: Codable, Hashable, Sendable {
     var displayTextBeforeRecording: String = "Get ready!"
     var blinkFlashWhileRecording: Bool = false
     var clipDirection: ClipDirection = .reverse
+    /// Phase 4 — factory motion template raw value (`MotionTemplate`).
+    /// Optional so pre-4 blobs decode; nil = Hero Slow.
+    var motionTemplate: String? = nil
+    /// Phase 4 — ramp curve raw value (`RampCurve`). nil = gentle.
+    var rampCurve: String? = nil
     var clipSpeed: Double = 1.0              // 0.25…2.0 typical
     var soundtrackName: String? = nil        // placeholder — pick from library later
     /// M4: relative path under `Documents/events/<eventId>/audio/` to the

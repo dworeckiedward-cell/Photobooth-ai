@@ -50,9 +50,32 @@ final class Booth360NativeRenderClient: Booth360RenderClient {
         do {
             update { $0.currentStep = .slowMotion; $0.progress = 0.1 }
 
+            // Phase 4 — factory motion template (operator-selected; Hero Slow
+            // default). Capture fps read from the actual asset; a clamped hero
+            // (not enough real frames) is flagged, never faked.
+            let rawAsset = AVURLAsset(url: rawURL)
+            let captureDuration = (try? await rawAsset.load(.duration).seconds) ?? 0
+            let captureFPS = (try? await rawAsset.loadTracks(withMediaType: .video)
+                .first?.load(.nominalFrameRate)).flatMap { Double($0) } ?? 30
+            let template = MotionTemplate(rawValue: job.settingsSnapshot.motionTemplate ?? "") ?? .heroSlow
+            let curve = RampCurve(rawValue: job.settingsSnapshot.rampCurve ?? "") ?? .gentle
+            let motion = template.timeline(
+                captureDuration: captureDuration,
+                captureFPS: max(captureFPS, 1),
+                outputFPS: Double(spec.fps),
+                curve: curve
+            )
+            if motion.clamped {
+                SentryClient.shared.breadcrumb(
+                    "hero speed clamped", category: "render",
+                    data: ["capture_fps": "\(Int(captureFPS))", "hero": "\(motion.heroSpeed)"]
+                )
+            }
+
             // Progress callbacks arrive off-main; hop back for the observable job.
             try await Booth360RenderEngine.render(
                 input: rawURL,
+                timeline: motion.timeline,
                 spec: spec,
                 to: masterURL,
                 progress: { fraction in

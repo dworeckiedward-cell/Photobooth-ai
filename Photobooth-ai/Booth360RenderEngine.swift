@@ -36,17 +36,25 @@ struct Booth360RenderEngine: Sendable {
     /// Build the composition + video composition for a timeline over `asset`.
     /// Phase 3 consumes 1× full-range timelines; Phase 4's multi-segment
     /// speed/reverse model plugs in here via `scaleTimeRange`.
+    /// Build the composition + video composition for a timeline over `asset`.
+    /// Reversed segments consume pre-generated upright intermediates
+    /// (`reversedIntermediates`, keyed by segment index — see `render`).
+    ///
+    /// One composition video track hosts inserts from BOTH the raw asset and
+    /// the intermediates; a single layer instruction carries a time-keyed
+    /// aspect-fill transform per insert (`setTransform(_:at:)`).
     static func buildComposition(
         asset: AVAsset,
         timeline: RenderTimeline,
-        spec: RenderSpec
+        spec: RenderSpec,
+        reversedIntermediates: [Int: AVAsset] = [:]
     ) async throws -> (composition: AVMutableComposition, videoComposition: AVMutableVideoComposition) {
         guard let sourceVideo = try await asset.loadTracks(withMediaType: .video).first else {
             throw Booth360RenderEngineError.noVideoTrack
         }
         let sourceAudio = try await asset.loadTracks(withMediaType: .audio).first
-        let naturalSize = try await sourceVideo.load(.naturalSize)
-        let preferredTransform = try await sourceVideo.load(.preferredTransform)
+        let sourceNatural = try await sourceVideo.load(.naturalSize)
+        let sourceTransform = try await sourceVideo.load(.preferredTransform)
         let sourceDuration = try await asset.load(.duration)
 
         let composition = AVMutableComposition()
@@ -57,31 +65,69 @@ struct Booth360RenderEngine: Sendable {
             withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid
         )
 
-        // Insert each segment back-to-back, then retime it (scaleTimeRange).
+        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+
         var cursor = CMTime.zero
-        for segment in timeline.segments {
-            let start = CMTime(seconds: segment.sourceStart, preferredTimescale: 600)
-            let rawDuration = CMTime(seconds: segment.sourceDuration, preferredTimescale: 600)
-            // Clamp to the asset — a timeline must never read past the capture.
-            let clampedEnd = min(CMTimeAdd(start, rawDuration), sourceDuration)
-            let range = CMTimeRange(start: start, end: clampedEnd)
-            guard range.duration > .zero else { continue }
+        for (index, segment) in timeline.segments.enumerated() {
+            let segmentOutputStart = cursor
 
-            try videoTrack.insertTimeRange(range, of: sourceVideo, at: cursor)
-            if let audioTrack, let sourceAudio {
-                try? audioTrack.insertTimeRange(range, of: sourceAudio, at: cursor)
-            }
+            if segment.reversed, let intermediate = reversedIntermediates[index] {
+                guard let revTrack = try await intermediate.loadTracks(withMediaType: .video).first else {
+                    throw Booth360RenderEngineError.noVideoTrack
+                }
+                let revDuration = try await intermediate.load(.duration)
+                let revNatural = try await revTrack.load(.naturalSize)
+                try videoTrack.insertTimeRange(
+                    CMTimeRange(start: .zero, duration: revDuration), of: revTrack, at: cursor
+                )
+                var insertedDuration = revDuration
+                if segment.speed != 1 {
+                    let scaled = CMTime(
+                        seconds: revDuration.seconds / max(segment.speed, 0.0001),
+                        preferredTimescale: 600
+                    )
+                    videoTrack.scaleTimeRange(
+                        CMTimeRange(start: cursor, duration: revDuration), toDuration: scaled
+                    )
+                    insertedDuration = scaled
+                }
+                // Reversed spans are silent (soundtrack arrives in Phase 5).
+                if let audioTrack {
+                    audioTrack.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: insertedDuration))
+                }
+                layerInstruction.setTransform(
+                    aspectFillTransform(sourceSize: revNatural, preferred: .identity, spec: spec),
+                    at: segmentOutputStart
+                )
+                cursor = CMTimeAdd(cursor, insertedDuration)
+            } else {
+                let start = CMTime(seconds: segment.sourceStart, preferredTimescale: 600)
+                let rawDuration = CMTime(seconds: segment.sourceDuration, preferredTimescale: 600)
+                let clampedEnd = min(CMTimeAdd(start, rawDuration), sourceDuration)
+                let range = CMTimeRange(start: start, end: clampedEnd)
+                guard range.duration > .zero else { continue }
 
-            let scaledDuration = CMTime(
-                seconds: segment.sourceDuration / max(segment.speed, 0.0001),
-                preferredTimescale: 600
-            )
-            if segment.speed != 1 {
-                let inserted = CMTimeRange(start: cursor, duration: range.duration)
-                videoTrack.scaleTimeRange(inserted, toDuration: scaledDuration)
-                audioTrack?.scaleTimeRange(inserted, toDuration: scaledDuration)
+                try videoTrack.insertTimeRange(range, of: sourceVideo, at: cursor)
+                if let audioTrack, let sourceAudio {
+                    try? audioTrack.insertTimeRange(range, of: sourceAudio, at: cursor)
+                }
+                var insertedDuration = range.duration
+                if segment.speed != 1 {
+                    let scaled = CMTime(
+                        seconds: range.duration.seconds / max(segment.speed, 0.0001),
+                        preferredTimescale: 600
+                    )
+                    let inserted = CMTimeRange(start: cursor, duration: range.duration)
+                    videoTrack.scaleTimeRange(inserted, toDuration: scaled)
+                    audioTrack?.scaleTimeRange(inserted, toDuration: scaled)
+                    insertedDuration = scaled
+                }
+                layerInstruction.setTransform(
+                    aspectFillTransform(sourceSize: sourceNatural, preferred: sourceTransform, spec: spec),
+                    at: segmentOutputStart
+                )
+                cursor = CMTimeAdd(cursor, insertedDuration)
             }
-            cursor = CMTimeAdd(cursor, segment.speed == 1 ? range.duration : scaledDuration)
         }
 
         // Hard duration cap (spec of record).
@@ -90,25 +136,8 @@ struct Booth360RenderEngine: Sendable {
             composition.removeTimeRange(CMTimeRange(start: cap, end: composition.duration))
         }
 
-        // Aspect-fill transform: source (with its preferredTransform applied)
-        // scaled to cover spec.size, centered. Stretching is an amateur tell —
-        // we crop, never distort.
-        let oriented = naturalSize.applying(preferredTransform)
-        let sourceSize = CGSize(width: abs(oriented.width), height: abs(oriented.height))
-        let scale = max(spec.size.width / sourceSize.width, spec.size.height / sourceSize.height)
-        let scaledSize = CGSize(width: sourceSize.width * scale, height: sourceSize.height * scale)
-        let offset = CGPoint(
-            x: (spec.size.width - scaledSize.width) / 2,
-            y: (spec.size.height - scaledSize.height) / 2
-        )
-        var transform = preferredTransform
-        transform = transform.concatenating(CGAffineTransform(scaleX: scale, y: scale))
-        transform = transform.concatenating(CGAffineTransform(translationX: offset.x, y: offset.y))
-
         let instruction = AVMutableVideoCompositionInstruction()
         instruction.timeRange = CMTimeRange(start: .zero, duration: composition.duration)
-        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
-        layerInstruction.setTransform(transform, at: .zero)
         instruction.layerInstructions = [layerInstruction]
 
         let videoComposition = AVMutableVideoComposition()
@@ -117,6 +146,24 @@ struct Booth360RenderEngine: Sendable {
         videoComposition.instructions = [instruction]
 
         return (composition, videoComposition)
+    }
+
+    /// Aspect-FILL (crop, never stretch) of a source frame into spec.size.
+    private static func aspectFillTransform(
+        sourceSize: CGSize, preferred: CGAffineTransform, spec: RenderSpec
+    ) -> CGAffineTransform {
+        let oriented = sourceSize.applying(preferred)
+        let effective = CGSize(width: abs(oriented.width), height: abs(oriented.height))
+        let scale = max(spec.size.width / effective.width, spec.size.height / effective.height)
+        let scaledSize = CGSize(width: effective.width * scale, height: effective.height * scale)
+        let offset = CGPoint(
+            x: (spec.size.width - scaledSize.width) / 2,
+            y: (spec.size.height - scaledSize.height) / 2
+        )
+        var transform = preferred
+        transform = transform.concatenating(CGAffineTransform(scaleX: scale, y: scale))
+        transform = transform.concatenating(CGAffineTransform(translationX: offset.x, y: offset.y))
+        return transform
     }
 
     // MARK: - Export (reader → writer, VideoToolbox H.264)
@@ -261,6 +308,9 @@ struct Booth360RenderEngine: Sendable {
     }
 
     /// Convenience: full pipeline (composition + export) from a raw file.
+    /// Reversed segments are pre-flattened into upright intermediates here
+    /// (reverse doubles cost — expected, blueprint §7.3); temp files are
+    /// cleaned up after export.
     static func render(
         input: URL,
         timeline: RenderTimeline? = nil,
@@ -271,8 +321,24 @@ struct Booth360RenderEngine: Sendable {
         let asset = AVURLAsset(url: input)
         let duration = try await asset.load(.duration).seconds
         let effectiveTimeline = timeline ?? .fullRange(duration: duration)
+
+        var intermediates: [Int: AVAsset] = [:]
+        var tempURLs: [URL] = []
+        defer { tempURLs.forEach { try? FileManager.default.removeItem(at: $0) } }
+
+        for (index, segment) in effectiveTimeline.segments.enumerated() where segment.reversed {
+            let range = CMTimeRange(
+                start: CMTime(seconds: segment.sourceStart, preferredTimescale: 600),
+                duration: CMTime(seconds: segment.sourceDuration, preferredTimescale: 600)
+            )
+            let url = try await Booth360ReverseEncoder.reversedIntermediate(input: input, range: range)
+            tempURLs.append(url)
+            intermediates[index] = AVURLAsset(url: url)
+        }
+
         let (composition, videoComposition) = try await buildComposition(
-            asset: asset, timeline: effectiveTimeline, spec: spec
+            asset: asset, timeline: effectiveTimeline, spec: spec,
+            reversedIntermediates: intermediates
         )
         try await export(
             composition: composition, videoComposition: videoComposition,

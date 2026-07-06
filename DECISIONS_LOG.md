@@ -76,3 +76,14 @@
 18. **E2E size floor = "non-empty/valid" (20 KB), not the 8–15 MB window** —
     synthetic solid-color frames legitimately compress far below the average
     bitrate; the marketing window is asserted in Phase 7 on realistic footage.
+
+## Phase 4
+
+19. **Reverse = real chunked re-encode** (0.2 s chunks, upright intermediates),
+    not a fake. Reversed spans are silent by design — reversed audio is noise
+    and Phase 5's soundtrack covers the whole timeline. ReverseBounce's back
+    pass runs at 0.8× so the bounce reads deliberate.
+20. **Ramp step = 0.1 s source time** — 10 sub-segments/s of ramp; smooth at
+    30 fps output without exploding composition complexity.
+21. **Template/curve stored as raw-value Optionals on AI360Settings** so
+    pre-Phase-4 blobs decode untouched (same pattern as stabilizationEnabled).
