@@ -59,15 +59,14 @@ struct Booth360ProcessingView: View {
             // Kick off the render pipeline once; subsequent appears (e.g. swipe-back
             // during nav animation) shouldn't restart it.
             //
-            // IM0: local FFmpeg client is the primary renderer (real montage via
-            // h264_videotoolbox). On non-zero return code it falls back to the
-            // passthrough renderer internally so the operator never sits on a
-            // spinner. The cloud client (M3) still uploads, but only AFTER the
-            // local render — kicked off as a side effect once finalVideoURL is
-            // available (handled by ResultView / its caller in a future sprint).
+            // PIPELINE-REBUILD (Phase 0): Passthrough surfaces the raw recording
+            // as the final output (real file, no transcode) until the native
+            // AVFoundation/VideoToolbox client lands in Phase 3. This is the ONLY
+            // concrete render call-site — the Phase 3 client swaps in here,
+            // behind the Booth360RenderClient protocol.
             if pipelineTask == nil, let j = job, !j.status.isTerminal {
                 pipelineTask = Task {
-                    await Booth360FFmpegRenderClient.shared.runPipeline(jobId: jobId, app: app)
+                    await Booth360PassthroughRenderClient.shared.runPipeline(jobId: jobId, app: app)
                 }
             }
         }

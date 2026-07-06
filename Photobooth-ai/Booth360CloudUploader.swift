@@ -194,7 +194,7 @@ final class Booth360CloudUploader {
         live.cloudUploadError = "\(step) failed: \(error.localizedDescription)"
         app.upsertJob(live)
         // BM1: persist for retry across app launches.
-        Booth360UploadQueue.shared.enqueue(jobId: jobId, app: app)
+        Booth360UploadQueue.shared.enqueue(jobId: jobId)
     }
 
     // MARK: - Retry helper

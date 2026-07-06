@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		0EE36FEB2FB0A0D400F745CF /* Photobooth-ai.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Photobooth-ai.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000002 /* Photobooth-aiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Photobooth-aiTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,20 +17,40 @@
 			path = "Photobooth-ai";
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000003 /* Photobooth-aiTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Photobooth-aiTests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXBuildFile section */
-		0EFF000110000000000000A1 /* FFmpeg-Kit in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000130000000000000C1 /* FFmpeg-Kit */; };
 		0EFF000210000000000000A2 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000230000000000000C2 /* Sentry */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA000000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0EE36FE32FB0A0D400F745CF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0EE36FEA2FB0A0D400F745CF;
+			remoteInfo = "Photobooth-ai";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0EE36FE82FB0A0D400F745CF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0EFF000110000000000000A1 /* FFmpeg-Kit in Frameworks */,
 				0EFF000210000000000000A2 /* Sentry in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -40,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				0EE36FED2FB0A0D400F745CF /* Photobooth-ai */,
+				AA0000000000000000000003 /* Photobooth-aiTests */,
 				0EE36FEC2FB0A0D400F745CF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -48,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				0EE36FEB2FB0A0D400F745CF /* Photobooth-ai.app */,
+				AA0000000000000000000002 /* Photobooth-aiTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,12 +95,34 @@
 			);
 			name = "Photobooth-ai";
 			packageProductDependencies = (
-				0EFF000130000000000000C1 /* FFmpeg-Kit */,
 				0EFF000230000000000000C2 /* Sentry */,
 			);
 			productName = "Photobooth-ai";
 			productReference = 0EE36FEB2FB0A0D400F745CF /* Photobooth-ai.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AA0000000000000000000001 /* Photobooth-aiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000007 /* Build configuration list for PBXNativeTarget "Photobooth-aiTests" */;
+			buildPhases = (
+				AA0000000000000000000004 /* Sources */,
+				AA0000000000000000000005 /* Frameworks */,
+				AA0000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA000000000000000000000B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000003 /* Photobooth-aiTests */,
+			);
+			name = "Photobooth-aiTests";
+			packageProductDependencies = (
+			);
+			productName = "Photobooth-aiTests";
+			productReference = AA0000000000000000000002 /* Photobooth-aiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -91,6 +136,10 @@
 				TargetAttributes = {
 					0EE36FEA2FB0A0D400F745CF = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					AA0000000000000000000001 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 0EE36FEA2FB0A0D400F745CF;
 					};
 				};
 			};
@@ -109,9 +158,9 @@
 			projectRoot = "";
 			targets = (
 				0EE36FEA2FB0A0D400F745CF /* Photobooth-ai */,
+				AA0000000000000000000001 /* Photobooth-aiTests */,
 			);
 			packageReferences = (
-				0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */,
 				0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 		};
@@ -119,6 +168,13 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		0EE36FE92FB0A0D400F745CF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,7 +191,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA000000000000000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0EE36FEA2FB0A0D400F745CF /* Photobooth-ai */;
+			targetProxy = AA000000000000000000000A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0EE36FF42FB0A0D500F745CF /* Debug */ = {
@@ -190,7 +261,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -234,7 +305,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
+				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -247,7 +318,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -256,7 +327,6 @@
 				VALIDATE_PRODUCT = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = all;
-				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
 			};
 			name = Release;
@@ -342,6 +412,48 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.servify.Photobooth-aiTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Photobooth-ai.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Photobooth-ai";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.servify.Photobooth-aiTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Photobooth-ai.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Photobooth-ai";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -363,20 +475,18 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AA0000000000000000000007 /* Build configuration list for PBXNativeTarget "Photobooth-aiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000008 /* Debug */,
+				AA0000000000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tylerjonesio/ffmpeg-kit-spm";
-			requirement = {
-				kind = revision;
-				revision = 6053b0e4f8607314ff5e14e0b18fc250c0f87c9b;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCRemoteSwiftPackageReference section (sentry-cocoa) */
 		0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
@@ -385,14 +495,9 @@
 				minimumVersion = 9.9.0;
 			};
 		};
-/* End XCRemoteSwiftPackageReference section (sentry-cocoa) */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		0EFF000130000000000000C1 /* FFmpeg-Kit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 0EFF000120000000000000B1 /* XCRemoteSwiftPackageReference "ffmpeg-kit-spm" */;
-			productName = "FFmpeg-Kit";
-		};
 		0EFF000230000000000000C2 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;

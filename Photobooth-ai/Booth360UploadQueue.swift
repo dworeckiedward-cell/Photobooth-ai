@@ -28,9 +28,10 @@ final class Booth360UploadQueue {
     }
 
     /// Add a job to the queue. Safe to call repeatedly — Set dedupes.
-    /// `app` is unused right now but the signature keeps the future option
-    /// of also persisting a snapshot of the Booth360Job state alongside.
-    func enqueue(jobId: UUID, app _: AppState) {
+    /// (Phase 0: dropped the unused `app` parameter so the queue is testable
+    /// without constructing a second AppState inside the test host, which
+    /// crashes the runner. Thread values in explicitly if ever needed.)
+    func enqueue(jobId: UUID) {
         if pendingJobIds.insert(jobId).inserted {
             save()
             log.debug("queued \(jobId.uuidString, privacy: .public) for retry")

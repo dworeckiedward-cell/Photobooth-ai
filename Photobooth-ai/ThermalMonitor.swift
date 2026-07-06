@@ -3,14 +3,14 @@ import os.log
 
 /// RA1 — observable wrapper around `ProcessInfo.thermalState`.
 ///
-/// 4-hour event of continuous FFmpeg render + camera + upload pushes
+/// 4-hour event of continuous render + camera + upload pushes
 /// iPhone 12/13 into `.serious` → `.critical` thermal throttling. The OS
 /// silently caps CPU, GPU, and frame rates; operator sees "the app got
 /// slow" with no signal of why.
 ///
 /// This monitor:
 /// 1. Surfaces the live thermal state to UI (StatusOverlay in RA4).
-/// 2. Lets the FFmpeg render client auto-degrade bitrate when hot
+/// 2. Lets the render client auto-degrade bitrate when hot
 ///    (so we throttle *before* the OS does, deliberately, with the
 ///    operator informed via the HUD).
 /// 3. Debounces transitions (anti-flap): a 30s cooldown prevents a
@@ -41,7 +41,7 @@ final class ThermalMonitor {
         thermalState == .serious || thermalState == .critical
     }
 
-    /// Recommended bitrate multiplier for the FFmpeg render. 1.0 = full
+    /// Recommended bitrate multiplier for the render. 1.0 = full
     /// quality, 0.7 = 30% reduction when hot. Anti-flap: only updates
     /// the underlying decision when `thermalState` has been stable for
     /// at least 30s.
