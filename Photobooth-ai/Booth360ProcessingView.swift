@@ -42,10 +42,21 @@ struct Booth360ProcessingView: View {
 
                 Spacer()
 
-                progressRing
-
-                stepDots
-                    .padding(.top, BoothifySpacing.lg)
+                // The ring floats on its own glass pane — the glassmorphism
+                // hero of the wait.
+                VStack(spacing: BoothifySpacing.lg) {
+                    progressRing
+                    stepDots
+                }
+                .padding(BoothifySpacing.xl)
+                .background(
+                    LinearGradient(
+                        colors: [BoothifyTheme.indigoGlow.opacity(0.18), BoothifyTheme.violet.opacity(0.05)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: BoothifyRadius.hero + 8, style: .continuous)
+                )
+                .glassSurface(radius: BoothifyRadius.hero + 8)
 
                 Spacer()
 
@@ -223,7 +234,9 @@ struct Booth360ProcessingView: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, BoothifySpacing.md)
+        .padding(.vertical, BoothifySpacing.sm + 2)
+        .glassSurface(radius: BoothifyRadius.card)
         .id(tipIndex)  // forces fade transition
         .transition(.opacity)
     }

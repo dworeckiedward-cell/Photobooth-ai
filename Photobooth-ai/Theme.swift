@@ -134,19 +134,42 @@ struct AccentCTAButtonStyle: ButtonStyle {
     }
 }
 
-/// Ghost secondary button with hairline border.
+/// Ghost secondary button — glassmorphism pane (material + sheen + rim,
+/// no heavy drop so small controls stay light). Reduce Transparency falls
+/// back to the solid elevated surface.
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
         configuration.label
             .font(BoothifyType.subheadline.weight(.semibold))
             .foregroundStyle(BoothifyTheme.textPrimary)
             .frame(maxWidth: .infinity, minHeight: 48)
-            .background(BoothifyTheme.surface1)
+            .background {
+                ZStack {
+                    if UIAccessibility.isReduceTransparencyEnabled {
+                        shape.fill(BoothifyTheme.bgElevated)
+                    } else {
+                        shape.fill(.ultraThinMaterial)
+                            .environment(\.colorScheme, .dark)
+                    }
+                    shape.fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.10), Color.white.opacity(0.03)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                }
+            }
             .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.05)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
             )
-            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+            .clipShape(shape)
             .opacity(configuration.isPressed ? 0.75 : 1)
             .animation(.easeOut(duration: 0.10), value: configuration.isPressed)
     }

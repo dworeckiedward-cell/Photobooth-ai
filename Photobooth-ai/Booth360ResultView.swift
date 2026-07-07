@@ -243,6 +243,14 @@ struct Booth360ResultView: View {
                 Spacer(minLength: 0)
             }
             .padding(BoothifySpacing.sm + 4)
+            // Rich glassmorphism — the delivery hero gets the violet-lit pane.
+            .background(
+                LinearGradient(
+                    colors: [BoothifyTheme.indigoGlow.opacity(0.30), BoothifyTheme.violet.opacity(0.08)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+            )
             .glassSurface(radius: BoothifyRadius.hero)
             .glowAccent(intensity: linkReady ? 0.4 : 0.12)
         }
