@@ -212,7 +212,15 @@ struct Booth360LandingView: View {
                     createZone
                 }
                 .padding(BoothifySpacing.md + 4)
-                .background(BoothifyTheme.bgElevated, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                // Rich glassmorphism — the pane blurs the dimmed stage behind
+                // it; a violet under-tint keeps it in the language.
+                .background(
+                    LinearGradient(
+                        colors: [BoothifyTheme.indigoGlow.opacity(0.35), BoothifyTheme.violet.opacity(0.10)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+                )
                 .glassSurface(radius: 28)
                 .frame(maxWidth: 560)
                 .padding(.horizontal, BoothifySpacing.md + 2)
@@ -443,6 +451,8 @@ struct Booth360LandingView: View {
                 }
             }
             .buttonStyle(AccentCTAButtonStyle())
+            // The laser: a bright violet light segment orbiting the capsule.
+            .overlay(LaserCapsuleBorder())
             .disabled(!canStart)
             .opacity(canStart || creating ? 1 : 0.55)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: canStart)

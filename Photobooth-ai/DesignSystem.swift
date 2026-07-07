@@ -247,6 +247,55 @@ struct AppListRow: View {
     }
 }
 
+// MARK: - LaserCapsuleBorder
+/// A bright violet "laser" segment orbiting a capsule's outline (hero CTAs).
+/// Two layers — a blurred glow under a thin bright core — travel the border
+/// on a seamless 2.6s loop. Reduce Motion degrades to a static violet rim.
+struct LaserCapsuleBorder: View {
+    @State private var phase: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Fraction of the outline lit at once.
+    private let span: CGFloat = 0.28
+    private let laserBright = Color(red: 0.78, green: 0.70, blue: 1.0)
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                Capsule()
+                    .strokeBorder(BoothifyTheme.violet.opacity(0.55), lineWidth: 1.5)
+            } else {
+                ZStack {
+                    segment(lineWidth: 5).blur(radius: 5)
+                        .foregroundStyle(BoothifyTheme.violet)
+                    segment(lineWidth: 1.8)
+                        .foregroundStyle(laserBright)
+                }
+                .onAppear {
+                    withAnimation(.linear(duration: 2.6).repeatForever(autoreverses: false)) {
+                        phase = 1
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// The traveling arc, drawn in two trims so it wraps seamlessly past
+    /// the path's start point.
+    private func segment(lineWidth: CGFloat) -> some View {
+        ZStack {
+            Capsule()
+                .trim(from: phase, to: min(phase + span, 1))
+                .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            Capsule()
+                .trim(from: 0, to: max(phase + span - 1, 0))
+                .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+        }
+    }
+}
+
 // MARK: - EntranceReveal
 /// Staggered section entrance: fade + a 14pt rise, ordered so the hero
 /// lands first and secondary blocks follow (~70ms apart). Re-arms on
