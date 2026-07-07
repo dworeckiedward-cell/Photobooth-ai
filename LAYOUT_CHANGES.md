@@ -136,3 +136,15 @@ wyłącznie „feel": materiał szkła na OLED, intensywność glow za tekstem
 attract (58 pt + glow — banding?), czytelność „Tap to start" z 3 m w świetle
 sali, skanowalność inline QR 108 pt z ręki gościa (jak źle — QR sheet jest
 zawsze o tap dalej), Reduce Transparency na sprzęcie.
+
+## Era czarna (decyzja operatora, po biegu bento)
+- **Amber wycofany z całej aplikacji** — jedyny akcent to fiolet
+  (violet-500): CTA (`AccentCTAButtonStyle`, biały-na-fiolecie), glow, ikony
+  settings, liczniki, chipy, ring processing, cue countdown. Token amber
+  zostaje wyłącznie jako semantyczny `warning`.
+- **Czarne tło wszędzie**: `bgDeep` -> niemal czysta czerń; mesh atmosfery
+  zredukowany do jednego nikłego fioletowego poola u góry — kalendarz
+  i ustawienia czytają się jako czarne ekrany.
+- **Home**: klip budki gra jako PEŁNOEKRANOWE tło (scrim góra/dół dla
+  czytelności bento); kafel „YOUR BOOTH" usunięty — staty w pełnym rzędzie.
+  Reduce Motion / brak asseta -> czarna atmosfera.

@@ -42,7 +42,7 @@ struct Booth360LandingView: View {
 
     var body: some View {
         ZStack {
-            AtmosphericBackground()
+            homeBackground
 
             ScrollView {
                 VStack(spacing: BoothifySpacing.md) {
@@ -83,6 +83,36 @@ struct Booth360LandingView: View {
         }
     }
 
+    // MARK: - Home background (the ambient booth clip, full-bleed)
+
+    /// The booth clip replaces the black stage on Home only. A scrim keeps
+    /// the greeting and glass tiles legible on top of the moving footage.
+    /// Reduce Motion / missing asset → the shared black atmosphere.
+    private var homeBackground: some View {
+        ZStack {
+            BoothifyTheme.bgDeep.ignoresSafeArea()
+
+            if !reduceMotion,
+               let clip = Bundle.main.url(forResource: "BoothAmbient", withExtension: "mp4") {
+                AmbientVideoView(url: clip)
+                    .ignoresSafeArea()
+                LinearGradient(
+                    stops: [
+                        .init(color: .black.opacity(0.62), location: 0),
+                        .init(color: .black.opacity(0.38), location: 0.4),
+                        .init(color: .black.opacity(0.86), location: 1),
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            } else {
+                AtmosphericBackground()
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     // MARK: - Greeting header
 
     private var greetingHeader: some View {
@@ -102,16 +132,16 @@ struct Booth360LandingView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [BoothifyTheme.amber, BoothifyTheme.amber.opacity(0.65)],
+                            colors: [BoothifyTheme.violet, BoothifyTheme.violet.opacity(0.65)],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 48, height: 48)
                     .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
-                    .shadow(color: BoothifyTheme.amber.opacity(0.35), radius: 12)
+                    .shadow(color: BoothifyTheme.violet.opacity(0.35), radius: 12)
                 Text(String(operatorName.prefix(1)))
                     .font(.headline.weight(.bold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.white)
             }
             .accessibilityHidden(true)
         }
@@ -134,15 +164,15 @@ struct Booth360LandingView: View {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [BoothifyTheme.amber, BoothifyTheme.amber.opacity(0.75)],
+                                    colors: [BoothifyTheme.violet, BoothifyTheme.violet.opacity(0.75)],
                                     startPoint: .top, endPoint: .bottom
                                 )
                             )
                             .frame(width: 50, height: 50)
-                            .shadow(color: BoothifyTheme.amber.opacity(0.55), radius: 14)
+                            .shadow(color: BoothifyTheme.violet.opacity(0.55), radius: 14)
                         Image(systemName: "rotate.3d.fill")
                             .font(.title3.weight(.semibold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                     }
                     Spacer()
                     ZStack {
@@ -205,7 +235,7 @@ struct Booth360LandingView: View {
             .glassSurface(radius: BoothifyRadius.card)
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                    .stroke(BoothifyTheme.amber.opacity(nameFocused ? 0.55 : 0), lineWidth: 1.5)
+                    .stroke(BoothifyTheme.violet.opacity(nameFocused ? 0.55 : 0), lineWidth: 1.5)
             )
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: nameFocused)
             .focused($nameFocused)
@@ -244,7 +274,7 @@ struct Booth360LandingView: View {
             } label: {
                 HStack(spacing: 8) {
                     if creating {
-                        ProgressView().tint(.black)
+                        ProgressView().tint(.white)
                     }
                     Text(creating ? "Creating event…" : "Start session")
                     if !creating {
@@ -252,7 +282,7 @@ struct Booth360LandingView: View {
                     }
                 }
             }
-            .buttonStyle(AmberCTAButtonStyle())
+            .buttonStyle(AccentCTAButtonStyle())
             .disabled(!canStart)
             .opacity(canStart || creating ? 1 : 0.55)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: canStart)
@@ -270,81 +300,21 @@ struct Booth360LandingView: View {
         .padding(.top, 2)
     }
 
-    // MARK: - Bento row: booth tile + stat tiles
+    // MARK: - Bento row: stat tiles (the booth clip lives in the background)
 
     private var bentoRow: some View {
         HStack(alignment: .top, spacing: BoothifySpacing.md - 3) {
-            boothTile
-            VStack(spacing: BoothifySpacing.md - 3) {
-                statTile(
-                    value: "\(spinsCaptured)",
-                    unit: nil,
-                    label: "spins captured"
-                )
-                statTile(
-                    value: deliveredPercent.map { "\($0)" } ?? "—",
-                    unit: deliveredPercent != nil ? "%" : nil,
-                    label: "delivered"
-                )
-            }
-        }
-    }
-
-    private var boothTile: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Color.clear base — the media fills via overlay so its intrinsic
-            // size never steals layout space from the stat column. Animated
-            // booth clip (muted loop); Reduce Motion or a missing asset falls
-            // back to the static photo.
-            Color.clear
-                .overlay {
-                    if !reduceMotion,
-                       let clip = Bundle.main.url(forResource: "BoothAmbient", withExtension: "mp4") {
-                        AmbientVideoView(url: clip)
-                    } else {
-                        Image("Mode_360")
-                            .resizable()
-                            .scaledToFill()
-                    }
-                }
-
-            // Wash — keeps the label legible and ties the photo into the
-            // violet atmosphere (gradient on imagery is permitted).
-            LinearGradient(
-                colors: [BoothifyTheme.indigoGlow.opacity(0.15), .clear, .black.opacity(0.72)],
-                startPoint: .top, endPoint: .bottom
+            statTile(
+                value: "\(spinsCaptured)",
+                unit: nil,
+                label: "spins captured"
             )
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(app.hasActiveRenders ? BoothifyTheme.amber : BoothifyTheme.success)
-                        .frame(width: 7, height: 7)
-                        .shadow(color: (app.hasActiveRenders ? BoothifyTheme.amber : BoothifyTheme.success).opacity(0.9), radius: 5)
-                    Text("YOUR BOOTH")
-                        .font(.caption2.weight(.bold))
-                        .kerning(0.5)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.7), radius: 4)
-                }
-                Text(app.hasActiveRenders ? "Rendering in background" : "Ready · idle")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .shadow(color: .black.opacity(0.6), radius: 3)
-            }
-            .padding(BoothifySpacing.sm + 6)
+            statTile(
+                value: deliveredPercent.map { "\($0)" } ?? "\u{2014}",
+                unit: deliveredPercent != nil ? "%" : nil,
+                label: "delivered"
+            )
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 209)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(.white.opacity(0.13), lineWidth: 1)
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(app.hasActiveRenders
-                            ? "Your booth: a video is rendering in the background"
-                            : "Your booth: ready")
     }
 
     private func statTile(value: String, unit: String?, label: String) -> some View {
@@ -356,7 +326,7 @@ struct Booth360LandingView: View {
                 if let unit {
                     Text(unit)
                         .font(.subheadline.weight(.bold))
-                        .foregroundStyle(BoothifyTheme.amber)
+                        .foregroundStyle(BoothifyTheme.violet)
                 }
             }
             Text(label)
@@ -374,7 +344,7 @@ struct Booth360LandingView: View {
     @ViewBuilder
     private var latestEventSection: some View {
         if app.isLoadingEvents && app.events.isEmpty {
-            ProgressView().tint(BoothifyTheme.amber)
+            ProgressView().tint(BoothifyTheme.violet)
                 .frame(maxWidth: .infinity)
                 .padding(.top, BoothifySpacing.sm)
         } else if let event = latestEvent {
@@ -388,7 +358,7 @@ struct Booth360LandingView: View {
                         RoundedRectangle(cornerRadius: 17, style: .continuous)
                             .fill(
                                 RadialGradient(
-                                    colors: [BoothifyTheme.amber.opacity(0.35), BoothifyTheme.amber.opacity(0.08)],
+                                    colors: [BoothifyTheme.violet.opacity(0.35), BoothifyTheme.violet.opacity(0.08)],
                                     center: .topLeading, startRadius: 0, endRadius: 70
                                 )
                             )
@@ -422,7 +392,7 @@ struct Booth360LandingView: View {
                     VStack(alignment: .trailing, spacing: 1) {
                         Text("\(spins)")
                             .font(.title3.weight(.heavy).monospacedDigit())
-                            .foregroundStyle(BoothifyTheme.amber)
+                            .foregroundStyle(BoothifyTheme.violet)
                         Text("SPINS")
                             .font(.caption2.weight(.semibold))
                             .kerning(0.5)
@@ -504,11 +474,11 @@ private struct Booth360TemplateChip: View {
         Button(action: action) {
             Text(label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(selected ? .black : BoothifyTheme.amber)
+                .foregroundStyle(selected ? .white : BoothifyTheme.violet)
                 .padding(.horizontal, BoothifySpacing.sm + 2)
                 .padding(.vertical, 7)
-                .background(BoothifyTheme.amber.opacity(selected ? 1.0 : 0.14), in: Capsule())
-                .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(selected ? 0 : 0.32), lineWidth: 1))
+                .background(BoothifyTheme.violet.opacity(selected ? 1.0 : 0.14), in: Capsule())
+                .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(selected ? 0 : 0.32), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .scaleEffect(pressed ? 0.95 : 1)

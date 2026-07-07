@@ -32,7 +32,7 @@ struct KioskAttractView: View {
         ZStack {
             AtmosphericBackground()
             RadialGradient(
-                colors: [BoothifyTheme.amber.opacity(0.22), .clear],
+                colors: [BoothifyTheme.violet.opacity(0.22), .clear],
                 center: .top, startRadius: 0, endRadius: 520
             )
             .ignoresSafeArea()
@@ -81,7 +81,7 @@ struct KioskAttractView: View {
                         HStack(spacing: BoothifySpacing.xs + 2) {
                             ProgressView()
                                 .controlSize(.small)
-                                .tint(BoothifyTheme.amber)
+                                .tint(BoothifyTheme.violet)
                             Text(Loc.t(
                                 "Previous video is finishing — you can start",
                                 pl: "Poprzednie wideo się kończy — możesz zaczynać",
@@ -107,7 +107,7 @@ struct KioskAttractView: View {
                     // gesture toward the bottom edge.
                     Image(systemName: "hand.tap.fill")
                         .font(.title2)
-                        .foregroundStyle(BoothifyTheme.amber)
+                        .foregroundStyle(BoothifyTheme.violet)
                         .opacity(pulse ? 1 : 0.55)
                         .accessibilityHidden(true)
 
@@ -218,8 +218,8 @@ private struct OperatorBrandMark: View {
             } else {
                 Image(systemName: "rotate.3d.fill")
                     .font(.system(size: 76, weight: .thin))
-                    .foregroundStyle(BoothifyTheme.amber)
-                    .shadow(color: BoothifyTheme.amber.opacity(0.45), radius: 24)
+                    .foregroundStyle(BoothifyTheme.violet)
+                    .shadow(color: BoothifyTheme.violet.opacity(0.45), radius: 24)
             }
         }
         .accessibilityHidden(true)

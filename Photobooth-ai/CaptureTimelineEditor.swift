@@ -125,13 +125,13 @@ private struct SegmentEditor: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: segment.reverse ? "arrow.uturn.left.circle.fill" : "play.circle.fill")
-                    .foregroundStyle(segment.reverse ? BoothifyTheme.amber : BoothifyTheme.violet)
+                    .foregroundStyle(segment.reverse ? BoothifyTheme.violet : BoothifyTheme.violet)
                 Text(String(format: "%.1fs at %.2f×", segment.duration, segment.speed))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Toggle("Reverse", isOn: $segment.reverse)
                     .labelsHidden()
-                    .tint(BoothifyTheme.amber)
+                    .tint(BoothifyTheme.violet)
             }
 
             VStack(alignment: .leading, spacing: 4) {

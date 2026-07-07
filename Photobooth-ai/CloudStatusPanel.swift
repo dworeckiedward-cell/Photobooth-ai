@@ -22,7 +22,7 @@ struct CloudStatusPanel: View {
             HStack(spacing: BoothifySpacing.xs) {
                 Image(systemName: "icloud.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.amber)
+                    .foregroundStyle(BoothifyTheme.violet)
                 Text("Cloud status")
                     .font(BoothifyType.captionEmphasis)
                     .foregroundStyle(BoothifyTheme.textSecondary)
@@ -38,7 +38,7 @@ struct CloudStatusPanel: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(refreshing ? BoothifyTheme.amber : BoothifyTheme.textTertiary)
+                        .foregroundStyle(refreshing ? BoothifyTheme.violet : BoothifyTheme.textTertiary)
                         .rotationEffect(refreshing ? .degrees(360) : .zero)
                         .animation(
                             reduceMotion ? nil : (refreshing
@@ -80,7 +80,7 @@ struct CloudStatusPanel: View {
                 // Counter grid
                 HStack(spacing: BoothifySpacing.xs) {
                     counter("Queued", count: status.queued, tint: BoothifyTheme.textTertiary, symbol: "clock.fill")
-                    counter("Uploading", count: status.uploading, tint: BoothifyTheme.amber, symbol: "icloud.and.arrow.up.fill")
+                    counter("Uploading", count: status.uploading, tint: BoothifyTheme.violet, symbol: "icloud.and.arrow.up.fill")
                     counter("Done", count: status.done, tint: BoothifyTheme.emerald, symbol: "checkmark.seal.fill")
                     counter("Sent", count: status.sent, tint: BoothifyTheme.emerald, symbol: "paperplane.fill")
                 }
@@ -107,7 +107,7 @@ struct CloudStatusPanel: View {
                                     .fill(BoothifyTheme.surface2)
                                     .frame(height: 6)
                                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(BoothifyTheme.amber)
+                                    .fill(BoothifyTheme.violet)
                                     .frame(width: geo.size.width * progress, height: 6)
                                     .animation(.spring(response: 0.5), value: progress)
                             }

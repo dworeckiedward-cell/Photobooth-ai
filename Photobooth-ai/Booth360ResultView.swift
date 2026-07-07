@@ -158,7 +158,7 @@ struct Booth360ResultView: View {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
-        .shadow(color: BoothifyTheme.amber.opacity(0.25), radius: 22, y: 12)
+        .shadow(color: BoothifyTheme.violet.opacity(0.25), radius: 22, y: 12)
     }
 
     private func durationLabel(job: Booth360Job) -> String {
@@ -211,7 +211,7 @@ struct Booth360ResultView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
                                 .fill(BoothifyTheme.surface2)
-                            ProgressView().tint(BoothifyTheme.amber)
+                            ProgressView().tint(BoothifyTheme.violet)
                         }
                     }
                 }
@@ -236,7 +236,7 @@ struct Booth360ResultView: View {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.caption2.weight(.bold))
                         }
-                        .foregroundStyle(BoothifyTheme.amber)
+                        .foregroundStyle(BoothifyTheme.violet)
                         .padding(.top, 4)
                     }
                 }
@@ -362,7 +362,7 @@ struct Booth360ResultView: View {
             VStack(spacing: 6) {
                 Image(systemName: symbol)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(enabled ? BoothifyTheme.amber : BoothifyTheme.textMuted)
+                    .foregroundStyle(enabled ? BoothifyTheme.violet : BoothifyTheme.textMuted)
                 Text(label)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(enabled ? .white : BoothifyTheme.textTertiary)
@@ -392,7 +392,7 @@ struct Booth360ResultView: View {
                 ProgressView()
                     .progressViewStyle(.circular)
                     .scaleEffect(0.8)
-                    .tint(BoothifyTheme.amber)
+                    .tint(BoothifyTheme.violet)
                 Text(Loc.t("Uploading — your QR already works", pl: "Wysyłanie — Twój QR już działa", de: "Wird hochgeladen — dein QR funktioniert schon"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.white)
@@ -404,10 +404,10 @@ struct Booth360ResultView: View {
                 Spacer()
             }
             .padding(12)
-            .background(BoothifyTheme.amber.opacity(0.12))
+            .background(BoothifyTheme.violet.opacity(0.12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(BoothifyTheme.amber.opacity(0.35), lineWidth: 1)
+                    .stroke(BoothifyTheme.violet.opacity(0.35), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         case .failed where !NetworkMonitor.shared.isConnected:
@@ -416,7 +416,7 @@ struct Booth360ResultView: View {
             HStack(spacing: BoothifySpacing.sm + 2) {
                 Image(systemName: "wifi.slash")
                     .font(.body)
-                    .foregroundStyle(BoothifyTheme.amber)
+                    .foregroundStyle(BoothifyTheme.violet)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(Loc.t("Queued — offline", pl: "W kolejce — brak sieci", de: "In Warteschlange — offline"))
                         .font(.footnote.weight(.semibold))
@@ -431,10 +431,10 @@ struct Booth360ResultView: View {
                 Spacer()
             }
             .padding(BoothifySpacing.sm + 4)
-            .background(BoothifyTheme.amber.opacity(0.10))
+            .background(BoothifyTheme.violet.opacity(0.10))
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                    .stroke(BoothifyTheme.amber.opacity(0.30), lineWidth: 1)
+                    .stroke(BoothifyTheme.violet.opacity(0.30), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
         case .failed:
@@ -461,10 +461,10 @@ struct Booth360ResultView: View {
                     Label(Loc.t("Send again", pl: "Wyślij ponownie", de: "Erneut senden"), systemImage: "arrow.clockwise")
                         .font(.footnote.weight(.semibold))
                         .labelStyle(.titleAndIcon)
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(BoothifyTheme.amber, in: Capsule())
+                        .background(BoothifyTheme.violet, in: Capsule())
                 }
                 .buttonStyle(.plain)
             }
@@ -591,10 +591,10 @@ private struct AnimatedDemoPreviewCard: View {
             // Sweeping gradient that loops, evoking a cinematic 360 reel
             AngularGradient(
                 colors: [
-                    BoothifyTheme.amber.opacity(0.70),
+                    BoothifyTheme.violet.opacity(0.70),
                     BoothifyTheme.violet.opacity(0.80),
                     BoothifyTheme.bg,
-                    BoothifyTheme.amber.opacity(0.70),
+                    BoothifyTheme.violet.opacity(0.70),
                 ],
                 center: .center
             )

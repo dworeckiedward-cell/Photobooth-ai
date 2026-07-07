@@ -144,7 +144,7 @@ struct AppLoadingState: View {
         VStack(spacing: BoothifySpacing.sm) {
             ProgressView()
                 .progressViewStyle(.circular)
-                .tint(BoothifyTheme.amber)
+                .tint(BoothifyTheme.violet)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(BoothifyTheme.textMuted)

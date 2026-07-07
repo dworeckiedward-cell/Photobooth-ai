@@ -460,7 +460,7 @@ struct IdleReminderBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "hand.wave.fill")
-                .foregroundStyle(BoothifyTheme.amber)
+                .foregroundStyle(BoothifyTheme.violet)
             Text("Still there? Tap the shutter when you're ready.")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.white)

@@ -8,9 +8,11 @@ enum BoothifyTheme {
     // Atmospheric Glass (UI v2): the deep violet/indigo stage every screen
     // floats on, plus the solid surface glass degrades to under
     // Reduce Transparency.
-    static let bgDeep      = Color(red: 0.055, green: 0.045, blue: 0.11) // deep indigo-violet
-    static let bgElevated  = Color(red: 0.10, green: 0.09, blue: 0.16)   // solid glass fallback
-    static let indigoGlow  = Color(red: 0.24, green: 0.20, blue: 0.55)   // mesh pool hue
+    // Black era: the stage is near-black with only a whisper of violet
+    // (bento reference) — no more saturated indigo mesh.
+    static let bgDeep      = Color(red: 0.031, green: 0.020, blue: 0.059) // near-black, violet cast
+    static let bgElevated  = Color(red: 0.08, green: 0.07, blue: 0.12)    // solid glass fallback
+    static let indigoGlow  = Color(red: 0.24, green: 0.20, blue: 0.55)    // mesh pool hue (dim use only)
     static let surface1    = Color.white.opacity(0.05)
     static let surface2    = Color.white.opacity(0.08)
     static let surfaceLine = Color.white.opacity(0.10)
@@ -110,16 +112,23 @@ struct AccentButtonStyle: ButtonStyle {
     }
 }
 
-/// Amber hero CTA — THE glowing action of a screen (Atmospheric Glass).
-/// Black-on-amber capsule; pair with `.glowAccent()` and keep it to one
+/// Accent hero CTA — THE glowing action of a screen (black era: violet).
+/// White-on-violet capsule; pair with `.glowAccent()` and keep it to one
 /// per screen — the accent is scarce by design.
-struct AmberCTAButtonStyle: ButtonStyle {
+struct AccentCTAButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(BoothifyType.bodyEmphasis)
-            .foregroundStyle(.black)
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 56)
-            .background(BoothifyTheme.amber.opacity(configuration.isPressed ? 0.85 : 1), in: Capsule())
+            .background(
+                LinearGradient(
+                    colors: [BoothifyTheme.violet, BoothifyTheme.violet.opacity(0.78)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .opacity(configuration.isPressed ? 0.85 : 1),
+                in: Capsule()
+            )
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }

@@ -73,8 +73,8 @@ struct Booth360RecordingView: View {
                              : Loc.t("Get ready", pl: "Przygotuj się", de: "Mach dich bereit"))
                             .font(.title2.weight(.heavy))
                             .kerning(1.5)
-                            .foregroundStyle(countdown == 1 ? BoothifyTheme.amber : .white.opacity(0.85))
-                            .shadow(color: countdown == 1 ? BoothifyTheme.amber.opacity(0.8) : .clear, radius: 18)
+                            .foregroundStyle(countdown == 1 ? BoothifyTheme.violet : .white.opacity(0.85))
+                            .shadow(color: countdown == 1 ? BoothifyTheme.violet.opacity(0.8) : .clear, radius: 18)
                             .textCase(.uppercase)
                             .transition(.opacity)
                             .id("cue-\(countdown)")
@@ -187,7 +187,7 @@ struct Booth360RecordingView: View {
         HStack(spacing: 8) {
             Image(systemName: "rotate.3d")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.amber)
+                .foregroundStyle(BoothifyTheme.violet)
             Text(Loc.t("Keep the pose — you're spinning!", pl: "Trzymaj pozę — kręcisz się!", de: "Pose halten — du drehst dich!"))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.white)
@@ -251,7 +251,7 @@ struct Booth360RecordingView: View {
                 Text(hasSoundtrack ? "Track" : "Music")
                     .font(.caption2.weight(.semibold))
             }
-            .foregroundStyle(hasSoundtrack ? BoothifyTheme.amber : .white)
+            .foregroundStyle(hasSoundtrack ? BoothifyTheme.violet : .white)
             .frame(width: 64, height: 64)
             .background(.black.opacity(0.4))
             .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
@@ -356,7 +356,7 @@ struct Booth360RecordingView: View {
                 if recording {
                     Circle()
                         .trim(from: 0, to: min(1.0, recordingElapsed / duration))
-                        .stroke(BoothifyTheme.amber, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .stroke(BoothifyTheme.violet, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .frame(width: 92, height: 92)
                         .animation(reduceMotion ? nil : .linear(duration: 0.1), value: recordingElapsed)
@@ -396,7 +396,7 @@ struct Booth360RecordingView: View {
             VStack(spacing: 16) {
                 Image(systemName: "video.slash")
                     .font(.system(size: 48, weight: .bold))
-                    .foregroundStyle(BoothifyTheme.amber)
+                    .foregroundStyle(BoothifyTheme.violet)
                     .accessibilityHidden(true)
                 Text("Camera permission needed")
                     .font(.title2.bold())
@@ -636,7 +636,7 @@ private struct QuickPresetsSheet: View {
                             HStack(spacing: 12) {
                                 Image(systemName: preset.symbol)
                                     .frame(width: 22)
-                                    .foregroundStyle(BoothifyTheme.amber)
+                                    .foregroundStyle(BoothifyTheme.violet)
                                 Text(preset.label)
                                     .foregroundStyle(.white)
                                 Spacer()

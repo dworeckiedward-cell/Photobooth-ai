@@ -29,7 +29,7 @@ struct SettingsHubView: View {
                     // Identity — light glass, amber aperture.
                     if let event {
                         HStack(spacing: BoothifySpacing.md) {
-                            AppIconBadge(symbol: "camera.aperture", color: BoothifyTheme.amber, size: 48)
+                            AppIconBadge(symbol: "camera.aperture", color: BoothifyTheme.violet, size: 48)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(event.name)
                                     .font(.headline)
@@ -179,8 +179,8 @@ enum SettingsBadge: Hashable {
     var tint: Color {
         switch self {
         case .available: BoothifyTheme.emerald
-        case .demo:      BoothifyTheme.amber
-        case .beta:      BoothifyTheme.amber
+        case .demo:      BoothifyTheme.violet
+        case .beta:      BoothifyTheme.violet
         }
     }
 }
@@ -202,7 +202,7 @@ struct SettingsRow: View {
                         .frame(width: 32, height: 32)
                     Image(systemName: icon)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(disabled ? BoothifyTheme.textMuted : BoothifyTheme.amber)
+                        .foregroundStyle(disabled ? BoothifyTheme.textMuted : BoothifyTheme.violet)
                 }
                 .accessibilityHidden(true)
 
@@ -265,7 +265,7 @@ struct ComingSoonView: View {
                         )
                     Image(systemName: "clock.badge.questionmark")
                         .font(.title2.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.amber)
+                        .foregroundStyle(BoothifyTheme.violet)
                         .accessibilityHidden(true)
                 }
                 VStack(spacing: BoothifySpacing.xs) {

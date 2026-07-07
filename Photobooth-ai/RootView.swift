@@ -297,11 +297,11 @@ private struct AppSettingsView: View {
                     HStack(spacing: BoothifySpacing.md) {
                         ZStack {
                             Circle()
-                                .fill(BoothifyTheme.amber.opacity(0.16))
+                                .fill(BoothifyTheme.violet.opacity(0.16))
                                 .frame(width: 56, height: 56)
                             Text(String(displayName.prefix(1)))
                                 .font(.title2.weight(.bold))
-                                .foregroundStyle(BoothifyTheme.amber)
+                                .foregroundStyle(BoothifyTheme.violet)
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(displayName)
@@ -345,11 +345,11 @@ private struct AppSettingsView: View {
                                     .font(.caption.weight(.bold))
                                     .kerning(0.4)
                             }
-                            .foregroundStyle(isPaid ? BoothifyTheme.amber : BoothifyTheme.textSecondary)
+                            .foregroundStyle(isPaid ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background((isPaid ? BoothifyTheme.amber : BoothifyTheme.textMuted).opacity(0.15), in: Capsule())
-                            .overlay(Capsule().stroke((isPaid ? BoothifyTheme.amber : BoothifyTheme.textMuted).opacity(0.35), lineWidth: 0.8))
+                            .background((isPaid ? BoothifyTheme.violet : BoothifyTheme.textMuted).opacity(0.15), in: Capsule())
+                            .overlay(Capsule().stroke((isPaid ? BoothifyTheme.violet : BoothifyTheme.textMuted).opacity(0.35), lineWidth: 0.8))
                             Image(systemName: "chevron.right")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(BoothifyTheme.textMuted)
@@ -505,7 +505,7 @@ private struct AppSettingsView: View {
                 .frame(width: 32, height: 32)
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.amber)
+                .foregroundStyle(BoothifyTheme.violet)
         }
         .accessibilityHidden(true)
     }

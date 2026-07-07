@@ -61,7 +61,7 @@ struct CameraSettingsView: View {
                     if let cropText = current.cropPreviewText {
                         Text("\(cropText) — stabilization trades frame edges for smoothness.")
                             .font(.caption)
-                            .foregroundStyle(BoothifyTheme.amber)
+                            .foregroundStyle(BoothifyTheme.violet)
                             .padding(.top, 2)
                     }
                     if !supported.contains(current) && current != .off {
@@ -241,7 +241,7 @@ struct AI360SettingsView: View {
                     } label: {
                         HStack(spacing: BoothifySpacing.sm) {
                             Image(systemName: "slider.horizontal.below.rectangle")
-                                .foregroundStyle(BoothifyTheme.amber)
+                                .foregroundStyle(BoothifyTheme.violet)
                                 .frame(width: 22)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Capture timeline")
@@ -332,13 +332,13 @@ struct SharingSettingsView: View {
                             HStack(spacing: BoothifySpacing.sm + 2) {
                                 Image(systemName: ch.symbol)
                                     .frame(width: 22)
-                                    .foregroundStyle(BoothifyTheme.amber)
+                                    .foregroundStyle(BoothifyTheme.violet)
                                 Text(ch.label)
                                     .foregroundStyle(.white)
                                     .font(.subheadline)
                             }
                         }
-                        .tint(BoothifyTheme.amber)
+                        .tint(BoothifyTheme.violet)
                     }
                 }
 
@@ -416,10 +416,10 @@ struct EmailSMSSettingsView: View {
                     HStack(spacing: BoothifySpacing.sm) {
                         ZStack {
                             RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
-                                .fill(twilioConfigured ? BoothifyTheme.emerald.opacity(0.15) : BoothifyTheme.amber.opacity(0.15))
+                                .fill(twilioConfigured ? BoothifyTheme.emerald.opacity(0.15) : BoothifyTheme.violet.opacity(0.15))
                                 .frame(width: 40, height: 40)
                             Image(systemName: twilioConfigured ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right.slash")
-                                .foregroundStyle(twilioConfigured ? BoothifyTheme.emerald : BoothifyTheme.amber)
+                                .foregroundStyle(twilioConfigured ? BoothifyTheme.emerald : BoothifyTheme.violet)
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Twilio SMS")
@@ -648,7 +648,7 @@ private struct SettingsToggle: View {
         Toggle(isOn: isOn) {
             Text(title).font(.subheadline).foregroundStyle(.white)
         }
-        .tint(BoothifyTheme.amber)
+        .tint(BoothifyTheme.violet)
     }
 }
 
@@ -732,10 +732,10 @@ private struct SettingsSlider: View {
             LabeledRow(title, value: valueLabel)
             if step > 0 {
                 Slider(value: value, in: range, step: step)
-                    .tint(BoothifyTheme.amber)
+                    .tint(BoothifyTheme.violet)
             } else {
                 Slider(value: value, in: range)
-                    .tint(BoothifyTheme.amber)
+                    .tint(BoothifyTheme.violet)
             }
         }
     }

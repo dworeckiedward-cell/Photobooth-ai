@@ -134,7 +134,7 @@ struct Booth360ProcessingView: View {
                 .multilineTextAlignment(.center)
             Text(currentStepLabel)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(BoothifyTheme.amber)
+                .foregroundStyle(BoothifyTheme.violet)
                 .multilineTextAlignment(.center)
                 .animation(reduceMotion ? nil : BoothifyMotion.gentle, value: job?.currentStep)
         }
@@ -157,7 +157,7 @@ struct Booth360ProcessingView: View {
                 .trim(from: 0, to: progressFraction)
                 .stroke(
                     AngularGradient(
-                        colors: [BoothifyTheme.amber.opacity(0.35), BoothifyTheme.amber, BoothifyTheme.amber],
+                        colors: [BoothifyTheme.violet.opacity(0.35), BoothifyTheme.violet, BoothifyTheme.violet],
                         center: .center
                     ),
                     style: StrokeStyle(lineWidth: 12, lineCap: .round)
@@ -198,8 +198,8 @@ struct Booth360ProcessingView: View {
 
     private func dotColor(idx: Int, step: Booth360ProcessingStep) -> Color {
         switch stepState(idx: idx, step: step) {
-        case .done:    BoothifyTheme.amber.opacity(0.9)
-        case .active:  BoothifyTheme.amber
+        case .done:    BoothifyTheme.violet.opacity(0.9)
+        case .active:  BoothifyTheme.violet
         case .pending: BoothifyTheme.surface2
         }
     }
@@ -216,7 +216,7 @@ struct Booth360ProcessingView: View {
         HStack(spacing: 8) {
             Image(systemName: processingTips[tipIndex].symbol)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.amber)
+                .foregroundStyle(BoothifyTheme.violet)
             Text(processingTips[tipIndex].text)
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(BoothifyTheme.textSecondary)

@@ -47,27 +47,14 @@ struct AtmosphericBackground: View {
         .accessibilityHidden(true)
     }
 
-    /// Deep violet/indigo mesh: three soft radial pools + one warm whisper.
+    /// Black era: a truly dark stage — only a faint violet pool at the top
+    /// edge (bento reference), so calendar/settings read as black screens.
     /// Static by design — atmosphere breathes through space, not motion.
     private var mesh: some View {
-        ZStack {
-            RadialGradient(
-                colors: [BoothifyTheme.indigoGlow.opacity(0.55), .clear],
-                center: .init(x: 0.15, y: 0.10), startRadius: 0, endRadius: 480
-            )
-            RadialGradient(
-                colors: [BoothifyTheme.violet.opacity(0.22), .clear],
-                center: .init(x: 0.9, y: 0.35), startRadius: 0, endRadius: 420
-            )
-            RadialGradient(
-                colors: [BoothifyTheme.indigoGlow.opacity(0.35), .clear],
-                center: .init(x: 0.5, y: 1.05), startRadius: 0, endRadius: 560
-            )
-            RadialGradient(
-                colors: [BoothifyTheme.amber.opacity(0.07), .clear],
-                center: .init(x: 0.8, y: 0.9), startRadius: 0, endRadius: 380
-            )
-        }
+        RadialGradient(
+            colors: [BoothifyTheme.indigoGlow.opacity(0.20), .clear],
+            center: .init(x: 0.5, y: 0.0), startRadius: 0, endRadius: 460
+        )
         .ignoresSafeArea()
     }
 }
@@ -121,7 +108,7 @@ extension View {
 /// per screen — the accent is scarce by design. Static (no pulsing here;
 /// screens that pulse already guard reduce-motion).
 struct GlowAccent: ViewModifier {
-    var color: Color = BoothifyTheme.amber
+    var color: Color = BoothifyTheme.violet
     /// 0…1 — how loud the glow is. 0.35 whisper, 0.7 hero.
     var intensity: Double = 0.5
 
@@ -138,7 +125,7 @@ struct GlowAccent: ViewModifier {
 }
 
 extension View {
-    func glowAccent(color: Color = BoothifyTheme.amber, intensity: Double = 0.5) -> some View {
+    func glowAccent(color: Color = BoothifyTheme.violet, intensity: Double = 0.5) -> some View {
         modifier(GlowAccent(color: color, intensity: intensity))
     }
 }

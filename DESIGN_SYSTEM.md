@@ -36,15 +36,23 @@ Statyczna (pulsowanie tylko tam, gdzie już było, za guardem reduce-motion).
 ## Tokeny dodane
 | Token | Wartość | Rola |
 |---|---|---|
-| `BoothifyTheme.bgDeep` | 0.055/0.045/0.11 | baza atmosfery (indygo-fiolet) |
-| `BoothifyTheme.bgElevated` | 0.10/0.09/0.16 | solidny fallback szkła |
-| `BoothifyTheme.indigoGlow` | 0.24/0.20/0.55 | pole mesh-u |
+| `BoothifyTheme.bgDeep` | 0.031/0.020/0.059 | niemal-czarna scena (era czarna) |
+| `BoothifyTheme.bgElevated` | 0.08/0.07/0.12 | solidny fallback szkła |
+| `BoothifyTheme.indigoGlow` | 0.24/0.20/0.55 | nikły pool przy górnej krawędzi |
 | `BoothifyTheme.recording` | 0.94/0.20/0.20 | czerwień REC (z biegu v1) |
 | `BoothifyType.hero` | largeTitle **heavy** | jedna dominująca linia ekranu |
 
-## Paleta — role
-- **Fiolet/indygo** = atmosfera (tło, mesh). NIE akcent interakcji.
-- **Amber** = akcent (CTA, glow, badge 360, aktywne stany). Oszczędnie.
+## Paleta — role (ERA CZARNA, decyzja operatora 2026-07-07)
+- **Tło = czerń.** `bgDeep` niemal czysta czerń; atmosfera to JEDEN nikły
+  fioletowy pool u góry. Kalendarz i ustawienia czytają się jako czarne ekrany.
+- **Fiolet (violet-500) = JEDYNY akcent interakcji** (CTA, glow, ikony,
+  badge, liczniki). CTA: `AccentCTAButtonStyle` — biały tekst na fioletowym
+  gradiencie.
+- **Amber = WYCOFANY z UI.** Token istnieje wyłącznie dla semantyki
+  `warning`; nie używać jako akcentu.
+- **Home = wyjątek tła**: pełnoekranowy ambientowy klip budki
+  (`BoothAmbient.mp4` przez `AmbientVideoView`) pod scrimem czytelności;
+  Reduce Motion / brak asseta -> czarna atmosfera.
 - Biel/biel-z-opacity = tekst wg hierarchii; tokeny textSecondary/Tertiary/Muted.
 - `fuchsia`/`pink` = legacy, nieużywane w nowym UI (komentarz w Theme).
 

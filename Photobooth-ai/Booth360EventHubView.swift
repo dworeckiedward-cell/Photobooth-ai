@@ -28,7 +28,7 @@ struct Booth360EventHubView: View {
             HStack(spacing: BoothifySpacing.sm + 2) {
                 Image(systemName: "lock.display")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.amber)
+                    .foregroundStyle(BoothifyTheme.violet)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Start Kiosk Mode")
                         .font(.subheadline.weight(.semibold))
@@ -70,13 +70,13 @@ struct Booth360EventHubView: View {
                                     .font(.caption)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            .foregroundStyle(BoothifyTheme.amber)
+                            .foregroundStyle(BoothifyTheme.violet)
                             .padding(BoothifySpacing.md)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(BoothifyTheme.amber.opacity(0.10), in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
+                            .background(BoothifyTheme.violet.opacity(0.10), in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                                    .stroke(BoothifyTheme.amber.opacity(0.30), lineWidth: 1)
+                                    .stroke(BoothifyTheme.violet.opacity(0.30), lineWidth: 1)
                             )
                             .accessibilityLabel("Performance warning: \(warning)")
                         }
@@ -143,21 +143,21 @@ struct Booth360EventHubView: View {
             HStack(spacing: 6) {
                 ZStack {
                     Circle()
-                        .fill(BoothifyTheme.amber.opacity(0.25))
+                        .fill(BoothifyTheme.violet.opacity(0.25))
                         .frame(width: 10, height: 10)
                     Circle()
-                        .fill(BoothifyTheme.amber)
+                        .fill(BoothifyTheme.violet)
                         .frame(width: 6, height: 6)
                 }
                 .accessibilityHidden(true)
                 Text("360 event")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.amber)
+                    .foregroundStyle(BoothifyTheme.violet)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(BoothifyTheme.amber.opacity(0.10), in: Capsule())
-            .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.30), lineWidth: 1))
+            .background(BoothifyTheme.violet.opacity(0.10), in: Capsule())
+            .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.30), lineWidth: 1))
 
             Spacer()
 
@@ -217,11 +217,11 @@ struct Booth360EventHubView: View {
                                     .font(.caption2.weight(.bold))
                                     .kerning(0.6)
                             }
-                            .foregroundStyle(BoothifyTheme.amber)
+                            .foregroundStyle(BoothifyTheme.violet)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background(BoothifyTheme.amber.opacity(0.18), in: Capsule())
-                            .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.55), lineWidth: 0.8))
+                            .background(BoothifyTheme.violet.opacity(0.18), in: Capsule())
+                            .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.55), lineWidth: 0.8))
                         }
                         .padding(BoothifySpacing.md)
                     }
@@ -241,7 +241,7 @@ struct Booth360EventHubView: View {
                         Image(systemName: "arrow.right")
                             .font(.subheadline.weight(.semibold))
                     }
-                    .foregroundStyle(BoothifyTheme.amber)
+                    .foregroundStyle(BoothifyTheme.violet)
                     .padding(.top, 4)
                 }
                 .padding(BoothifySpacing.md)
@@ -321,7 +321,7 @@ struct Booth360EventHubView: View {
             ZStack {
                 BoothifyTheme.surface2
                 if !job.status.isTerminal {
-                    ProgressView().tint(BoothifyTheme.amber)
+                    ProgressView().tint(BoothifyTheme.violet)
                 } else if job.status == .completed {
                     Image(systemName: "play.fill")
                         .font(.title3.weight(.bold))
@@ -358,7 +358,7 @@ struct Booth360EventHubView: View {
         switch job.status {
         case .completed: BoothifyTheme.emerald
         case .failed:    BoothifyTheme.error
-        default:         BoothifyTheme.amber
+        default:         BoothifyTheme.violet
         }
     }
 
@@ -372,7 +372,7 @@ struct Booth360EventHubView: View {
             statDivider
             inlineStat(label: "Ready", value: "\(completed.count)", tint: completed.isEmpty ? nil : BoothifyTheme.emerald)
             statDivider
-            inlineStat(label: "Processing", value: "\(processing.count)", tint: processing.isEmpty ? nil : BoothifyTheme.amber)
+            inlineStat(label: "Processing", value: "\(processing.count)", tint: processing.isEmpty ? nil : BoothifyTheme.violet)
         }
         .padding(.vertical, BoothifySpacing.xs)
         .opacity(zero ? 0.55 : 1.0)
@@ -411,7 +411,7 @@ struct Booth360EventHubView: View {
                         .frame(width: 40, height: 40)
                     Image(systemName: "link")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(hasUrl ? BoothifyTheme.amber : BoothifyTheme.textMuted)
+                        .foregroundStyle(hasUrl ? BoothifyTheme.violet : BoothifyTheme.textMuted)
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Share event")
