@@ -16,7 +16,6 @@ struct Booth360ResultView: View {
     @State private var qrPresented: Bool = false
     @State private var smsPresented: Bool = false   // BM2
     @State private var copiedLink: Bool = false
-    @State private var saveToast: String? = nil
 
     private var job: Booth360Job? { app.job(id: jobId) }
 
@@ -46,9 +45,6 @@ struct Booth360ResultView: View {
                         }
 
                     metadataLine(job: job)
-                        .padding(.horizontal, BoothifySpacing.md)
-
-                    qrHeroCard(job: job)
                         .padding(.horizontal, BoothifySpacing.md)
 
                     // BM1: per-job upload-status row. Hidden when uploaded
@@ -115,20 +111,6 @@ struct Booth360ResultView: View {
                     .presentationDetents([.medium])
             }
         }
-        // IM1: lightweight "Saved to Photos" toast over the fixed layout.
-        .overlay(alignment: .top) {
-            if let saveToast {
-                Text(saveToast)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.black.opacity(0.75), in: Capsule())
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(BoothifyMotion.bouncy, value: saveToast)   // RA5
     }
 
     // MARK: - Preview card (animated placeholder)
@@ -186,80 +168,6 @@ struct Booth360ResultView: View {
             .frame(maxWidth: .infinity)
     }
 
-    // MARK: - QR hero (the delivery wow moment)
-    //
-    // Phase 7 deferred-resolve: the public link exists from SIGN time — the
-    // code is scannable the moment there IS a link, even mid-upload. Tapping
-    // the card opens the full-size QR sheet for scanning from a distance.
-
-    @ViewBuilder
-    private func qrHeroCard(job: Booth360Job) -> some View {
-        let linkReady = job.publicShareURL != nil
-
-        Button {
-            guard linkReady else { return }
-            Haptics.tap()
-            SentryClient.shared.breadcrumb("qr opened", category: "share",
-                data: ["job_id": String(job.id.uuidString.prefix(8))])
-            qrPresented = true
-        } label: {
-            HStack(spacing: BoothifySpacing.md) {
-                Group {
-                    if linkReady, let url = job.publicShareURL {
-                        QRCodeView(url: url)
-                    } else {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
-                                .fill(BoothifyTheme.surface2)
-                            ProgressView().tint(BoothifyTheme.violet)
-                        }
-                    }
-                }
-                .frame(width: 108, height: 108)
-                .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(Loc.t("Scan to get your video", pl: "Zeskanuj i odbierz wideo", de: "Scannen und Video erhalten"))
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(linkReady
-                         ? Loc.t("Point your camera at the code", pl: "Wyceluj aparat w kod", de: "Richte die Kamera auf den Code")
-                         : Loc.t("Getting your link ready…", pl: "Przygotowuję Twój link…", de: "Dein Link wird vorbereitet…"))
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if linkReady {
-                        HStack(spacing: 4) {
-                            Text(Loc.t("Show full screen", pl: "Pokaż na cały ekran", de: "Groß anzeigen"))
-                                .font(.caption.weight(.semibold))
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.caption2.weight(.bold))
-                        }
-                        .foregroundStyle(BoothifyTheme.violet)
-                        .padding(.top, 4)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(BoothifySpacing.sm + 4)
-            // Rich glassmorphism — the delivery hero gets the violet-lit pane.
-            .background(
-                LinearGradient(
-                    colors: [BoothifyTheme.indigoGlow.opacity(0.30), BoothifyTheme.violet.opacity(0.08)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ),
-                in: RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
-            )
-            .glassSurface(radius: BoothifyRadius.hero)
-            .glowAccent(intensity: linkReady ? 0.4 : 0.12)
-        }
-        .buttonStyle(.plain)
-        .disabled(!linkReady)
-        .accessibilityLabel(Loc.t("QR code — scan to get your video", pl: "Kod QR — zeskanuj i odbierz wideo", de: "QR-Code — scannen und Video erhalten"))
-        .accessibilityHint(Loc.t("Opens the code full screen", pl: "Otwiera kod na całym ekranie", de: "Zeigt den Code im Vollbild"))
-    }
-
     // MARK: - Quiet action row (share / SMS / copy / save)
     //
     // IM1: Share is a native `ShareLink` so AirDrop, Messages, WhatsApp, Mail
@@ -269,7 +177,6 @@ struct Booth360ResultView: View {
 
     private func actionRow(job: Booth360Job) -> some View {
         let linkReady = job.publicShareURL != nil
-        let hasVideo = job.finalVideoURL != nil
 
         return HStack(spacing: BoothifySpacing.sm) {
             if linkReady, let url = job.publicShareURL {
@@ -314,9 +221,11 @@ struct Booth360ResultView: View {
                     }
                 }
             }
-            quietAction(symbol: "arrow.down.to.line", label: Loc.t("Save", pl: "Zapisz", de: "Sichern"), enabled: hasVideo) {
+            quietAction(symbol: "qrcode", label: Loc.t("QR", pl: "QR", de: "QR"), enabled: linkReady) {
                 Haptics.tap()
-                if let url = job.finalVideoURL { saveVideoToLibrary(url) }
+                SentryClient.shared.breadcrumb("qr opened", category: "share",
+                    data: ["job_id": String(job.id.uuidString.prefix(8))])
+                qrPresented = true
             }
         }
     }
@@ -342,44 +251,6 @@ struct Booth360ResultView: View {
     private func quietAction(symbol: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             quietActionLabel(symbol: symbol, label: label, enabled: enabled)
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-    }
-
-    /// Save the rendered .mp4 (M0 raw / IM0 montage) to Photos. Uses
-    /// UISaveVideoAtPathToSavedPhotosAlbum which requires NSPhotoLibraryAdd
-    /// (already declared) and the file to be local.
-    private func saveVideoToLibrary(_ url: URL) {
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            saveToast = Loc.t("File not found", pl: "Nie znaleziono pliku", de: "Datei nicht gefunden")
-            return
-        }
-        UISaveVideoAtPathToSavedPhotosAlbum(url.path, nil, nil, nil)
-        saveToast = Loc.t("Saved to Photos", pl: "Zapisano w Zdjęciach", de: "In Fotos gesichert")
-        Haptics.notify(.success)
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
-            saveToast = nil
-        }
-    }
-
-    @ViewBuilder
-    private func actionTile(symbol: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(enabled ? BoothifyTheme.violet : BoothifyTheme.textMuted)
-                Text(label)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(enabled ? .white : BoothifyTheme.textTertiary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .padding(.vertical, BoothifySpacing.sm)
-            .glassSurface(radius: BoothifyRadius.tile)
-            .opacity(enabled ? 1.0 : 0.55)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
