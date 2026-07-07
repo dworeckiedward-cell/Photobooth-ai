@@ -9,7 +9,9 @@ import AVKit
 /// confirms (RA0 + P2).
 struct Booth360ResultView: View {
     @Environment(AppState.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let jobId: UUID
+    @State private var revealed = false
 
     @State private var qrPresented: Bool = false
     @State private var smsPresented: Bool = false   // BM2
@@ -31,6 +33,13 @@ struct Booth360ResultView: View {
                     previewCard(job: job)
                         .padding(.horizontal, 16)
                         .frame(maxHeight: .infinity)
+                        // Reveal beat — the guest's "wow" moment gets an
+                        // entrance instead of just being there.
+                        .scaleEffect(revealed || reduceMotion ? 1 : 0.94)
+                        .opacity(revealed || reduceMotion ? 1 : 0)
+                        .onAppear {
+                            withAnimation(reduceMotion ? nil : BoothifyMotion.bouncy) { revealed = true }
+                        }
 
                     metadataChips(job: job)
                         .padding(.horizontal, 16)
@@ -50,13 +59,13 @@ struct Booth360ResultView: View {
                 }
                 .padding(.top, 12)
             } else {
-                VStack {
-                    Spacer()
-                    Text("Job not found")
-                        .font(.body)
-                        .foregroundStyle(BoothifyTheme.textSecondary)
-                    Spacer()
-                }
+                BoothifyEmptyState(
+                    icon: "video.slash",
+                    title: Loc.t("This video is gone", pl: "Tego wideo już nie ma", de: "Dieses Video ist weg"),
+                    subtitle: Loc.t("It may have been cleared from this device. Recent clips live in the event hub.",
+                                    pl: "Mogło zostać usunięte z tego urządzenia. Ostatnie klipy znajdziesz w hubie eventu.",
+                                    de: "Es wurde eventuell von diesem Gerät entfernt. Aktuelle Clips findest du im Event-Hub.")
+                )
             }
         }
         .navigationTitle("360 Result")
@@ -81,8 +90,9 @@ struct Booth360ResultView: View {
         // the action tile is already gated. Defense against a future caller
         // toggling `qrPresented` without checking `cloudUploadStatus`.
         .sheet(isPresented: $qrPresented) {
+            // Deferred-resolve: the link is final from SIGN — show the QR even
+            // mid-upload; the page resolves when the upload lands.
             if let j = job,
-               j.cloudUploadStatus == .uploaded,
                let url = j.publicShareURL {
                 Booth360QRSheet(url: url)
                     .presentationDetents([.medium, .large])
@@ -93,7 +103,6 @@ struct Booth360ResultView: View {
         // RA0 belt-and-suspenders gate, same reason as the QR sheet above.
         .sheet(isPresented: $smsPresented) {
             if let j = job,
-               j.cloudUploadStatus == .uploaded,
                let url = j.publicShareURL {
                 Booth360SMSSheet(jobId: j.id, eventId: j.eventId, publicURL: url)
                     .presentationDetents([.medium])
@@ -190,15 +199,18 @@ struct Booth360ResultView: View {
     // Save-to-Photos re-enabled because IM0 produces a real `finalVideoURL`.
 
     private func actionGrid(job: Booth360Job) -> some View {
-        let cloudReady = job.cloudUploadStatus == .uploaded && job.publicShareURL != nil
+        // Phase 7 deferred-resolve: the public link exists from SIGN time —
+        // QR/SMS/Copy/Share unlock the moment there IS a link. The status bar
+        // below communicates that the clip is still uploading behind it.
+        let linkReady = job.publicShareURL != nil
         let hasVideo = job.finalVideoURL != nil
 
         return VStack(spacing: 10) {
             // ── Primary: Share ──────────────────────────────────────────────
-            if cloudReady, let url = job.publicShareURL {
+            if linkReady, let url = job.publicShareURL {
                 ShareLink(item: url,
-                          subject: Text("Your 360 video from Boothify"),
-                          message: Text("Check out the 360 take →")) {
+                          subject: Text(Loc.t("Your 360 video", pl: "Twoje wideo 360", de: "Dein 360-Video")),
+                          message: Text(Loc.t("Check out my 360 spin →", pl: "Zobacz mój spin 360 →", de: "Schau dir meinen 360-Spin an →"))) {
                     primaryShareLabel()
                 }
                 .buttonStyle(.plain)
@@ -219,13 +231,13 @@ struct Booth360ResultView: View {
 
             // ── Secondary: QR / SMS / Copy / Save ───────────────────────────
             HStack(spacing: 8) {
-                actionTile(symbol: "qrcode", label: "QR", enabled: cloudReady) {
+                actionTile(symbol: "qrcode", label: Loc.t("QR", pl: "QR", de: "QR"), enabled: linkReady) {
                     Haptics.tap()
                     SentryClient.shared.breadcrumb("qr opened", category: "share",
                         data: ["job_id": String(job.id.uuidString.prefix(8))])
                     qrPresented = true
                 }
-                actionTile(symbol: "message.fill", label: "SMS", enabled: cloudReady) {
+                actionTile(symbol: "message.fill", label: Loc.t("SMS", pl: "SMS", de: "SMS"), enabled: linkReady) {
                     Haptics.tap()
                     SentryClient.shared.breadcrumb("sms sheet opened", category: "share",
                         data: ["job_id": String(job.id.uuidString.prefix(8))])
@@ -233,8 +245,10 @@ struct Booth360ResultView: View {
                 }
                 actionTile(
                     symbol: copiedLink ? "checkmark" : "doc.on.doc",
-                    label: copiedLink ? "Copied" : "Copy",
-                    enabled: cloudReady
+                    label: copiedLink
+                        ? Loc.t("Copied", pl: "Skopiowano", de: "Kopiert")
+                        : Loc.t("Copy", pl: "Kopiuj", de: "Kopieren"),
+                    enabled: linkReady
                 ) {
                     Haptics.notify(.success)
                     if let url = job.publicShareURL {
@@ -246,7 +260,7 @@ struct Booth360ResultView: View {
                         }
                     }
                 }
-                actionTile(symbol: "arrow.down.to.line", label: "Save", enabled: hasVideo) {
+                actionTile(symbol: "arrow.down.to.line", label: Loc.t("Save", pl: "Zapisz", de: "Sichern"), enabled: hasVideo) {
                     Haptics.tap()
                     if let url = job.finalVideoURL { saveVideoToLibrary(url) }
                 }
@@ -263,7 +277,7 @@ struct Booth360ResultView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "video.badge.plus")
                         .font(.subheadline.weight(.semibold))
-                    Text("New take")
+                    Text(Loc.t("New take", pl: "Nowe ujęcie", de: "Neue Aufnahme"))
                         .font(.subheadline.weight(.semibold))
                 }
                 .foregroundStyle(BoothifyTheme.textSecondary)
@@ -285,7 +299,7 @@ struct Booth360ResultView: View {
         HStack(spacing: 8) {
             Image(systemName: "square.and.arrow.up")
                 .font(.body.weight(.bold))
-            Text("Share")
+            Text(Loc.t("Share", pl: "Udostępnij", de: "Teilen"))
                 .font(.body.weight(.bold))
         }
         .foregroundStyle(enabled ? .black : BoothifyTheme.textMuted)
@@ -325,11 +339,11 @@ struct Booth360ResultView: View {
     /// (already declared) and the file to be local.
     private func saveVideoToLibrary(_ url: URL) {
         guard FileManager.default.fileExists(atPath: url.path) else {
-            saveToast = "File not found"
+            saveToast = Loc.t("File not found", pl: "Nie znaleziono pliku", de: "Datei nicht gefunden")
             return
         }
         UISaveVideoAtPathToSavedPhotosAlbum(url.path, nil, nil, nil)
-        saveToast = "Saved to Photos"
+        saveToast = Loc.t("Saved to Photos", pl: "Zapisano w Zdjęciach", de: "In Fotos gesichert")
         Haptics.notify(.success)
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
@@ -379,7 +393,7 @@ struct Booth360ResultView: View {
                     .progressViewStyle(.circular)
                     .scaleEffect(0.8)
                     .tint(BoothifyTheme.amber)
-                Text("Uploading to cloud…")
+                Text(Loc.t("Uploading — your QR already works", pl: "Wysyłanie — Twój QR już działa", de: "Wird hochgeladen — dein QR funktioniert schon"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.white)
                 if job.progress > 0 {
@@ -396,6 +410,33 @@ struct Booth360ResultView: View {
                     .stroke(BoothifyTheme.amber.opacity(0.35), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        case .failed where !NetworkMonitor.shared.isConnected:
+            // No network = QUEUED, not broken. The replay fires on reconnect;
+            // the guest's QR still resolves once it lands. Calm, not alarming.
+            HStack(spacing: BoothifySpacing.sm + 2) {
+                Image(systemName: "wifi.slash")
+                    .font(.body)
+                    .foregroundStyle(BoothifyTheme.amber)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(Loc.t("Queued — offline", pl: "W kolejce — brak sieci", de: "In Warteschlange — offline"))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(Loc.t("It will upload when the connection returns. The QR keeps working.",
+                               pl: "Wyśle się, gdy wróci internet. Kod QR nadal działa.",
+                               de: "Wird hochgeladen, sobald die Verbindung zurück ist. Der QR-Code funktioniert weiter."))
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(BoothifySpacing.sm + 4)
+            .background(BoothifyTheme.amber.opacity(0.10))
+            .overlay(
+                RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                    .stroke(BoothifyTheme.amber.opacity(0.30), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
         case .failed:
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -417,7 +458,7 @@ struct Booth360ResultView: View {
                     Haptics.tap()
                     Booth360UploadQueue.shared.retry(jobId: job.id, app: app)
                 } label: {
-                    Label("Send again", systemImage: "arrow.clockwise")
+                    Label(Loc.t("Send again", pl: "Wyślij ponownie", de: "Erneut senden"), systemImage: "arrow.clockwise")
                         .font(.footnote.weight(.semibold))
                         .labelStyle(.titleAndIcon)
                         .foregroundStyle(.white)
@@ -428,10 +469,10 @@ struct Booth360ResultView: View {
                 .buttonStyle(.plain)
             }
             .padding(12)
-            .background(Color.red.opacity(0.12))
+            .background(BoothifyTheme.error.opacity(0.12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.red.opacity(0.45), lineWidth: 1)
+                    .stroke(BoothifyTheme.error.opacity(0.45), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
@@ -550,11 +591,10 @@ private struct AnimatedDemoPreviewCard: View {
             // Sweeping gradient that loops, evoking a cinematic 360 reel
             AngularGradient(
                 colors: [
-                    BoothifyTheme.amber.opacity(0.75),
-                    BoothifyTheme.fuchsia.opacity(0.85),
-                    BoothifyTheme.violet.opacity(0.85),
-                    Color(red: 0.10, green: 0.10, blue: 0.16),
-                    BoothifyTheme.amber.opacity(0.75),
+                    BoothifyTheme.amber.opacity(0.70),
+                    BoothifyTheme.violet.opacity(0.80),
+                    BoothifyTheme.bg,
+                    BoothifyTheme.amber.opacity(0.70),
                 ],
                 center: .center
             )
@@ -623,7 +663,7 @@ private struct Booth360QRSheet: View {
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("Scan to get the video")
+                Text(Loc.t("Scan to get your video", pl: "Zeskanuj i odbierz wideo", de: "Scannen und Video erhalten"))
                     .font(.title3.bold())
                     .foregroundStyle(.white)
                 Spacer()
@@ -661,7 +701,7 @@ private struct Booth360QRSheet: View {
                     withAnimation(BoothifyMotion.quickTap) { copied = false }
                 }
             } label: {
-                Label(copied ? "Copied" : "Copy link",
+                Label(copied ? Loc.t("Copied", pl: "Skopiowano", de: "Kopiert") : Loc.t("Copy link", pl: "Kopiuj link", de: "Link kopieren"),
                       systemImage: copied ? "checkmark" : "doc.on.doc")
                     .font(.subheadline.weight(.semibold))
             }
@@ -698,7 +738,7 @@ private struct Booth360SMSSheet: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Text(sent ? "SMS sent" : "Send via SMS")
+            Text(sent ? Loc.t("SMS sent", pl: "SMS wysłany", de: "SMS gesendet") : Loc.t("Send via SMS", pl: "Wyślij SMS-em", de: "Per SMS senden"))
                 .font(.title3.bold())
                 .foregroundStyle(.white)
                 .padding(.top, 20)
@@ -741,7 +781,7 @@ private struct Booth360SMSSheet: View {
                 Button {
                     send()
                 } label: {
-                    Text(sending ? "Sending…" : "Send")
+                    Text(sending ? Loc.t("Sending…", pl: "Wysyłanie…", de: "Wird gesendet…") : Loc.t("Send", pl: "Wyślij", de: "Senden"))
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(sending || phone.filter(\.isNumber).count < 7 || !twilioConfigured)
