@@ -49,10 +49,11 @@ struct SettingsHubView: View {
                         }
                         .padding(BoothifySpacing.md)
                         .glassSurface(radius: BoothifyRadius.section)
+                        .entrance(0)
                     }
 
                     // Quick Setup — the 2 most critical items for new operators.
-                    SettingsSectionCard(title: "Quick Setup") {
+                    SettingsSectionCard(title: "Quick Setup", entranceOrder: 1) {
                         SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle) {
                             app.push(.settingsCamera(eventId: eventId))
                         }
@@ -63,7 +64,7 @@ struct SettingsHubView: View {
 
                     // Set Up — rows are filtered by the current event's BoothMode so
                     // each panel stays focused on what the operator configures here.
-                    SettingsSectionCard(title: "Set Up") {
+                    SettingsSectionCard(title: "Set Up", entranceOrder: 2) {
                         SettingsRow(icon: "video.fill", title: "360 Booth", subtitle: ai360Subtitle) {
                             app.push(.settingsAI360(eventId: eventId))
                         }
@@ -75,7 +76,7 @@ struct SettingsHubView: View {
                         }
                     }
 
-                    SettingsSectionCard(title: "Sharing Add-ons") {
+                    SettingsSectionCard(title: "Sharing Add-ons", entranceOrder: 3) {
                         SettingsRow(icon: "envelope.fill", title: "Email / SMS", subtitle: "Templates & sender") {
                             app.push(.settingsEmailSMS(eventId: eventId))
                         }
@@ -96,7 +97,7 @@ struct SettingsHubView: View {
                     // Gallery & Slideshow settings now live inside Album/Gallery
                     // toolbar — intentionally NOT shown as a primary row here.
 
-                    SettingsSectionCard(title: "More") {
+                    SettingsSectionCard(title: "More", entranceOrder: 4) {
                         SettingsRow(icon: "antenna.radiowaves.left.and.right", title: "Delivery Status", subtitle: "Delivery channels") {
                             app.push(.settingsSharingStatus(eventId: eventId))
                         }

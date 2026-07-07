@@ -24,12 +24,16 @@ struct EventsCalendarView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: BoothifySpacing.lg) {
                     calendarCard
+                        .entrance(0)
 
                     selectedDaySection
+                        .entrance(1)
 
                     allEventsSection
+                        .entrance(2)
 
                     connectBanner
+                        .entrance(3)
                 }
                 .frame(maxWidth: 620)
                 .padding(.horizontal, BoothifySpacing.md)

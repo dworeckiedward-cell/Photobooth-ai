@@ -60,10 +60,12 @@ struct Booth360LandingView: View {
                     VStack(spacing: BoothifySpacing.md) {
                         greetingHeader
                             .padding(.bottom, BoothifySpacing.xs)
+                            .entrance(0)
 
                         Spacer(minLength: BoothifySpacing.xl)
 
                         startCard
+                            .entrance(1)
 
                         if let topErr = app.topLevelError {
                             Text(topErr)
@@ -74,11 +76,14 @@ struct Booth360LandingView: View {
 
                         if let current = currentEvent {
                             currentEventBanner(current)
+                                .entrance(2)
                         }
 
                         bentoRow
+                            .entrance(3)
 
                         latestEventSection
+                            .entrance(4)
                     }
                     .frame(maxWidth: 620)
                     .padding(.horizontal, BoothifySpacing.md + 2)

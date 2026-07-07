@@ -247,6 +247,37 @@ struct AppListRow: View {
     }
 }
 
+// MARK: - EntranceReveal
+/// Staggered section entrance: fade + a 14pt rise, ordered so the hero
+/// lands first and secondary blocks follow (~70ms apart). Re-arms on
+/// disappear, so every return to a tab replays the sequence. Reduce
+/// Motion shows content instantly.
+struct EntranceReveal: ViewModifier {
+    var order: Int = 0
+    @State private var shown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || reduceMotion ? 1 : 0)
+            .offset(y: shown || reduceMotion ? 0 : 14)
+            .onAppear {
+                guard !shown, !reduceMotion else { return }
+                withAnimation(.easeOut(duration: 0.38).delay(Double(order) * 0.07)) {
+                    shown = true
+                }
+            }
+            .onDisappear { shown = false }
+    }
+}
+
+extension View {
+    /// Staggered fade/rise entrance; `order` 0 = the screen's hero.
+    func entrance(_ order: Int = 0) -> some View {
+        modifier(EntranceReveal(order: order))
+    }
+}
+
 // MARK: - GlassRowBackground
 /// Glassmorphism background for `List` rows (settings detail screens):
 /// dark material + the language's diagonal sheen. Pair with
@@ -276,9 +307,19 @@ struct GlassRowBackground: View {
 /// compose these on the atmosphere instead of rendering a generic iOS list.
 struct SettingsSectionCard<Content: View>: View {
     var title: String? = nil
+    /// When set, the card joins the screen's staggered entrance sequence.
+    var entranceOrder: Int? = nil
     @ViewBuilder var content: () -> Content
 
     var body: some View {
+        if let entranceOrder {
+            core.entrance(entranceOrder)
+        } else {
+            core
+        }
+    }
+
+    private var core: some View {
         VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
             if let title {
                 Text(title.uppercased())

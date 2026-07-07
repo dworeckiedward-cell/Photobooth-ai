@@ -322,9 +322,10 @@ private struct AppSettingsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Profile, \(displayName)")
                 .accessibilityHint("Opens your profile")
+                .entrance(0)
 
                 // ── Account & Plan ───────────────────────────────────────
-                SettingsSectionCard(title: "Account & Plan") {
+                SettingsSectionCard(title: "Account & Plan", entranceOrder: 1) {
                     // Subscription tier — reflects the real StoreKit entitlement,
                     // not a hardcoded badge. Tapping opens the paywall.
                     Button {
@@ -361,7 +362,7 @@ private struct AppSettingsView: View {
                 }
 
                 // ── Booth ────────────────────────────────────────────────
-                SettingsSectionCard(title: "Booth") {
+                SettingsSectionCard(title: "Booth", entranceOrder: 2) {
                     // Full per-event configuration (camera, branding, sharing,
                     // survey, PIN…) surfaced from the main settings: opens the
                     // 360 settings hub for the live event, or the latest one.
@@ -386,7 +387,7 @@ private struct AppSettingsView: View {
                 }
 
                 // ── App ──────────────────────────────────────────────────
-                SettingsSectionCard(title: "App") {
+                SettingsSectionCard(title: "App", entranceOrder: 3) {
                     globalSettingsRow(icon: "faceid", title: "Face ID / PIN Lock", subtitle: "Protect operator panel")
                     globalSettingsRow(icon: "bell", title: "Notifications", subtitle: "Event alerts, delivery status")
                     globalSettingsRow(icon: "internaldrive", title: "Storage", subtitle: "Manage local cache")
@@ -394,7 +395,7 @@ private struct AppSettingsView: View {
                 }
 
                 // ── Support ──────────────────────────────────────────────
-                SettingsSectionCard(title: "Support") {
+                SettingsSectionCard(title: "Support", entranceOrder: 4) {
                     globalSettingsRow(icon: "questionmark.circle", title: "Help Center", subtitle: "Guides & tutorials") {
                         openURL(BoothifyAPI.shared.baseURL.appending(path: "support"))
                     }
@@ -409,7 +410,7 @@ private struct AppSettingsView: View {
                 }
 
                 // ── About ────────────────────────────────────────────────
-                SettingsSectionCard {
+                SettingsSectionCard(entranceOrder: 5) {
                     NavigationLink(destination: AboutBoothifyView()) {
                         HStack {
                             globalRowIcon("info.circle")
@@ -434,7 +435,7 @@ private struct AppSettingsView: View {
                 }
 
                 // ── Sign Out ─────────────────────────────────────────────
-                SettingsSectionCard {
+                SettingsSectionCard(entranceOrder: 6) {
                     Button(role: .destructive) {
                         Haptics.tap(.medium)
                         confirmSignOut = true
