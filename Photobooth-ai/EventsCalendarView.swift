@@ -69,6 +69,15 @@ struct EventsCalendarView: View {
             calendarGrid
         }
         .padding(BoothifySpacing.sm + 4)
+        // Rich glassmorphism: a violet tint under the pane makes the glass
+        // read clearly on the black stage (same treatment as the home hero).
+        .background(
+            LinearGradient(
+                colors: [BoothifyTheme.indigoGlow.opacity(0.30), BoothifyTheme.violet.opacity(0.08)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: BoothifyRadius.hero, style: .continuous)
+        )
         .glassSurface(radius: BoothifyRadius.hero)
     }
 

@@ -15,7 +15,11 @@ struct Booth360LandingView: View {
     @State private var createError: String? = nil
     @State private var selectedTemplate: EventTemplate? = nil
     @State private var createExpanded: Bool = false
+    @State private var scrollOffset: CGFloat = 0
     @FocusState private var nameFocused: Bool
+
+    /// 0…1 progress of the scroll-linked background effect (settles ~260pt).
+    private var scrollProgress: CGFloat { min(max(scrollOffset, 0) / 260, 1) }
 
     // MARK: - Data
 
@@ -84,7 +88,18 @@ struct Booth360LandingView: View {
                     .padding(.bottom, BoothifySpacing.md)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: geo.size.height)
+                    // Scroll tracking for the parallax background.
+                    .background(
+                        GeometryReader { inner in
+                            Color.clear.preference(
+                                key: HomeScrollOffsetKey.self,
+                                value: -inner.frame(in: .named("homeScroll")).minY
+                            )
+                        }
+                    )
                 }
+                .coordinateSpace(name: "homeScroll")
+                .onPreferenceChange(HomeScrollOffsetKey.self) { scrollOffset = $0 }
                 .refreshable { await app.loadRecentEvents() }
             }
         }
@@ -223,8 +238,13 @@ struct Booth360LandingView: View {
 
             if !reduceMotion,
                let clip = Bundle.main.url(forResource: "BoothAmbient", withExtension: "mp4") {
+                // Scroll-linked parallax: the footage rides up with the
+                // content while shrinking and dimming, so scrolling feels
+                // like the stage recedes behind the tiles.
                 AmbientVideoView(url: clip)
                     .ignoresSafeArea()
+                    .scaleEffect(1 - 0.10 * scrollProgress)
+                    .offset(y: -scrollOffset * 0.30)
                 LinearGradient(
                     stops: [
                         .init(color: .black.opacity(0.62), location: 0),
@@ -234,6 +254,8 @@ struct Booth360LandingView: View {
                     startPoint: .top, endPoint: .bottom
                 )
                 .ignoresSafeArea()
+                Color.black.opacity(0.45 * scrollProgress)
+                    .ignoresSafeArea()
             } else {
                 AtmosphericBackground()
             }
@@ -593,6 +615,15 @@ struct Booth360LandingView: View {
                 creating = false
             }
         }
+    }
+}
+
+// MARK: - Scroll offset preference
+
+private struct HomeScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

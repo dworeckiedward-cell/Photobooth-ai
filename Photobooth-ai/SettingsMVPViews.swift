@@ -29,7 +29,7 @@ private extension View {
     func mvpFormBackground() -> some View {
         self
             .scrollContentBackground(.hidden)
-            .background(BoothifyTheme.bg.ignoresSafeArea())
+            .background(AtmosphericBackground())
             .tint(BoothifyTheme.violet)
     }
 }
@@ -468,7 +468,7 @@ struct VirtualAttendantHelpSheet: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack(spacing: 12) {
@@ -641,7 +641,7 @@ struct DisclaimerConsentSheet: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             VStack(alignment: .leading, spacing: 16) {
                 Text("Before we start")
                     .font(.title2.bold())
@@ -869,7 +869,7 @@ struct PostResultSurveySheet: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             VStack(spacing: 24) {
                 VStack(spacing: 8) {
                     Image(systemName: "sparkles")
@@ -1034,7 +1034,7 @@ struct SharingStatusView: View {
                 Text("Status reflects local config. Test sends return with 360 clip delivery (per-channel tests against real endpoints).")
                     .font(.caption2)
             }
-            .listRowBackground(BoothifyTheme.surface1)
+            .listRowBackground(GlassRowBackground())
 
             Section {
                 TextField("test@example.com", text: app.mvpBinding(eventId: eventId, keyPath: \.sharing.testEmail))
@@ -1057,11 +1057,11 @@ struct SharingStatusView: View {
                 Text("Used by the Send test buttons above. Saved per event.")
                     .font(.caption2)
             }
-            .listRowBackground(BoothifyTheme.surface1)
+            .listRowBackground(GlassRowBackground())
 
         }
         .scrollContentBackground(.hidden)
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .tint(BoothifyTheme.violet)
         .navigationTitle("Delivery Status")
         .navigationBarTitleDisplayMode(.inline)
@@ -1201,7 +1201,7 @@ struct AccountSettingsView: View {
                         }
                     }
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+                .listRowBackground(GlassRowBackground())
             }
 
             Section("Event") {
@@ -1227,7 +1227,7 @@ struct AccountSettingsView: View {
                     LabeledRowInline(title: "Created", value: createdAt.formatted(date: .abbreviated, time: .shortened))
                 }
             }
-            .listRowBackground(BoothifyTheme.surface1)
+            .listRowBackground(GlassRowBackground())
 
             Section("App") {
                 LabeledRowInline(title: "Version", value: appVersion)
@@ -1260,7 +1260,7 @@ struct AccountSettingsView: View {
                     .transition(.opacity)
                 }
             }
-            .listRowBackground(BoothifyTheme.surface1)
+            .listRowBackground(GlassRowBackground())
 
             Section {
                 Button(role: .destructive) {
@@ -1270,7 +1270,7 @@ struct AccountSettingsView: View {
                     Label("Reset local settings for this event", systemImage: "arrow.counterclockwise")
                 }
             }
-            .listRowBackground(BoothifyTheme.surface1)
+            .listRowBackground(GlassRowBackground())
 
             // M2: account-level actions. Always available so the operator can
             // bail mid-event if the wrong Apple ID logged in.
@@ -1284,7 +1284,7 @@ struct AccountSettingsView: View {
                             .foregroundStyle(.white)
                     }
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+                .listRowBackground(GlassRowBackground())
 
                 Section {
                     Button(role: .destructive) {
@@ -1309,11 +1309,11 @@ struct AccountSettingsView: View {
                 } footer: {
                     Text("Removes your Boothify account and all associated events, photos and 360 recordings from our servers. This cannot be undone.")
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+                .listRowBackground(GlassRowBackground())
             }
         }
         .scrollContentBackground(.hidden)
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .tint(BoothifyTheme.violet)
         .navigationTitle("Account")
         .navigationBarTitleDisplayMode(.inline)

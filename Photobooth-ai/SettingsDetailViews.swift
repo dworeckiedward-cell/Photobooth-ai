@@ -116,7 +116,7 @@ struct CameraSettingsView: View {
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.md)
         }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .navigationTitle("Camera Settings")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -300,7 +300,7 @@ struct AI360SettingsView: View {
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.md)
         }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .navigationTitle("AI 360 Settings")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -368,7 +368,7 @@ struct SharingSettingsView: View {
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.md)
         }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .navigationTitle("Sharing")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -466,7 +466,7 @@ struct EmailSMSSettingsView: View {
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.md)
         }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .navigationTitle("Email / SMS")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $connectPresented) {
@@ -538,7 +538,7 @@ struct LockPinSettingsView: View {
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.md)
         }
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .navigationTitle("Lock PIN")
         .navigationBarTitleDisplayMode(.inline)
     }

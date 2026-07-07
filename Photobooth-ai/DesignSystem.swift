@@ -247,6 +247,29 @@ struct AppListRow: View {
     }
 }
 
+// MARK: - GlassRowBackground
+/// Glassmorphism background for `List` rows (settings detail screens):
+/// dark material + the language's diagonal sheen. Pair with
+/// `.scrollContentBackground(.hidden)` and `AtmosphericBackground` behind
+/// the List. Reduce Transparency → solid elevated surface (sheen stays).
+struct GlassRowBackground: View {
+    var body: some View {
+        ZStack {
+            if UIAccessibility.isReduceTransparencyEnabled {
+                BoothifyTheme.bgElevated
+            } else {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+            }
+            LinearGradient(
+                colors: [Color.white.opacity(0.10), Color.white.opacity(0.03)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        }
+    }
+}
+
 // MARK: - SettingsSectionCard
 /// Glass section for settings screens: a quiet uppercase eyebrow floating
 /// above a thin panel of rows. Layout-redesign primitive — settings screens
@@ -268,6 +291,15 @@ struct SettingsSectionCard<Content: View>: View {
                 .padding(.horizontal, BoothifySpacing.md)
                 .padding(.vertical, BoothifySpacing.xs + 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // Faint violet under-tint so the pane reads as glass on the
+                // black stage, not as a flat gray block.
+                .background(
+                    LinearGradient(
+                        colors: [BoothifyTheme.indigoGlow.opacity(0.16), BoothifyTheme.violet.opacity(0.04)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
+                )
                 .glassSurface(radius: BoothifyRadius.section)
         }
     }

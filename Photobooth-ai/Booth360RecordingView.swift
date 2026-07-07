@@ -648,7 +648,7 @@ private struct QuickPresetsSheet: View {
                         }
                     }
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+                .listRowBackground(GlassRowBackground())
 
                 Section {
                     Button {
@@ -662,7 +662,7 @@ private struct QuickPresetsSheet: View {
                         Label("All 360 settings…", systemImage: "gearshape.fill")
                     }
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+                .listRowBackground(GlassRowBackground())
             }
             .scrollContentBackground(.hidden)
             .navigationTitle("Quick presets")

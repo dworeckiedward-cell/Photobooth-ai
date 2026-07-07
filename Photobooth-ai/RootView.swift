@@ -360,8 +360,26 @@ private struct AppSettingsView: View {
                     .buttonStyle(.plain)
                 }
 
-                // ── Default Booth Settings ───────────────────────────────
-                SettingsSectionCard(title: "Default Booth Settings") {
+                // ── Booth ────────────────────────────────────────────────
+                SettingsSectionCard(title: "Booth") {
+                    // Full per-event configuration (camera, branding, sharing,
+                    // survey, PIN…) surfaced from the main settings: opens the
+                    // 360 settings hub for the live event, or the latest one.
+                    if let boothEvent = app.events.first(where: { $0.id == app.currentEventId }) ?? app.events.first {
+                        globalSettingsRow(
+                            icon: "slider.horizontal.3",
+                            title: "360 Advanced Settings",
+                            subtitle: boothEvent.name
+                        ) {
+                            app.push(.settings360Hub(eventId: boothEvent.id))
+                        }
+                    } else {
+                        globalSettingsRow(
+                            icon: "slider.horizontal.3",
+                            title: "360 Advanced Settings",
+                            subtitle: "Create an event first"
+                        )
+                    }
                     globalSettingsRow(icon: "camera.rotate", title: "Default Camera", subtitle: "Back · Mirrored selfie off")
                     globalSettingsRow(icon: "rosette", title: "Default Branding", subtitle: "Logo watermark off")
                     globalSettingsRow(icon: "square.and.arrow.up", title: "Default Sharing", subtitle: "Email + SMS templates")
