@@ -191,7 +191,7 @@ final class BoothifyAPI {
     /// Uses `URLSession.uploadTask(with:fromFile:)` (file-backed, NOT memory-backed)
     /// so even big takes stream off disk instead of being loaded whole. Reports
     /// progress through the optional `onProgress` callback so the UI can keep
-    /// the FFmpeg progress bar moving past the render phase.
+    /// the render progress bar moving past the render phase.
     ///
     /// We deliberately don't go through `BoothifyAPI.session` here — the signed
     /// URL is on Supabase Storage's host, no Authorization header allowed.

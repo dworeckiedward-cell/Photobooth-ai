@@ -30,8 +30,10 @@ final class EventSettingsDecodeTests: XCTestCase {
     func testLegacyBlobWithAIKeysStillDecodes() throws {
         // Must not throw today, and must not throw after the AI-field cut.
         let decoded = try JSONDecoder().decode(EventSettings.self, from: legacyBlobWithAIKeys)
-        // Garbage sections fall back to defaults rather than corrupting state.
-        XCTAssertEqual(decoded.capture, EventSettings.default.capture)
+        // Every key in the blob (aiPortraits/effects/stickers/capture/…) is now
+        // an UNKNOWN key post-cut, so the whole thing falls back to defaults
+        // rather than corrupting state — old operators' saves keep loading.
+        XCTAssertEqual(decoded, EventSettings.default)
     }
 
     func testRoundTripPreservesValues() throws {

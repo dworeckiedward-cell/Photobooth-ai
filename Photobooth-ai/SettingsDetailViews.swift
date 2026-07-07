@@ -108,8 +108,6 @@ struct CameraSettingsView: View {
                 }
 
                 SettingsCard(title: "Advanced") {
-                    SettingsToggle("Roaming photographer", isOn: app.binding(eventId: eventId, keyPath: \.camera.roamingPhotographerMode))
-                    SettingsDivider()
                     SettingsToggle("Record in PAL 25 FPS", isOn: app.binding(eventId: eventId, keyPath: \.camera.pal25FpsRecording))
                 }
             }
@@ -122,7 +120,7 @@ struct CameraSettingsView: View {
     }
 }
 
-// MARK: - AI Portraits
+// MARK: - 360 Booth
 
 struct AI360SettingsView: View {
     @Environment(AppState.self) private var app
@@ -220,6 +218,19 @@ struct AI360SettingsView: View {
                         step: 1.0,
                         valueLabel: String(format: "%.0f Mbps", app.settings(for: eventId).ai360.bitrateMbps)
                     )
+                    SettingsDivider()
+                    SettingsPicker("Export preset", selection: Binding<RenderSpec.Preset>(
+                        get: { RenderSpec.Preset(rawValue: app.settings(for: eventId).ai360.exportPreset ?? "") ?? .fastShare },
+                        set: { newValue in
+                            var all = app.settings(for: eventId)
+                            all.ai360.exportPreset = newValue.rawValue
+                            app.updateSettings(all, for: eventId)
+                        }
+                    )) {
+                        ForEach(RenderSpec.Preset.allCases, id: \.self) { preset in
+                            Text(preset == .fastShare ? "Fast share" : "Best quality").tag(preset)
+                        }
+                    }
                 }
 
                 SettingsCard(title: "Auto-start") {
@@ -277,18 +288,6 @@ struct AI360SettingsView: View {
                 SettingsCard(title: "Pre-record text") {
                     TextField("\"Get ready!\"", text: app.binding(eventId: eventId, keyPath: \.ai360.displayTextBeforeRecording))
                         .foregroundStyle(.white)
-                }
-
-                SettingsCard(title: "Soundtrack & overlays") {
-                    ComingSoonRow(label: "Soundtrack", value: app.settings(for: eventId).ai360.soundtrackName ?? "None")
-                    SettingsDivider()
-                    ComingSoonRow(label: "Image overlay", value: app.settings(for: eventId).ai360.imageOverlayName ?? "None")
-                    SettingsDivider()
-                    ComingSoonRow(label: "Animated overlay", value: app.settings(for: eventId).ai360.animatedOverlayName ?? "None")
-                    SettingsDivider()
-                    ComingSoonRow(label: "Before-recording overlay", value: app.settings(for: eventId).ai360.beforeRecordingOverlayName ?? "None")
-                    SettingsDivider()
-                    ComingSoonRow(label: "After-recording overlay", value: app.settings(for: eventId).ai360.afterRecordingOverlayName ?? "None")
                 }
 
                 SettingsCard(title: "Preview") {

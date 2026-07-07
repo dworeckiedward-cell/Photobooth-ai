@@ -120,4 +120,24 @@ struct Booth360JobDTO: Codable, Sendable {
         case completedAt = "completed_at"
         case errorMessage = "error_message"
     }
+
+    /// Custom decoder so a MISSING `progress` field does not throw and drop the
+    /// whole event's server history. (A plain `= 0.0` default is NOT enough:
+    /// Swift's synthesized Decodable still calls `decode(_:forKey:)` for a
+    /// non-optional and throws `keyNotFound` on a missing key regardless of the
+    /// default — so `progress` must be explicitly `decodeIfPresent ?? 0`.)
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id           = try c.decode(UUID.self, forKey: .id)
+        self.eventId      = try c.decode(UUID.self, forKey: .eventId)
+        self.status       = try c.decode(String.self, forKey: .status)
+        self.currentStep  = try c.decodeIfPresent(String.self, forKey: .currentStep)
+        self.progress     = (try? c.decodeIfPresent(Double.self, forKey: .progress)) ?? 0
+        self.rawVideoUrl    = try c.decodeIfPresent(String.self, forKey: .rawVideoUrl)
+        self.finalVideoUrl  = try c.decodeIfPresent(String.self, forKey: .finalVideoUrl)
+        self.publicShareUrl = try c.decodeIfPresent(String.self, forKey: .publicShareUrl)
+        self.createdAt    = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        self.completedAt  = try c.decodeIfPresent(Date.self, forKey: .completedAt)
+        self.errorMessage = try c.decodeIfPresent(String.self, forKey: .errorMessage)
+    }
 }

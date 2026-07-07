@@ -336,7 +336,7 @@ struct AboutBoothifyView: View {
                         .foregroundStyle(BoothifyTheme.textSecondary)
                 }
 
-                Text("AI photo booth platform for events.\nPowered by Servify Labs.")
+                Text("360 video booth platform for events.\nPowered by Servify Labs.")
                     .font(.callout)
                     .foregroundStyle(BoothifyTheme.textSecondary)
                     .multilineTextAlignment(.center)

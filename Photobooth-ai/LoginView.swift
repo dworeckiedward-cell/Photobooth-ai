@@ -76,7 +76,7 @@ struct LoginView: View {
                             .tracking(-1.2)
                             .foregroundStyle(.white)
 
-                        Text("AI photo booth for your events")
+                        Text("360 video booth for your events")
                             .font(.callout)
                             .foregroundStyle(BoothifyTheme.textSecondary)
                             .multilineTextAlignment(.center)

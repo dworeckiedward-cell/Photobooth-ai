@@ -3,7 +3,7 @@ import UIKit
 import AVKit
 
 /// 360 AI Booth final preview. Renders the real `finalVideoURL` (produced
-/// by `Booth360FFmpegRenderClient` since IM0) in an inline `VideoPreviewPlayer`
+/// by the native render client since IM0) in an inline `VideoPreviewPlayer`
 /// with brand overlay, plus an action grid for share / QR / SMS / copy /
 /// save / new. Share-side actions stay disabled until the cloud upload
 /// confirms (RA0 + P2).

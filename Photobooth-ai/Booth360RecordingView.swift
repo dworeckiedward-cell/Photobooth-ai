@@ -3,11 +3,13 @@ import AVFoundation
 import AudioToolbox
 import UniformTypeIdentifiers
 
-/// 360 AI Booth recording screen — full-screen camera preview with countdown,
-/// fake-recording timer, and beep + haptic feedback. Frontend MVP: we don't
-/// actually write a video file; on duration end we create a `Booth360Job` with
-/// `rawVideoLocalURL = nil` and push to the Processing screen for the mock
-/// pipeline.
+/// 360 Booth recording screen — full-screen camera preview with countdown,
+/// beep + haptic feedback. Capture is real: `AVCaptureMovieFileOutput` writes
+/// the .mov to disk; the on-screen timer only drives the visible countdown /
+/// elapsed and triggers end-of-recording. On finish we create a `Booth360Job`
+/// with the recorded `rawVideoLocalURL` and push to the Processing screen,
+/// which runs the native AVFoundation render pipeline. (Simulator has no
+/// camera, so there the flow degrades to the mock client.)
 struct Booth360RecordingView: View {
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -501,7 +503,7 @@ struct Booth360RecordingView: View {
         // Audible "start" cue
         AudioServicesPlaySystemSound(SystemSoundID(1057))
         // P4 — breadcrumb for the recording start. Helps correlate any
-        // subsequent FFmpeg crash / upload failure with the take that
+        // subsequent render / upload failure with the take that
         // produced it. Duration is the planned length; actual elapsed
         // ships on finishRecording crumb.
         SentryClient.shared.breadcrumb(

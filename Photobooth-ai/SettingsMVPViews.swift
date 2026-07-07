@@ -34,7 +34,7 @@ private extension View {
     }
 }
 
-// MARK: - Print Setup
+// MARK: - Brand Overlay
 
 struct BrandOverlaySettingsView: View {
     @Environment(AppState.self) private var app
@@ -56,8 +56,8 @@ struct BrandOverlaySettingsView: View {
             }
 
             Section("Where it appears") {
-                Toggle("Apply to AI results", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.applyToResults))
-                Toggle("Show on AI-generated images", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.showOnAIResults))
+                Toggle("Apply to 360 results", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.applyToResults))
+                Toggle("Show on 360 videos", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.showOnAIResults))
                 Toggle("Show on original captures", isOn: app.mvpBinding(eventId: eventId, keyPath: \.brandOverlay.showOnOriginalCaptures))
             }
             .disabled(!s.enabled)
@@ -114,7 +114,7 @@ struct BrandOverlaySettingsView: View {
                             Label("Remove uploaded logo", systemImage: "trash")
                         }
                     }
-                    Text("PNG with alpha recommended. Logo is baked into 360 videos by the FFmpeg renderer (once the binary is wired) and composited on top of every photo result immediately.")
+                    Text("PNG with alpha recommended. Logo is rendered by the native video pipeline and composited on top of every 360 result.")
                         .font(.caption2)
                         .foregroundStyle(BoothifyTheme.textTertiary)
                 } else if s.logoSource == .textFallback {
@@ -315,8 +315,8 @@ struct BrandOverlayLayer: View {
         return UIImage(data: data)
     }
 
-    /// Returns the on-disk URL for an event's uploaded logo (if any). FFmpeg's
-    /// overlay filter takes it as an `-i` input — useful once M6 binary ships.
+    /// Returns the on-disk URL for an event's uploaded logo (if any). The
+    /// native video pipeline composites it per-frame during render.
     static func uploadedLogoURL(eventId: UUID, settings: BrandOverlaySettings) -> URL? {
         guard settings.logoSource == .uploaded,
               let relative = settings.customLogoRelativePath else { return nil }
@@ -494,12 +494,12 @@ struct VirtualAttendantHelpSheet: View {
                     helpRow(
                         symbol: "3.circle.fill",
                         title: "Pick a style",
-                        body: "Choose any of the cinematic AI styles — the rest is automatic."
+                        body: "Choose any of the cinematic motion templates — the rest is automatic."
                     )
                     helpRow(
                         symbol: "4.circle.fill",
-                        title: "Share your photo",
-                        body: "Save to camera roll, scan the QR code, or send to email/SMS — whatever the operator enabled."
+                        title: "Share your 360 video",
+                        body: "Scan the QR code, or send to email/SMS — whatever the operator enabled."
                     )
 
                     if !settings.voicePromptText.trimmingCharacters(in: .whitespaces).isEmpty {

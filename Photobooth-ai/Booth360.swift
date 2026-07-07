@@ -74,8 +74,9 @@ struct Booth360Job: Identifiable, Codable, Hashable, Sendable {
     /// Overall job progress, 0...1.
     var progress: Double
 
-    /// Local device file URI of the raw recording (mock today — we don't actually
-    /// write a video file to disk yet).
+    /// Local device file URI of the raw recording, written by
+    /// `AVCaptureMovieFileOutput` on a real device (nil on the simulator, which
+    /// has no camera and falls back to the mock client).
     var rawVideoLocalURL: URL?
     /// Backend-stored raw upload URL (populated after upload succeeds).
     var uploadedRawVideoURL: URL?
@@ -98,7 +99,7 @@ struct Booth360Job: Identifiable, Codable, Hashable, Sendable {
 
     // MARK: - BM0 cloud-upload (direct-to-Supabase flow)
     //
-    // Render still happens client-side (IM0 FFmpeg). After render the local
+    // Render still happens client-side (native AVFoundation). After render the local
     // file at `finalVideoURL` gets sign-PUT-confirm'd up to the backend —
     // these fields track that second pipeline independently of the render
     // pipeline. Backend keys idempotency by `clientJobId` so a retry never
@@ -158,7 +159,7 @@ struct Booth360Job: Identifiable, Codable, Hashable, Sendable {
 }
 
 /// BM0 — per-job cloud upload state. Independent of `Booth360RenderStatus`
-/// (which tracks the local FFmpeg render). A job can be render-`completed`
+/// (which tracks the local native render). A job can be render-`completed`
 /// AND upload-`failed` simultaneously: it has a watchable local file but no
 /// shareable cloud link yet.
 enum Booth360CloudUploadStatus: String, Codable, CaseIterable, Hashable, Sendable {
@@ -320,13 +321,13 @@ final class Booth360APIRenderClient: Booth360RenderClient {
 // MARK: - Passthrough render client (M0)
 //
 // Bridges the gap between the M0 fundament (real video file written by
-// `CameraController` + `Booth360RecordingView`) and M6 (FFmpeg pipeline +
+// `CameraController` + `Booth360RecordingView`) and M6 (native render pipeline +
 // speed ramp + overlays). Takes the raw recording, surfaces it as the final
 // render, walks the processing UI through the same step sequence so the user
 // gets familiar feedback. No transcode, no edit — just plumbing.
 //
 // Drop-in replacement for MockBooth360RenderClient: it's the new default wired
-// in `Booth360ProcessingView.task`. M6 swaps this for the real FFmpeg-backed
+// in `Booth360ProcessingView.task`. M6 swaps this for the real native-render-backed
 // client; the protocol stays identical.
 @MainActor
 final class Booth360PassthroughRenderClient: Booth360RenderClient {

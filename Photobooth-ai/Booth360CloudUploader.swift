@@ -4,7 +4,7 @@ import UIKit  // QW7 — UINotificationFeedbackGenerator.FeedbackType.success
 
 /// BM0 — orchestrates the post-render cloud upload (sign → PUT → confirm).
 ///
-/// `Booth360FFmpegRenderClient` calls `enqueue(jobId:)` once it has a local
+/// `Booth360NativeRenderClient` calls `enqueue(jobId:)` once it has a local
 /// `finalVideoURL`. The uploader takes over from there: marks the job
 /// `.uploading`, runs the three backend calls, and on success swaps the
 /// mock `publicShareURL` for the real one returned by `/api/booth360/jobs`.

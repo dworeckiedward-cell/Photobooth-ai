@@ -8,13 +8,11 @@ import SwiftUI
 /// Shape follows the Lumabooth feature reference — sections roughly map to the
 /// Settings Hub view sections (Set Up / Sharing Add-ons / More).
 struct EventSettings: Codable, Hashable, Sendable {
-    var capture: CaptureSettings
     var camera: CameraSettings
     var ai360: AI360Settings
     var sharing: SharingSettings
     var emailSMS: EmailSMSSettings
     var lockPin: LockPinSettings
-    var gallerySlideshow: GallerySlideshowSettings
 
     var virtualAttendant: VirtualAttendantSettings
     var disclaimer: DisclaimerSettings
@@ -22,13 +20,11 @@ struct EventSettings: Codable, Hashable, Sendable {
     var brandOverlay: BrandOverlaySettings
 
     static let `default` = EventSettings(
-        capture: .default,
         camera: .default,
         ai360: .default,
         sharing: .default,
         emailSMS: .default,
         lockPin: .default,
-        gallerySlideshow: .default,
         virtualAttendant: .default,
         disclaimer: .default,
         survey: .default,
@@ -37,17 +33,16 @@ struct EventSettings: Codable, Hashable, Sendable {
 
     // Backward-compatible decoder: previously-persisted JSON didn't have the MVP
     // add-on fields. We decode each section defensively so old events keep loading
-    // and just get default values for new sections.
+    // and just get default values for new sections. (Legacy `capture` /
+    // `gallerySlideshow` keys from photo-era blobs are simply ignored.)
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = Self.default
-        self.capture            = (try? c.decode(CaptureSettings.self,           forKey: .capture))            ?? d.capture
         self.camera             = (try? c.decode(CameraSettings.self,            forKey: .camera))             ?? d.camera
         self.ai360              = (try? c.decode(AI360Settings.self,             forKey: .ai360))              ?? d.ai360
         self.sharing            = (try? c.decode(SharingSettings.self,           forKey: .sharing))            ?? d.sharing
         self.emailSMS           = (try? c.decode(EmailSMSSettings.self,          forKey: .emailSMS))           ?? d.emailSMS
         self.lockPin            = (try? c.decode(LockPinSettings.self,           forKey: .lockPin))            ?? d.lockPin
-        self.gallerySlideshow   = (try? c.decode(GallerySlideshowSettings.self,  forKey: .gallerySlideshow))   ?? d.gallerySlideshow
         self.virtualAttendant   = (try? c.decode(VirtualAttendantSettings.self,  forKey: .virtualAttendant))   ?? d.virtualAttendant
         self.disclaimer         = (try? c.decode(DisclaimerSettings.self,        forKey: .disclaimer))         ?? d.disclaimer
         self.survey             = (try? c.decode(SurveySettings.self,            forKey: .survey))             ?? d.survey
@@ -56,76 +51,26 @@ struct EventSettings: Codable, Hashable, Sendable {
 
     // Memberwise init still needed because we added a custom decoder.
     init(
-        capture: CaptureSettings,
         camera: CameraSettings,
         ai360: AI360Settings,
         sharing: SharingSettings,
         emailSMS: EmailSMSSettings,
         lockPin: LockPinSettings,
-        gallerySlideshow: GallerySlideshowSettings,
         virtualAttendant: VirtualAttendantSettings,
         disclaimer: DisclaimerSettings,
         survey: SurveySettings,
         brandOverlay: BrandOverlaySettings
     ) {
-        self.capture = capture
         self.camera = camera
         self.ai360 = ai360
         self.sharing = sharing
         self.emailSMS = emailSMS
         self.lockPin = lockPin
-        self.gallerySlideshow = gallerySlideshow
         self.virtualAttendant = virtualAttendant
         self.disclaimer = disclaimer
         self.survey = survey
         self.brandOverlay = brandOverlay
     }
-}
-
-// MARK: - Capture
-
-enum CaptureMode: String, Codable, CaseIterable, Hashable, Sendable {
-    case singlePhoto, photoStrip, gif, boomerang, video
-
-    var label: String {
-        switch self {
-        case .singlePhoto: "Single Photo"
-        case .photoStrip:  "Photo Strip"
-        case .gif:         "GIF"
-        case .boomerang:   "Boomerang"
-        case .video:       "Video"
-        }
-    }
-}
-
-enum OutputSize: String, Codable, CaseIterable, Hashable, Sendable {
-    case square, portrait43, portrait916, landscape34, landscape169
-
-    var label: String {
-        switch self {
-        case .square:        "Square (1:1)"
-        case .portrait43:    "Portrait (4:5)"
-        case .portrait916:   "Portrait (9:16)"
-        case .landscape34:   "Landscape (4:3)"
-        case .landscape169:  "Landscape (16:9)"
-        }
-    }
-}
-
-struct CaptureSettings: Codable, Hashable, Sendable {
-    var mode: CaptureMode = .singlePhoto
-    var countdownFirstPhoto: Int = 3
-    var countdownOtherPhotos: Int = 2
-    var displayEachPhotoDuration: Int = 3
-    var numberOfPhotos: Int = 1
-    var delayBetweenFrames: Double = 0.5
-    var alsoGenerateGif: Bool = false
-    var reverseGif: Bool = false
-    var roamingPhotographerMode: Bool = false
-    var outputSize: OutputSize = .square
-    var quality: Double = 0.85
-
-    static let `default` = CaptureSettings()
 }
 
 // MARK: - Camera
@@ -157,7 +102,6 @@ struct CameraSettings: Codable, Hashable, Sendable {
     var zoom: Double = 1.0
     var rotation: CameraRotation = .zero
     var mirrorSelfie: Bool = true
-    var roamingPhotographerMode: Bool = false
     var pal25FpsRecording: Bool = false
     var flash: FlashBehavior = .off
     /// Video stabilization for 360 / slow-mo recording (smooths platform vibration).
@@ -171,8 +115,6 @@ struct CameraSettings: Codable, Hashable, Sendable {
     static let `default` = CameraSettings()
 }
 
-// MARK: - AI Portraits
-
 // MARK: - AI 360
 
 enum VideoQuality: String, Codable, CaseIterable, Hashable, Sendable {
@@ -184,12 +126,11 @@ enum VideoQuality: String, Codable, CaseIterable, Hashable, Sendable {
 }
 
 enum ClipDirection: String, Codable, CaseIterable, Hashable, Sendable {
-    case forwards, backwards, reverse
+    case forwards, reverse
 
     var label: String {
         switch self {
         case .forwards:  "Forwards"
-        case .backwards: "Backwards"
         case .reverse:   "Forwards + Reverse"
         }
     }
@@ -253,12 +194,7 @@ struct AI360Settings: Codable, Hashable, Sendable {
     var introRelativePath: String? = nil
     /// Phase 5: outro clip (played after the spin).
     var outroRelativePath: String? = nil
-    var imageOverlayName: String? = nil      // placeholder
-    var animatedOverlayName: String? = nil   // placeholder
-    var beforeRecordingOverlayName: String? = nil
-    var afterRecordingOverlayName: String? = nil
-
-    /// M6: segmented timeline that drives the FFmpeg montage. When non-empty,
+    /// M6: segmented timeline that drives the native render montage. When non-empty,
     /// the active template overrides the single `clipSpeed` / `clipDirection`
     /// values. We keep the singles for backward-compat — old persisted
     /// settings still decode and the renderer synthesises a one-segment
@@ -281,7 +217,7 @@ struct AI360Settings: Codable, Hashable, Sendable {
             CaptureSegment(
                 duration: max(1, recordingDurationSeconds),
                 speed: max(0.1, clipSpeed),
-                reverse: clipDirection == .reverse || clipDirection == .backwards
+                reverse: clipDirection == .reverse
             )
         ]
     }
@@ -354,10 +290,10 @@ struct SharingSettings: Codable, Hashable, Sendable {
 
 struct EmailSMSSettings: Codable, Hashable, Sendable {
     var senderName: String = "Boothify"
-    var emailSubject: String = "📸 Your photo from Boothify"
+    var emailSubject: String = "📸 Your 360 video from Boothify"
     var emailBodyTemplate: String =
-        "Hi! Your AI photo is ready. Tap below to open it.\n\n{{link}}"
-    var smsBodyTemplate: String = "Your Boothify photo is ready: {{link}}"
+        "Hi! Your 360 video is ready. Tap below to open it.\n\n{{link}}"
+    var smsBodyTemplate: String = "Your Boothify 360 video is ready: {{link}}"
     var includeBrandingInEmail: Bool = true
     /// M5: optional per-event override for the SMS "From" number. When empty
     /// we use the operator's global TwilioCredentials.fromNumber. Useful when
@@ -375,80 +311,6 @@ struct LockPinSettings: Codable, Hashable, Sendable {
     var idleTimeoutMinutes: Int = 0   // 0 = never auto-lock
 
     static let `default` = LockPinSettings()
-}
-
-// MARK: - Gallery / Slideshow
-
-struct GallerySlideshowSettings: Codable, Hashable, Sendable {
-    var slideIntervalSeconds: Int = 5
-    var transitionStyle: SlideTransition = .fade
-    var showStyleLabel: Bool = false
-    var randomizeOrder: Bool = false
-
-    static let `default` = GallerySlideshowSettings()
-}
-
-enum SlideTransition: String, Codable, CaseIterable, Hashable, Sendable {
-    case fade, slide, kenBurns
-
-    var label: String {
-        switch self {
-        case .fade:     "Fade"
-        case .slide:    "Slide"
-        case .kenBurns: "Ken Burns"
-        }
-    }
-}
-
-// MARK: - Print Setup
-
-enum PrintPaperSize: String, Codable, CaseIterable, Hashable, Sendable {
-    case fourBySix, fiveBySeven, square, postcard
-
-    var label: String {
-        switch self {
-        case .fourBySix:    "4×6 in"
-        case .fiveBySeven:  "5×7 in"
-        case .square:       "Square 4×4 in"
-        case .postcard:     "Postcard A6"
-        }
-    }
-}
-
-enum PrintLayout: String, Codable, CaseIterable, Hashable, Sendable {
-    case single, twoStrip, fourStrip, doubleSingle
-
-    var label: String {
-        switch self {
-        case .single:        "Single photo"
-        case .twoStrip:      "2-photo strip"
-        case .fourStrip:     "Classic 4-photo strip"
-        case .doubleSingle:  "Double single (2 copies)"
-        }
-    }
-}
-
-// MARK: - Stickers
-
-enum StickerPack: String, Codable, CaseIterable, Hashable, Sendable {
-    case wedding, birthday, corporate
-
-    var label: String {
-        switch self {
-        case .wedding:    "Wedding"
-        case .birthday:   "Birthday"
-        case .corporate:  "Corporate"
-        }
-    }
-
-    /// SF Symbol emoji set for the placeholder preview chips.
-    var sampleSymbols: [String] {
-        switch self {
-        case .wedding:   ["heart.fill", "sparkles", "rings.fill", "gift.fill"]
-        case .birthday:  ["birthday.cake.fill", "balloon.fill", "party.popper.fill", "music.note"]
-        case .corporate: ["briefcase.fill", "checkmark.seal.fill", "trophy.fill", "chart.line.uptrend.xyaxis"]
-        }
-    }
 }
 
 // MARK: - Virtual Attendant
@@ -469,9 +331,9 @@ struct VirtualAttendantSettings: Codable, Hashable, Sendable {
 struct DisclaimerSettings: Codable, Hashable, Sendable {
     var enabled: Bool = false
     var disclaimerText: String =
-        "By tapping continue you consent to your photo being processed by AI and shared via the channels selected for this event. You can request deletion at any time."
+        "By tapping continue you consent to your 360 video being processed and shared via the channels selected for this event. You can request deletion at any time."
     var requireConsentBeforeCapture: Bool = false
-    var consentCheckboxLabel: String = "I agree to the photo terms"
+    var consentCheckboxLabel: String = "I agree to the video terms"
 
     static let `default` = DisclaimerSettings()
 }

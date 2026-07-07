@@ -76,7 +76,7 @@ struct PaywallView: View {
             Text("Go Pro")
                 .font(BoothifyType.displayMedium)
                 .foregroundStyle(.white)
-            Text("Unlock AI portraits, 360, printing and white-label branding.")
+            Text("Unlock 360 video, white-label branding and unlimited events.")
                 .font(.subheadline)
                 .foregroundStyle(BoothifyTheme.textSecondary)
                 .multilineTextAlignment(.center)
