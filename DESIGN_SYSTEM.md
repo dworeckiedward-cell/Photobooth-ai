@@ -22,9 +22,11 @@ przyszły branding operatora (asset z bundla; systemu uploadu celowo brak).
 Użycie: pierwszy element ZStacka ekranu, zamiast `BoothifyTheme.bg.ignoresSafeArea()`.
 
 ### `.glassSurface(radius: CGFloat = BoothifyRadius.surface)`
-`ultraThinMaterial` wymuszony dark + rim 1 px (biały 14→5% top-weighted) +
-continuous radius + miękki cień. **Reduce Transparency → SOLID
-`BoothifyTheme.bgElevated`** (obowiązkowy fallback dostępności).
+Glassmorphism: `ultraThinMaterial` wymuszony dark + **przekątny połysk
+bieli 13%→4%** (światło łapiące taflę, wg referensu bento) + rim 1 px
+(biały 20→6% top-weighted) + continuous radius + miękki cień.
+**Reduce Transparency → SOLID `BoothifyTheme.bgElevated` + połysk**
+(obowiązkowy fallback dostępności; połysk nie wymaga blura).
 Kaskaduje automatycznie przez: `AppCard`, legacy `Surface`
 (`.boothifySurface`), `SettingsCard` — nie stosuj podwójnie.
 

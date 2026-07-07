@@ -62,36 +62,48 @@ struct AtmosphericBackground: View {
 // MARK: - Glass surface
 
 /// THE surface of the language: frosted material floating over the
-/// atmosphere, 1px light rim, continuous radius, soft drop.
+/// atmosphere with a glassmorphism sheen — a diagonal white gradient
+/// (13% → 4%, bento reference) over the blur, a top-lit 1px rim,
+/// continuous radius, soft drop.
 /// Accessibility: Reduce Transparency degrades to a SOLID dark surface
-/// (mandatory fallback — glass must never cost legibility).
+/// (the sheen stays — it needs no blur, and it keeps panels legible).
 struct GlassSurface: ViewModifier {
     var radius: CGFloat = BoothifyRadius.surface
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
+    }
 
     func body(content: Content) -> some View {
         content
             .background {
-                if UIAccessibility.isReduceTransparencyEnabled {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(BoothifyTheme.bgElevated)
-                } else {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .environment(\.colorScheme, .dark)
+                ZStack {
+                    if UIAccessibility.isReduceTransparencyEnabled {
+                        shape.fill(BoothifyTheme.bgElevated)
+                    } else {
+                        shape.fill(.ultraThinMaterial)
+                            .environment(\.colorScheme, .dark)
+                    }
+                    // Glassmorphism sheen — the light catching the pane.
+                    shape.fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.13), Color.white.opacity(0.04)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
                 }
             }
             .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.14), Color.white.opacity(0.05)],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.20), Color.white.opacity(0.06)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
             )
-            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .shadow(color: .black.opacity(0.30), radius: 16, y: 8)
+            .clipShape(shape)
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 9)
     }
 }
 
