@@ -18,14 +18,15 @@ struct Booth360ProcessingView: View {
 
     private let steps: [Booth360ProcessingStep] = Booth360ProcessingStep.allCases
 
-    private let processingTips: [(symbol: String, text: String)] = [
-        ("wand.and.stars", "AI is color-grading your 360 footage"),
-        ("film.stack", "Stitching frames for smooth playback"),
-        ("gauge.with.dots.needle.67percent", "Optimizing for mobile streaming"),
-        ("music.note", "Syncing your soundtrack to the video"),
-        ("arrow.triangle.2.circlepath", "Applying stabilization passes"),
-        ("sparkles", "Final quality check before delivery"),
-    ]
+    private var processingTips: [(symbol: String, text: String)] {
+        [
+            ("sparkles", Loc.t("Your spin is being rendered", pl: "Twój spin właśnie się renderuje", de: "Dein Spin wird gerendert")),
+            ("film.stack", Loc.t("Every frame gets the slow-mo treatment", pl: "Każda klatka dostaje slow motion", de: "Jedes Bild bekommt die Zeitlupe")),
+            ("music.note", Loc.t("Music is being woven in", pl: "Muzyka właśnie się wplata", de: "Die Musik wird eingewoben")),
+            ("iphone.gen3", Loc.t("Sized perfectly for your phone", pl: "Idealny rozmiar na telefon", de: "Perfekt fürs Handy dimensioniert")),
+            ("qrcode", Loc.t("Your QR code is seconds away", pl: "Twój kod QR za kilka sekund", de: "Dein QR-Code kommt gleich")),
+        ]
+    }
 
     var body: some View {
         ZStack {
@@ -76,6 +77,14 @@ struct Booth360ProcessingView: View {
         }
         .safeAreaInset(edge: .bottom) {
             if app.isKiosk, job?.status.isTerminal != true {
+                VStack(spacing: BoothifySpacing.xs + 2) {
+                    Text(Loc.t(
+                        "The video will finish in the background",
+                        pl: "Wideo dokończy się w tle",
+                        de: "Das Video wird im Hintergrund fertig"
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
                 Button {
                     Haptics.tap(.medium)
                     app.popToRoot()   // attract; export continues in background
@@ -87,9 +96,10 @@ struct Booth360ProcessingView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(SecondaryButtonStyle())
-                .padding(.horizontal, 24)
-                .padding(.bottom, 12)
                 .accessibilityHint("Returns to the start screen while the video finishes in the background")
+                }
+                .padding(.horizontal, BoothifySpacing.lg)
+                .padding(.bottom, BoothifySpacing.sm + 4)
             }
         }
         .onChange(of: job?.status) { _, newValue in
@@ -107,7 +117,7 @@ struct Booth360ProcessingView: View {
 
     private var titleBlock: some View {
         VStack(spacing: 8) {
-            Text("Creating your 360 video")
+            Text(Loc.t("Creating your 360 video", pl: "Tworzę Twoje wideo 360", de: "Dein 360-Video entsteht"))
                 .font(.title2.bold())
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
@@ -120,9 +130,9 @@ struct Booth360ProcessingView: View {
     }
 
     private var currentStepLabel: String {
-        if job?.status == .completed { return "Done — preparing preview…" }
-        if job?.status == .failed { return "Render failed" }
-        return job?.currentStep?.label ?? "Queued"
+        if job?.status == .completed { return Loc.t("Done — preparing preview…", pl: "Gotowe — przygotowuję podgląd…", de: "Fertig — Vorschau wird geladen…") }
+        if job?.status == .failed { return Loc.t("Something went wrong", pl: "Coś poszło nie tak", de: "Etwas ist schiefgelaufen") }
+        return job?.currentStep?.label ?? Loc.t("Queued", pl: "W kolejce", de: "In der Warteschlange")
     }
 
     // MARK: - Big progress ring
@@ -136,7 +146,7 @@ struct Booth360ProcessingView: View {
                 .trim(from: 0, to: progressFraction)
                 .stroke(
                     AngularGradient(
-                        colors: [BoothifyTheme.amber, BoothifyTheme.fuchsia, BoothifyTheme.amber],
+                        colors: [BoothifyTheme.amber.opacity(0.35), BoothifyTheme.amber, BoothifyTheme.amber],
                         center: .center
                     ),
                     style: StrokeStyle(lineWidth: 10, lineCap: .round)
@@ -223,15 +233,32 @@ struct Booth360ProcessingView: View {
     // MARK: - Failed
 
     private var failedSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: BoothifySpacing.sm + 2) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.title)
-                .foregroundStyle(.red)
-            Text(job?.errorMessage ?? "Something went wrong rendering the 360 video.")
+                .foregroundStyle(BoothifyTheme.error)
+                .accessibilityHidden(true)
+            Text(job?.errorMessage ?? Loc.t(
+                "Something went wrong rendering the video.",
+                pl: "Coś poszło nie tak przy renderowaniu wideo.",
+                de: "Beim Rendern des Videos ist etwas schiefgelaufen."
+            ))
                 .font(.subheadline)
                 .foregroundStyle(BoothifyTheme.textSecondary)
                 .multilineTextAlignment(.center)
-            Button("Back") {
+            // The raw take is KEPT on failure precisely so a retry is possible.
+            Button {
+                Haptics.tap(.medium)
+                app.cancelRender(jobId: jobId)
+                app.startRender(jobId: jobId)
+            } label: {
+                Label(Loc.t("Try again", pl: "Spróbuj ponownie", de: "Erneut versuchen"),
+                      systemImage: "arrow.clockwise")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(AccentButtonStyle())
+            .frame(maxWidth: 220)
+            Button(Loc.t("Back", pl: "Wróć", de: "Zurück")) {
                 Haptics.tap()
                 app.cancelRender(jobId: jobId)
                 app.pop()
@@ -239,7 +266,7 @@ struct Booth360ProcessingView: View {
             .buttonStyle(SecondaryButtonStyle())
             .frame(maxWidth: 220)
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, BoothifySpacing.md)
     }
 
     // MARK: - Ambient glow
@@ -252,7 +279,7 @@ struct Booth360ProcessingView: View {
                 startRadius: 0, endRadius: 460
             )
             RadialGradient(
-                colors: [BoothifyTheme.fuchsia.opacity(0.14), .clear],
+                colors: [BoothifyTheme.violet.opacity(0.10), .clear],
                 center: .init(x: 0.85, y: 0.8),
                 startRadius: 0, endRadius: 460
             )
