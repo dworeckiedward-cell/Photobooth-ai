@@ -45,9 +45,13 @@ struct Booth360RecordingView: View {
             // M1 safe-area overlay. `.cinematicExtended` stabilization crops ~10%
             // off each side, so the preview shows MORE than the final file. The
             // ramka tells the operator what will actually be captured.
-            StabilizationSafeAreaFrame()
-                .allowsHitTesting(false)
-                .ignoresSafeArea()
+            // Honest crop guide: only when the chosen preset actually crops
+            // (Phase 6 philosophy — never show a crop that won't happen).
+            if StabilizationPreset.effective(from: app.settings(for: eventId).camera) != .off {
+                StabilizationSafeAreaFrame()
+                    .allowsHitTesting(false)
+                    .ignoresSafeArea()
+            }
 
             if permissionDenied {
                 permissionOverlay
@@ -56,12 +60,24 @@ struct Booth360RecordingView: View {
             if let countdown {
                 ZStack {
                     Color.black.opacity(0.35).ignoresSafeArea()
-                    Text("\(countdown)")
-                        .font(.system(size: 220, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.6), radius: 20)
-                        .transition(.scale.combined(with: .opacity))
-                        .id(countdown)
+                    VStack(spacing: BoothifySpacing.sm) {
+                        Text("\(countdown)")
+                            .font(.system(size: 220, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.6), radius: 20)
+                            .transition(.scale.combined(with: .opacity))
+                            .id(countdown)
+                        // Prepare -> NOW choreography for the guest on the platform.
+                        Text(countdown == 1
+                             ? Loc.t("GO!", pl: "START!", de: "LOS!")
+                             : Loc.t("Get ready", pl: "Przygotuj się", de: "Mach dich bereit"))
+                            .font(.title2.weight(.heavy))
+                            .kerning(1.5)
+                            .foregroundStyle(countdown == 1 ? BoothifyTheme.amber : .white.opacity(0.85))
+                            .textCase(.uppercase)
+                            .transition(.opacity)
+                            .id("cue-\(countdown)")
+                    }
                 }
             }
 
@@ -133,15 +149,21 @@ struct Booth360RecordingView: View {
                 .background(.black.opacity(0.4), in: Capsule())
                 .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 1))
             Spacer()
-            Button {
-                Haptics.tap()
-                app.push(.settings360Hub(eventId: eventId))
-            } label: {
-                glassCircle("gearshape.fill")
+            // Operator control — hidden from guests in kiosk mode.
+            if !app.isKiosk {
+                Button {
+                    Haptics.tap()
+                    app.push(.settings360Hub(eventId: eventId))
+                } label: {
+                    glassCircle("gearshape.fill")
+                }
+                .disabled(recording)
+                .opacity(recording ? 0.4 : 1)
+                .accessibilityLabel("360 settings")
+            } else {
+                // Keep the title optically centered.
+                Color.clear.frame(width: 44, height: 44)
             }
-            .disabled(recording)
-            .opacity(recording ? 0.4 : 1)
-            .accessibilityLabel("360 settings")
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -165,7 +187,7 @@ struct Booth360RecordingView: View {
             Image(systemName: "rotate.3d")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.amber)
-            Text("Platform rotating — keep guests centered")
+            Text(Loc.t("Keep the pose — you're spinning!", pl: "Trzymaj pozę — kręcisz się!", de: "Pose halten — du drehst dich!"))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.white)
         }
@@ -182,7 +204,7 @@ struct Booth360RecordingView: View {
             if recording {
                 recordingStatus
             } else if countdown == nil {
-                Text("Tap to start a \(Int(duration))s recording")
+                Text(Loc.t("Tap to start a \(Int(duration))s spin", pl: "Dotknij — start \(Int(duration))-sekundowego nagrania", de: "Tippen — \(Int(duration))-Sekunden-Aufnahme starten"))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 12)
@@ -190,12 +212,12 @@ struct Booth360RecordingView: View {
                     .background(.black.opacity(0.4), in: Capsule())
             }
 
-            // M4: music ← REC → presets quick-controls row. Operator can swap
-            // soundtrack or change duration/quality without leaving the screen.
-            HStack(alignment: .center, spacing: 36) {
-                musicButton
+            // M4: music ← REC → presets quick-controls row. Operator-only —
+            // kiosk guests get a clean single-button stage.
+            HStack(alignment: .center, spacing: BoothifySpacing.xl + BoothifySpacing.xs) {
+                if !app.isKiosk { musicButton }
                 recordButton
-                presetButton
+                if !app.isKiosk { presetButton }
             }
         }
         .padding(.bottom, 36)
@@ -304,7 +326,7 @@ struct Booth360RecordingView: View {
     private var recordingStatus: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(.red)
+                .fill(BoothifyTheme.recording)
                 .frame(width: 8, height: 8)
             Text("REC")
                 .font(.caption2.weight(.bold))
@@ -317,7 +339,7 @@ struct Booth360RecordingView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.black.opacity(0.55), in: Capsule())
-        .overlay(Capsule().stroke(.red.opacity(0.6), lineWidth: 1))
+        .overlay(Capsule().stroke(BoothifyTheme.recording.opacity(0.6), lineWidth: 1))
     }
 
     private var recordButton: some View {
@@ -342,12 +364,12 @@ struct Booth360RecordingView: View {
                     .frame(width: 86, height: 86)
                 // Inner state
                 if recording {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(.red)
+                    RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
+                        .fill(BoothifyTheme.recording)
                         .frame(width: 32, height: 32)
                 } else {
                     Circle()
-                        .fill(.red)
+                        .fill(BoothifyTheme.recording)
                         .frame(width: 70, height: 70)
                         .scaleEffect(countdown != nil ? 0.85 : 1)
                 }

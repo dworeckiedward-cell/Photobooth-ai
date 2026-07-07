@@ -27,6 +27,9 @@ enum BoothifyTheme {
 
     // Semantic
     static let error   = Color(red: 0.96, green: 0.27, blue: 0.32)       // ~red-500, 4.5:1 on bg ✓
+    /// REC indicator red — the one place raw red is part of the language
+    /// (universal recording convention), tokenized so views never hardcode it.
+    static let recording = Color(red: 0.94, green: 0.20, blue: 0.20)
     static let warning = amber
     static let success = emerald
 
