@@ -24,7 +24,7 @@ struct KioskAttractView: View {
             ?? Loc.t("360 Booth", pl: "Budka 360", de: "360-Booth")
     }
     private var subtitle: String {
-        Loc.t("Tap anywhere to begin", pl: "Dotknij, aby zacząć", de: "Zum Starten tippen")
+        Loc.t("Your 360 video is seconds away", pl: "Twoje wideo 360 za kilka chwil", de: "Dein 360-Video in Sekunden")
     }
     private var brand: BrandOverlaySettings { app.settings(for: eventId).brandOverlay }
 
@@ -37,74 +37,87 @@ struct KioskAttractView: View {
             )
             .ignoresSafeArea()
 
-            VStack(spacing: BoothifySpacing.lg) {
+            // Layout redesign: the tap invitation is the ONE dominant — huge,
+            // readable from 3 meters. The operator's brand sits quiet at the
+            // top edge, the event name is its caption, and the center of the
+            // atmosphere breathes (content at the edges, per the reference).
+            VStack(spacing: 0) {
+                VStack(spacing: BoothifySpacing.sm + 4) {
+                    OperatorBrandMark(brand: brand, eventId: eventId)
+                        .scaleEffect(0.82)
+                    Text(title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, BoothifySpacing.lg)
+                }
+                .padding(.top, BoothifySpacing.xxl)
+
                 Spacer()
 
-                // The operator's mark is the hero; a 360 glyph is only the
-                // fallback when no branding is configured.
-                OperatorBrandMark(brand: brand, eventId: eventId)
-                    .scaleEffect(pulse ? 1.04 : 0.98)
-
-                VStack(spacing: BoothifySpacing.sm) {
-                    Text(title)
-                        .font(BoothifyType.hero)
+                // The dominant. 3-meter type is a deliberate single-callsite
+                // holdout from the Dynamic-Type scale (like the countdown).
+                VStack(spacing: BoothifySpacing.md) {
+                    Text(Loc.t("Tap to start", pl: "Dotknij, by zacząć", de: "Tippen zum Starten"))
+                        .font(.system(size: 58, weight: .heavy))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(2)
+                        .padding(.horizontal, BoothifySpacing.lg)
+                        .glowAccent(intensity: pulse ? 0.34 : 0.22)
                     Text(subtitle)
                         .font(.title3)
                         .foregroundStyle(BoothifyTheme.textSecondary)
+                        .opacity(pulse ? 1 : 0.7)
                 }
-                .padding(.horizontal, BoothifySpacing.lg)
 
                 Spacer()
 
-                // Calm reassurance while a previous export finishes — the booth
-                // is non-blocking, so the next guest can start right away.
-                if app.hasActiveRenders {
-                    HStack(spacing: BoothifySpacing.xs + 2) {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(BoothifyTheme.amber)
-                        Text(Loc.t(
-                            "Previous video is finishing — you can start",
-                            pl: "Poprzednie wideo się kończy — możesz zaczynać",
-                            de: "Das letzte Video wird fertig — du kannst starten"
+                VStack(spacing: BoothifySpacing.md) {
+                    // Calm reassurance while a previous export finishes — the booth
+                    // is non-blocking, so the next guest can start right away.
+                    if app.hasActiveRenders {
+                        HStack(spacing: BoothifySpacing.xs + 2) {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(BoothifyTheme.amber)
+                            Text(Loc.t(
+                                "Previous video is finishing — you can start",
+                                pl: "Poprzednie wideo się kończy — możesz zaczynać",
+                                de: "Das letzte Video wird fertig — du kannst starten"
+                            ))
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(BoothifyTheme.textSecondary)
+                        }
+                        .padding(.horizontal, BoothifySpacing.md)
+                        .padding(.vertical, BoothifySpacing.sm)
+                        .background(.black.opacity(0.45), in: Capsule())
+                        .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
+                        .transition(.opacity)
+                        .accessibilityLabel(Loc.t(
+                            "Previous video is finishing in the background. You can start.",
+                            pl: "Poprzednie wideo kończy się w tle. Możesz zaczynać.",
+                            de: "Das letzte Video wird im Hintergrund fertig. Du kannst starten."
                         ))
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(BoothifyTheme.textSecondary)
                     }
-                    .padding(.horizontal, BoothifySpacing.md)
-                    .padding(.vertical, BoothifySpacing.sm)
-                    .background(.black.opacity(0.45), in: Capsule())
-                    .overlay(Capsule().stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
-                    .transition(.opacity)
-                    .accessibilityLabel(Loc.t(
-                        "Previous video is finishing in the background. You can start.",
-                        pl: "Poprzednie wideo kończy się w tle. Możesz zaczynać.",
-                        de: "Das letzte Video wird im Hintergrund fertig. Du kannst starten."
-                    ))
-                }
 
-                HStack(spacing: BoothifySpacing.sm) {
+                    // Quiet affordance arrow — the giant headline carries the
+                    // screen; this only anchors the "whole screen is a button"
+                    // gesture toward the bottom edge.
                     Image(systemName: "hand.tap.fill")
-                    Text(Loc.t("Tap to start", pl: "Zacznij", de: "Tippen zum Starten"))
-                        .fontWeight(.semibold)
-                }
-                .font(.headline)
-                .foregroundStyle(.black)
-                .padding(.horizontal, BoothifySpacing.lg)
-                .padding(.vertical, BoothifySpacing.md)
-                .background(BoothifyTheme.amber, in: Capsule())
-                .glowAccent(intensity: 0.7)
-                .opacity(pulse ? 1 : 0.85)
-                .padding(.bottom, BoothifySpacing.xl)
+                        .font(.title2)
+                        .foregroundStyle(BoothifyTheme.amber)
+                        .opacity(pulse ? 1 : 0.55)
+                        .accessibilityHidden(true)
 
-                // Boothify stays nearly invisible on the operator's stage.
-                Text("Boothify")
-                    .font(.caption2)
-                    .foregroundStyle(BoothifyTheme.textMuted.opacity(0.6))
-                    .padding(.bottom, BoothifySpacing.lg)
-                    .accessibilityHidden(true)
+                    // Boothify stays nearly invisible on the operator's stage.
+                    Text("Boothify")
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textMuted.opacity(0.6))
+                        .accessibilityHidden(true)
+                }
+                .padding(.bottom, BoothifySpacing.xl)
             }
         }
         .contentShape(Rectangle())
