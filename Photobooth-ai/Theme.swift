@@ -5,6 +5,12 @@ import SwiftUI
 enum BoothifyTheme {
     // Backgrounds
     static let bg          = Color(red: 0.04, green: 0.04, blue: 0.05)   // ~zinc-950
+    // Atmospheric Glass (UI v2): the deep violet/indigo stage every screen
+    // floats on, plus the solid surface glass degrades to under
+    // Reduce Transparency.
+    static let bgDeep      = Color(red: 0.055, green: 0.045, blue: 0.11) // deep indigo-violet
+    static let bgElevated  = Color(red: 0.10, green: 0.09, blue: 0.16)   // solid glass fallback
+    static let indigoGlow  = Color(red: 0.24, green: 0.20, blue: 0.55)   // mesh pool hue
     static let surface1    = Color.white.opacity(0.05)
     static let surface2    = Color.white.opacity(0.08)
     static let surfaceLine = Color.white.opacity(0.10)
@@ -143,13 +149,9 @@ struct Surface: ViewModifier {
     var elevated: Bool = false
     var radius: CGFloat = BoothifyRadius.surface
     func body(content: Content) -> some View {
-        content
-            .background(elevated ? BoothifyTheme.surface2 : BoothifyTheme.surface1)
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        // Atmospheric Glass: the legacy Surface now IS glass, so every
+        // .boothifySurface call-site cascades to the new language for free.
+        content.glassSurface(radius: radius)
     }
 }
 

@@ -26,6 +26,8 @@ import SwiftUI
 ///   they're brand, not type-system.
 enum BoothifyType {
     static let display       = Font.system(.largeTitle,  design: .default).weight(.bold)
+    /// Atmospheric Glass hero — the ONE dominant line on a screen.
+    static let hero          = Font.system(.largeTitle,  design: .default).weight(.heavy)
     static let displayMedium = Font.system(.title,       design: .default).weight(.bold)
     /// Large icon-only decorative uses (hero cluster, onboarding).
     static let displayIcon   = Font.system(size: 48, weight: .bold)

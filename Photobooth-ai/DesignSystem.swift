@@ -8,14 +8,11 @@ struct AppCard<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
+        // Atmospheric Glass: every card floats as frosted material (solid
+        // fallback under Reduce Transparency lives inside glassSurface).
         content()
             .padding(padding)
-            .background(BoothifyTheme.surface1)
-            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
+            .glassSurface(radius: radius)
     }
 }
 
