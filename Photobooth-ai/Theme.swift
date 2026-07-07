@@ -108,6 +108,21 @@ struct AccentButtonStyle: ButtonStyle {
     }
 }
 
+/// Amber hero CTA — THE glowing action of a screen (Atmospheric Glass).
+/// Black-on-amber capsule; pair with `.glowAccent()` and keep it to one
+/// per screen — the accent is scarce by design.
+struct AmberCTAButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(BoothifyType.bodyEmphasis)
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(BoothifyTheme.amber.opacity(configuration.isPressed ? 0.85 : 1), in: Capsule())
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 /// Ghost secondary button with hairline border.
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

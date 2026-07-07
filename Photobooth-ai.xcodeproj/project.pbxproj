@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0EFF000210000000000000A2 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000230000000000000C2 /* Sentry */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA000000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0EE36FE32FB0A0D400F745CF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0EE36FEA2FB0A0D400F745CF;
+			remoteInfo = "Photobooth-ai";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0EE36FEB2FB0A0D400F745CF /* Photobooth-ai.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Photobooth-ai.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000002 /* Photobooth-aiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Photobooth-aiTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -23,20 +37,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXBuildFile section */
-		0EFF000210000000000000A2 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 0EFF000230000000000000C2 /* Sentry */; };
-/* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		AA000000000000000000000A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 0EE36FE32FB0A0D400F745CF /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 0EE36FEA2FB0A0D400F745CF;
-			remoteInfo = "Photobooth-ai";
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0EE36FE82FB0A0D400F745CF /* Frameworks */ = {
@@ -152,6 +152,9 @@
 			);
 			mainGroup = 0EE36FE22FB0A0D400F745CF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0EE36FEC2FB0A0D400F745CF /* Products */;
 			projectDirPath = "";
@@ -159,9 +162,6 @@
 			targets = (
 				0EE36FEA2FB0A0D400F745CF /* Photobooth-ai */,
 				AA0000000000000000000001 /* Photobooth-aiTests */,
-			);
-			packageReferences = (
-				0EFF000220000000000000B2 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 		};
 /* End PBXProject section */
@@ -306,6 +306,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -323,11 +324,10 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				VALIDATE_PRODUCT = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = all;
-				DEAD_CODE_STRIPPING = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -343,8 +343,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Boothify;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots and record 360 videos.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Boothify uses Face ID to unlock operator settings without entering a PIN.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos and 360 videos to your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Boothify needs photo library access to import existing photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -381,10 +381,11 @@
 				CURRENT_PROJECT_VERSION = 10;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BOOTHIFY_API_BASE_URL = "https://ai-photobooth-rust.vercel.app";
 				INFOPLIST_KEY_CFBundleDisplayName = Boothify;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Boothify needs the camera to take photobooth shots and record 360 videos.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Boothify uses Face ID to unlock operator settings without entering a PIN.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Boothify records audio together with your 360 videos so guests can include sound from the event.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Boothify saves your AI photos and 360 videos to your Photos library.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Boothify needs photo library access to import existing photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -398,7 +399,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				INFOPLIST_KEY_BOOTHIFY_API_BASE_URL = "https://ai-photobooth-rust.vercel.app";
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.servify.Photobooth-ai";
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -19,23 +19,26 @@ struct Booth360LandingView: View {
             AtmosphericBackground()
 
             ScrollView {
-                VStack(spacing: BoothifySpacing.lg) {
+                // Layout redesign: no mega-card. The screen is three breathing
+                // zones — headline, a light create zone floating directly on
+                // the atmosphere, and a quiet recents list. One dominant: the
+                // glowing amber CTA.
+                VStack(alignment: .leading, spacing: BoothifySpacing.xl) {
                     headerBlock
 
-                    newSessionCard
+                    newSessionZone
 
                     if let topErr = app.topLevelError {
                         Text(topErr)
                             .font(.footnote)
                             .foregroundStyle(BoothifyTheme.error)
-                            .multilineTextAlignment(.center)
                     }
 
                     recentEventsSection
                 }
                 .frame(maxWidth: 620)
-                .padding(.horizontal, BoothifySpacing.md)
-                .padding(.top, BoothifySpacing.xs)
+                .padding(.horizontal, BoothifySpacing.md + 4)
+                .padding(.top, BoothifySpacing.md)
                 .padding(.bottom, BoothifySpacing.lg)
                 .frame(maxWidth: .infinity)
             }
@@ -52,77 +55,67 @@ struct Booth360LandingView: View {
     // MARK: - Header
 
     private var headerBlock: some View {
-        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
-            // Mode badge
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm + 4) {
+            // Mode chip — a small floating capsule, not a full-width box.
+            // The atmosphere stays visible around it.
             HStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(BoothifyTheme.amber.opacity(0.25))
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(BoothifyTheme.amber)
-                        .frame(width: 5, height: 5)
-                }
-                .accessibilityHidden(true)
+                Circle()
+                    .fill(BoothifyTheme.amber)
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
                 Text("360 mode")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.amber)
-                Spacer()
                 Text("BETA")
                     .font(.caption2.weight(.bold))
                     .kerning(0.6)
-                    .foregroundStyle(BoothifyTheme.amber)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(BoothifyTheme.amber.opacity(0.14), in: Capsule())
-                    .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.40), lineWidth: 0.8))
+                    .opacity(0.75)
             }
+            .foregroundStyle(BoothifyTheme.amber)
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(BoothifyTheme.amber.opacity(0.08), in: RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
-                    .stroke(BoothifyTheme.amber.opacity(0.20), lineWidth: 1)
-            )
+            .padding(.vertical, 6)
+            .background(BoothifyTheme.amber.opacity(0.10), in: Capsule())
+            .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.28), lineWidth: 1))
 
-            Text("Start a new 360 session")
+            Text("Start a new\n360 session")
                 .font(BoothifyType.hero)
                 .foregroundStyle(.white)
+                .lineSpacing(1)
 
             Text("Capture rotating 360° clips and let AI turn them into cinematic shareable videos.")
                 .font(.subheadline)
                 .foregroundStyle(BoothifyTheme.textSecondary)
-                .lineSpacing(2)
+                .lineSpacing(3)
+                .frame(maxWidth: 460, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - New session card
+    // MARK: - New session zone
+    //
+    // Layout redesign: no enclosing mega-card. The input is its own light
+    // glass field, chips float directly on the atmosphere, and the CTA is
+    // the screen's single glowing dominant.
 
-    private var newSessionCard: some View {
-        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
-            Text("NEW 360 EVENT")
-                .font(.caption2.weight(.semibold))
-                .kerning(1.2)
-                .foregroundStyle(BoothifyTheme.textTertiary)
+    private var canStart: Bool {
+        eventName.trimmingCharacters(in: .whitespaces).count >= 2 && !creating
+    }
 
+    private var newSessionZone: some View {
+        VStack(alignment: .leading, spacing: BoothifySpacing.md) {
             TextField(
                 "",
                 text: $eventName,
-                prompt: Text("e.g. Anna & Tom — 360 Highlights")
+                prompt: Text("Name your event…")
                     .foregroundColor(BoothifyTheme.textMuted)
             )
             .font(.body)
             .foregroundStyle(.white)
             .padding(.horizontal, BoothifySpacing.md)
-            .frame(minHeight: 54)
-            .background(BoothifyTheme.surface2, in: RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
+            .frame(minHeight: 56)
+            .glassSurface(radius: BoothifyRadius.card)
             .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                    .stroke(
-                        nameFocused ? BoothifyTheme.amber.opacity(0.60) : BoothifyTheme.surfaceLine,
-                        lineWidth: nameFocused ? 1.5 : 1
-                    )
+                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                    .stroke(BoothifyTheme.amber.opacity(nameFocused ? 0.55 : 0), lineWidth: 1.5)
             )
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: nameFocused)
             .focused($nameFocused)
@@ -133,28 +126,29 @@ struct Booth360LandingView: View {
 
             // 1-tap templates (ported from the photo landing per blueprint 4.G):
             // a chip names AND pre-configures the event on create.
-            HStack(spacing: BoothifySpacing.xs) {
-                ForEach(EventTemplate.allCases) { template in
-                    Booth360TemplateChip(label: template.label, selected: selectedTemplate == template) {
-                        Haptics.tap(.light)
-                        selectedTemplate = template
-                        // Never overwrite a name the operator typed; only seed an
-                        // empty field or replace a prior chip's seed.
-                        let typed = eventName.trimmingCharacters(in: .whitespaces)
-                        if typed.isEmpty || EventTemplate.allCases.contains(where: { $0.nameSeed == typed }) {
-                            eventName = template.nameSeed
+            VStack(alignment: .leading, spacing: BoothifySpacing.xs + 2) {
+                HStack(spacing: BoothifySpacing.xs + 2) {
+                    ForEach(EventTemplate.allCases) { template in
+                        Booth360TemplateChip(label: template.label, selected: selectedTemplate == template) {
+                            Haptics.tap(.light)
+                            selectedTemplate = template
+                            // Never overwrite a name the operator typed; only seed an
+                            // empty field or replace a prior chip's seed.
+                            let typed = eventName.trimmingCharacters(in: .whitespaces)
+                            if typed.isEmpty || EventTemplate.allCases.contains(where: { $0.nameSeed == typed }) {
+                                eventName = template.nameSeed
+                            }
+                            nameFocused = true
                         }
-                        nameFocused = true
+                        .disabled(creating)
                     }
-                    .disabled(creating)
                 }
-            }
-            .padding(.top, 2)
-
-            if let t = selectedTemplate {
-                Text(templateHint(t))
-                    .font(.caption2)
-                    .foregroundStyle(BoothifyTheme.textTertiary)
+                if let t = selectedTemplate {
+                    Text(templateHint(t))
+                        .font(.caption2)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .padding(.leading, 4)
+                }
             }
 
             Button {
@@ -162,7 +156,7 @@ struct Booth360LandingView: View {
             } label: {
                 HStack(spacing: 8) {
                     if creating {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(.black)
                     }
                     Text(creating ? "Creating event…" : "Start session")
                     if !creating {
@@ -170,9 +164,12 @@ struct Booth360LandingView: View {
                     }
                 }
             }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(creating || eventName.trimmingCharacters(in: .whitespaces).count < 2)
-            .opacity(eventName.trimmingCharacters(in: .whitespaces).count < 2 ? 0.50 : 1)
+            .buttonStyle(AmberCTAButtonStyle())
+            .glowAccent(intensity: canStart ? 0.55 : 0.15)
+            .disabled(!canStart)
+            .opacity(canStart || creating ? 1 : 0.55)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: canStart)
+            .padding(.top, BoothifySpacing.xs)
 
             if let createError {
                 HStack(spacing: 6) {
@@ -184,8 +181,6 @@ struct Booth360LandingView: View {
                 .foregroundStyle(BoothifyTheme.error)
             }
         }
-        .padding(BoothifySpacing.md)
-        .glassSurface(radius: BoothifyRadius.surface)
     }
 
     // MARK: - Recent events
@@ -193,11 +188,14 @@ struct Booth360LandingView: View {
     @ViewBuilder
     private var recentEventsSection: some View {
         if app.isLoadingEvents && app.events.isEmpty {
-            ProgressView().tint(BoothifyTheme.amber).padding(.top, 20)
+            ProgressView().tint(BoothifyTheme.amber)
+                .frame(maxWidth: .infinity)
+                .padding(.top, BoothifySpacing.md)
         } else if app.events.isEmpty {
+            // Quiet background whisper — never a competitor to the CTA.
             Booth360EmptyState()
         } else {
-            VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+            VStack(alignment: .leading, spacing: BoothifySpacing.sm + 2) {
                 HStack {
                     Text("RECENT EVENTS")
                         .font(.caption2.weight(.semibold))
@@ -301,18 +299,16 @@ struct Booth360EventRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: BoothifySpacing.sm) {
+            // Light, airy row — small thumb, slim padding, glass stays thin
+            // so the list reads as floating entries, not stacked bricks.
+            HStack(spacing: BoothifySpacing.sm + 2) {
                 thumbnail
-                    .frame(width: 52, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                    )
+                    .frame(width: 40, height: 40)
+                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro + 2, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(event.name)
-                        .font(.body.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     Text(subtitle)
@@ -325,7 +321,8 @@ struct Booth360EventRow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.textMuted)
             }
-            .padding(BoothifySpacing.sm + 4)
+            .padding(.horizontal, BoothifySpacing.sm + 4)
+            .padding(.vertical, BoothifySpacing.sm + 2)
             .glassSurface(radius: BoothifyRadius.card)
         }
         .buttonStyle(.plain)
@@ -349,28 +346,20 @@ struct Booth360EventRow: View {
     }
 }
 
+/// Layout redesign: the landing empty state is a whisper, not a competitor —
+/// the CTA above is the screen's story. Two quiet lines, no icon box.
 struct Booth360EmptyState: View {
     var body: some View {
-        VStack(spacing: BoothifySpacing.sm) {
-            ZStack {
-                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                    .fill(BoothifyTheme.surface2)
-                    .frame(width: 60, height: 60)
-                Image(systemName: "video.badge.plus")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.amber.opacity(0.70))
-            }
-            .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 3) {
             Text("No 360 sessions yet")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-            Text("Create your first event to start capturing 360° clips.")
-                .font(.caption)
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.textTertiary)
-                .multilineTextAlignment(.center)
+            Text("Your first event will appear here.")
+                .font(.caption2)
+                .foregroundStyle(BoothifyTheme.textMuted)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, BoothifySpacing.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, BoothifySpacing.sm)
     }
 }
 
