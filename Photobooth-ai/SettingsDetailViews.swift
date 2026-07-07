@@ -74,6 +74,17 @@ struct CameraSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(BoothifyTheme.textMuted)
                         .padding(.top, BoothifySpacing.xs)
+                    // Roadmap, not a dead end: the v2 preset is visible so the
+                    // operator knows it's coming — just not selectable yet.
+                    HStack(spacing: BoothifySpacing.xs) {
+                        Image(systemName: "sparkles")
+                            .font(.caption2)
+                        Text("\(StabilizationPreset.cinematicExtended.label) — coming in a later update")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                    .padding(.top, 2)
+                    .accessibilityElement(children: .combine)
                 }
 
                 SettingsCard(title: "Framing") {

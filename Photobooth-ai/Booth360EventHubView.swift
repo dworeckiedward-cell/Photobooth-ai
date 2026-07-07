@@ -85,10 +85,12 @@ struct Booth360EventHubView: View {
                         statsRow
                         shareEventSection
                     } else {
-                        Text("Event not found")
-                            .font(.body)
-                            .foregroundStyle(BoothifyTheme.textSecondary)
-                            .padding(.top, 40)
+                        BoothifyEmptyState(
+                            icon: "calendar.badge.exclamationmark",
+                            title: "Event not found",
+                            subtitle: "It may have been deleted, or this link points at another account's event."
+                        )
+                        .padding(.top, BoothifySpacing.xl)
                     }
                 }
                 .padding(.horizontal, BoothifySpacing.md)
