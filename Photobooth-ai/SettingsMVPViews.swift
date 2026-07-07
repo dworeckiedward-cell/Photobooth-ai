@@ -30,7 +30,7 @@ private extension View {
         self
             .scrollContentBackground(.hidden)
             .background(BoothifyTheme.bg.ignoresSafeArea())
-            .tint(BoothifyTheme.violet)
+            .tint(BoothifyTheme.amber)
     }
 }
 
@@ -436,10 +436,10 @@ struct VirtualAttendantPreview: View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(BoothifyTheme.violet)
+                    .fill(BoothifyTheme.amber.opacity(0.16))
                     .frame(width: 44, height: 44)
                 Image(systemName: "person.wave.2.fill")
-                    .foregroundStyle(.white)
+                    .foregroundStyle(BoothifyTheme.amber)
                     .font(.title3.weight(.semibold))
             }
             VStack(alignment: .leading, spacing: 4) {
@@ -474,7 +474,7 @@ struct VirtualAttendantHelpSheet: View {
                     HStack(spacing: 12) {
                         Image(systemName: "questionmark.circle.fill")
                             .font(.system(size: 36))
-                            .foregroundStyle(BoothifyTheme.violet)
+                            .foregroundStyle(BoothifyTheme.amber)
                         Text("Need a hand?")
                             .font(.largeTitle.bold())
                             .foregroundStyle(.white)
@@ -531,7 +531,7 @@ struct VirtualAttendantHelpSheet: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: symbol)
                 .font(.title2)
-                .foregroundStyle(BoothifyTheme.violet)
+                .foregroundStyle(BoothifyTheme.amber)
                 .frame(width: 36)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline).foregroundStyle(.white)
@@ -659,7 +659,7 @@ struct DisclaimerConsentSheet: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white)
                 }
-                .tint(BoothifyTheme.violet)
+                .tint(BoothifyTheme.amber)
 
                 Spacer(minLength: 4)
 
@@ -827,7 +827,7 @@ private struct SurveyResponseRow: View {
                 Circle().fill(BoothifyTheme.surface2).frame(width: 32, height: 32)
                 Image(systemName: iconForType)
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
+                    .foregroundStyle(BoothifyTheme.amber)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(answerString)
@@ -874,7 +874,7 @@ struct PostResultSurveySheet: View {
                 VStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .font(.title)
-                        .foregroundStyle(BoothifyTheme.violet)
+                        .foregroundStyle(BoothifyTheme.amber)
                     Text(settings.questionText)
                         .font(.title2.bold())
                         .foregroundStyle(.white)
@@ -1062,7 +1062,7 @@ struct SharingStatusView: View {
         }
         .scrollContentBackground(.hidden)
         .background(BoothifyTheme.bg.ignoresSafeArea())
-        .tint(BoothifyTheme.violet)
+        .tint(BoothifyTheme.amber)
         .navigationTitle("Delivery Status")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -1114,7 +1114,7 @@ private struct SharingChannelRow: View {
                     .frame(width: 32, height: 32)
                 Image(systemName: channel.symbol)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
+                    .foregroundStyle(BoothifyTheme.amber)
             }
             .accessibilityHidden(true)
 
@@ -1131,7 +1131,7 @@ private struct SharingChannelRow: View {
             if canTest {
                 Button("Send test") { test() }
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
+                    .foregroundStyle(BoothifyTheme.amber)
                     .buttonStyle(.plain)
                     .disabled(live == .sending)
             }
@@ -1217,7 +1217,7 @@ struct AccountSettingsView: View {
                             copy(event!.slug, label: "Slug")
                         } label: {
                             Image(systemName: "doc.on.doc")
-                                .foregroundStyle(BoothifyTheme.violet)
+                                .foregroundStyle(BoothifyTheme.amber)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Copy slug")
@@ -1244,7 +1244,7 @@ struct AccountSettingsView: View {
                         copy(apiBaseURL, label: "API URL")
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .foregroundStyle(BoothifyTheme.violet)
+                            .foregroundStyle(BoothifyTheme.amber)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Copy API base URL")
@@ -1314,7 +1314,7 @@ struct AccountSettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(BoothifyTheme.bg.ignoresSafeArea())
-        .tint(BoothifyTheme.violet)
+        .tint(BoothifyTheme.amber)
         .navigationTitle("Account")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Reset settings?", isPresented: $confirmReset) {

@@ -332,13 +332,13 @@ struct SharingSettingsView: View {
                             HStack(spacing: BoothifySpacing.sm + 2) {
                                 Image(systemName: ch.symbol)
                                     .frame(width: 22)
-                                    .foregroundStyle(BoothifyTheme.violet)
+                                    .foregroundStyle(BoothifyTheme.amber)
                                 Text(ch.label)
                                     .foregroundStyle(.white)
                                     .font(.subheadline)
                             }
                         }
-                        .tint(BoothifyTheme.violet)
+                        .tint(BoothifyTheme.amber)
                     }
                 }
 
@@ -648,7 +648,7 @@ private struct SettingsToggle: View {
         Toggle(isOn: isOn) {
             Text(title).font(.subheadline).foregroundStyle(.white)
         }
-        .tint(BoothifyTheme.violet)
+        .tint(BoothifyTheme.amber)
     }
 }
 
@@ -732,10 +732,10 @@ private struct SettingsSlider: View {
             LabeledRow(title, value: valueLabel)
             if step > 0 {
                 Slider(value: value, in: range, step: step)
-                    .tint(BoothifyTheme.violet)
+                    .tint(BoothifyTheme.amber)
             } else {
                 Slider(value: value, in: range)
-                    .tint(BoothifyTheme.violet)
+                    .tint(BoothifyTheme.amber)
             }
         }
     }

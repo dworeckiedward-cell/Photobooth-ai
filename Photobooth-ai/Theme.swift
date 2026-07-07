@@ -213,6 +213,8 @@ struct GradientHeading: View {
 // StatTile here to avoid redeclaration errors.
 
 /// Reusable empty-state view used across gallery, cloud panel, etc.
+/// Layout redesign: a composed leading-aligned statement on light glass,
+/// not an orphaned icon floating in the middle of a void.
 struct BoothifyEmptyState: View {
     let icon: String
     let title: String
@@ -221,18 +223,26 @@ struct BoothifyEmptyState: View {
     var actionLabel: String = "Get started"
 
     var body: some View {
-        VStack(spacing: BoothifySpacing.md) {
-            Image(systemName: icon)
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(BoothifyTheme.textMuted)
-            VStack(spacing: BoothifySpacing.xs) {
-                Text(title)
-                    .font(BoothifyType.bodyEmphasis)
-                    .foregroundStyle(BoothifyTheme.textSecondary)
-                Text(subtitle)
-                    .font(BoothifyType.caption)
-                    .foregroundStyle(BoothifyTheme.textTertiary)
-                    .multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: BoothifySpacing.md) {
+            HStack(spacing: BoothifySpacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                        .fill(BoothifyTheme.amber.opacity(0.10))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.amber.opacity(0.75))
+                }
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(BoothifyType.bodyEmphasis)
+                        .foregroundStyle(.white)
+                    Text(subtitle)
+                        .font(BoothifyType.caption)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             if let action {
                 Button(actionLabel, action: action)
@@ -240,7 +250,10 @@ struct BoothifyEmptyState: View {
                     .frame(maxWidth: 200)
             }
         }
-        .padding(BoothifySpacing.xl)
+        .padding(BoothifySpacing.md)
+        .frame(maxWidth: 480)
+        .glassSurface(radius: BoothifyRadius.section)
+        .padding(BoothifySpacing.lg)
     }
 }
 

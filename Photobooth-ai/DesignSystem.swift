@@ -132,11 +132,7 @@ struct AppEmptyState: View {
         }
         .padding(BoothifySpacing.xl)
         .frame(maxWidth: .infinity)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
+        .glassSurface(radius: BoothifyRadius.surface)
     }
 }
 
@@ -148,7 +144,7 @@ struct AppLoadingState: View {
         VStack(spacing: BoothifySpacing.sm) {
             ProgressView()
                 .progressViewStyle(.circular)
-                .tint(BoothifyTheme.violet)
+                .tint(BoothifyTheme.amber)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(BoothifyTheme.textMuted)
