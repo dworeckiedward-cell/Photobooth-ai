@@ -38,7 +38,11 @@ struct Booth360LandingView: View {
         return Int((Double(uploaded) / Double(done.count) * 100).rounded())
     }
 
-    private var latestEvent: Event? { app.events.first }
+    /// Most recent event that is NOT the live one — the current event has
+    /// its own banner above.
+    private var latestEvent: Event? {
+        app.events.first(where: { $0.id != app.currentEventId })
+    }
 
     var body: some View {
         ZStack {
@@ -51,16 +55,15 @@ struct Booth360LandingView: View {
 
                     startCard
 
-                    if createExpanded {
-                        createZone
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
                     if let topErr = app.topLevelError {
                         Text(topErr)
                             .font(.footnote)
                             .foregroundStyle(BoothifyTheme.error)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    if let current = currentEvent {
+                        currentEventBanner(current)
                     }
 
                     bentoRow
@@ -77,9 +80,125 @@ struct Booth360LandingView: View {
         }
         // The designed greeting header IS the screen's title.
         .toolbar(.hidden, for: .navigationBar)
+        // New-event popup: dimmed stage + fading glass card, keyboard-first.
+        .overlay { createPopup }
         .task {
             CrashRestoreManager.clearActiveEvent()
             await app.loadRecentEvents()
+        }
+    }
+
+    // MARK: - Current event
+
+    private var currentEvent: Event? {
+        guard let id = app.currentEventId else { return nil }
+        return app.events.first(where: { $0.id == id })
+    }
+
+    /// "Continue your current event" — the first banner when a gig is live.
+    private func currentEventBanner(_ event: Event) -> some View {
+        Button {
+            Haptics.tap(.medium)
+            app.push(.booth360EventHub(eventId: event.id))
+        } label: {
+            HStack(spacing: BoothifySpacing.md - 2) {
+                ZStack {
+                    Circle()
+                        .fill(BoothifyTheme.violet.opacity(0.22))
+                        .frame(width: 44, height: 44)
+                    Circle()
+                        .fill(BoothifyTheme.violet)
+                        .frame(width: 10, height: 10)
+                        .shadow(color: BoothifyTheme.violet.opacity(0.9), radius: 6)
+                }
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("CURRENT EVENT")
+                        .font(.caption2.weight(.bold))
+                        .kerning(1.0)
+                        .lineLimit(1)
+                        .foregroundStyle(BoothifyTheme.violet)
+                    Text(event.name)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: BoothifySpacing.sm)
+
+                HStack(spacing: 5) {
+                    Text("Continue")
+                        .font(.subheadline.weight(.semibold))
+                    Image(systemName: "arrow.right")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(.white)
+            }
+            .padding(BoothifySpacing.md)
+            .background(
+                LinearGradient(
+                    colors: [BoothifyTheme.violet.opacity(0.30), BoothifyTheme.violet.opacity(0.10)],
+                    startPoint: .leading, endPoint: .trailing
+                ),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+            .glassSurface(radius: 24)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Continue your current event, \(event.name)")
+        .accessibilityHint("Opens the live event panel")
+    }
+
+    // MARK: - Create popup (dim + fade)
+
+    @ViewBuilder
+    private var createPopup: some View {
+        ZStack(alignment: .top) {
+            if createExpanded {
+                // Dimmer — tap outside dismisses.
+                Color.black.opacity(0.62)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture { closeCreate() }
+                    .accessibilityLabel("Dismiss")
+
+                VStack(alignment: .leading, spacing: BoothifySpacing.md) {
+                    HStack {
+                        Text("New event")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Button {
+                            closeCreate()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                        .frame(width: 44, height: 44)
+                        .accessibilityLabel("Close")
+                    }
+                    createZone
+                }
+                .padding(BoothifySpacing.md + 4)
+                .background(BoothifyTheme.bgElevated, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .glassSurface(radius: 28)
+                .frame(maxWidth: 560)
+                .padding(.horizontal, BoothifySpacing.md + 2)
+                // Upper third — the keyboard never covers the form.
+                .padding(.top, BoothifySpacing.xxl + BoothifySpacing.lg)
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: createExpanded)
+    }
+
+    private func closeCreate() {
+        Haptics.tap(.light)
+        nameFocused = false
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+            createExpanded = false
         }
     }
 
@@ -440,6 +559,8 @@ struct Booth360LandingView: View {
         Task {
             do {
                 let event = try await app.createEvent(name: trimmed)
+                // The freshly created event becomes the live one.
+                app.currentEventId = event.id
                 // 1-tap template: pre-configure the new event's settings.
                 if let template {
                     let configured = template.apply(to: app.settings(for: event.id), eventName: trimmed)

@@ -104,6 +104,7 @@ final class LayoutSnapshotTests: XCTestCase {
 
         // Landing — empty and populated.
         let emptyApp = AppState()
+        emptyApp.currentEventId = nil
         try snapshot("landing_empty") {
             NavigationStack { Booth360LandingView() }.environment(emptyApp)
         }
@@ -112,6 +113,9 @@ final class LayoutSnapshotTests: XCTestCase {
         let wedding = makeEvent(name: "Anna and Tom", daysAgo: 1)
         let corpo = makeEvent(name: "Servify Summit", daysAgo: 6)
         app.events = [wedding, corpo]
+        // Live-event marker: the wedding runs at the booth → landing shows
+        // the Continue banner, its hub shows LIVE + End event.
+        app.currentEventId = wedding.id
         _ = makeJob(app: app, eventId: wedding.id, status: .completed, shared: true)
         _ = makeJob(app: app, eventId: wedding.id, status: .processing, step: .slowMotion, progress: 0.42)
         try snapshot("landing_events") {

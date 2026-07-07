@@ -440,6 +440,25 @@ final class AppState {
 
     var booth360Jobs: [UUID: Booth360Job] = [:]
 
+    // MARK: - Current event (the one running at the booth)
+    //
+    // Local operator state: exactly one event can be "live" at a time.
+    // Creating an event makes it current; "Continue this event" repoints the
+    // marker (implicitly ending whichever was live); "End event" clears it.
+    // Persisted so an app restart mid-gig keeps the banner on Home.
+
+    var currentEventId: UUID? = UserDefaults.standard
+        .string(forKey: "boothify.currentEventId")
+        .flatMap(UUID.init(uuidString:)) {
+        didSet {
+            if let id = currentEventId {
+                UserDefaults.standard.set(id.uuidString, forKey: "boothify.currentEventId")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "boothify.currentEventId")
+            }
+        }
+    }
+
     func job(id: UUID) -> Booth360Job? { booth360Jobs[id] }
 
     func upsertJob(_ job: Booth360Job) { booth360Jobs[job.id] = job }

@@ -148,3 +148,17 @@ zawsze o tap dalej), Reduce Transparency na sprzęcie.
 - **Home**: klip budki gra jako PEŁNOEKRANOWE tło (scrim góra/dół dla
   czytelności bento); kafel „YOUR BOOTH" usunięty — staty w pełnym rzędzie.
   Reduce Motion / brak asseta -> czarna atmosfera.
+
+## Bieżący event + popup tworzenia (feature, decyzja operatora)
+- `AppState.currentEventId` — dokładnie JEDEN event „live" na raz; trwały
+  w UserDefaults (restart apki w trakcie gigu nie gubi stanu). Nowo
+  utworzony event automatycznie staje się bieżący.
+- **Home**: tap w „Start a new session" otwiera POPUP (przyciemnienie sceny
+  + fade/scale, tap poza kartą lub X zamyka; formularz w górnej 1/3, poza
+  klawiaturą). Gdy jest bieżący event — fioletowy baner „CURRENT EVENT →
+  Continue" jako pierwszy pod hero; „LATEST EVENT" pokazuje najnowszy
+  NIE-bieżący.
+- **Hub**: plakietka „LIVE · 360 event"; na dole sekcja cyklu życia:
+  bieżący → „End event" + czerwone potwierdzenie (confirmationDialog,
+  destructive); przeszły → „Continue this event" (przejmuje marker live —
+  inny bieżący event kończy się automatycznie).

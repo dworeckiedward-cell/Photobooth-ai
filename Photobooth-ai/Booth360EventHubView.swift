@@ -10,6 +10,9 @@ struct Booth360EventHubView: View {
 
     @State private var sharePresented: Bool = false
     @State private var copiedLink: Bool = false
+    @State private var confirmEnd: Bool = false
+
+    private var isCurrent: Bool { app.currentEventId == eventId }
 
     private var event: Event? { app.event(id: eventId) }
     private var jobs: [Booth360Job] { app.jobs(for: eventId) }
@@ -50,6 +53,83 @@ struct Booth360EventHubView: View {
         .accessibilityHint("Locks the app into the guest 360 booth for this event")
     }
 
+    // MARK: - Event lifecycle (current-event marker)
+    //
+    // Exactly one event runs at the booth. Live event → "End event" with a
+    // red confirmation; a past event → "Continue this event", which repoints
+    // the live marker (implicitly ending whichever event was running).
+
+    @ViewBuilder
+    private var lifecycleSection: some View {
+        if isCurrent {
+            Button {
+                Haptics.tap(.medium)
+                confirmEnd = true
+            } label: {
+                HStack(spacing: BoothifySpacing.sm + 2) {
+                    Image(systemName: "power")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.error)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("End event")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Closes the live session — videos and links keep working")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.vertical, BoothifySpacing.sm + 4)
+                .glassSurface(radius: BoothifyRadius.card)
+            }
+            .buttonStyle(.plain)
+            .confirmationDialog("End this event?", isPresented: $confirmEnd, titleVisibility: .visible) {
+                Button("End event", role: .destructive) {
+                    Haptics.notify(.success)
+                    app.currentEventId = nil
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The booth stops running this event. You can continue it again anytime.")
+            }
+        } else {
+            Button {
+                Haptics.notify(.success)
+                // Single live marker — continuing here ends any other event.
+                app.currentEventId = eventId
+            } label: {
+                HStack(spacing: BoothifySpacing.sm + 2) {
+                    Image(systemName: "play.circle.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(BoothifyTheme.violet)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Continue this event")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Makes it the live event — any other running event ends")
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.vertical, BoothifySpacing.sm + 4)
+                .background(
+                    LinearGradient(
+                        colors: [BoothifyTheme.violet.opacity(0.26), BoothifyTheme.violet.opacity(0.08)],
+                        startPoint: .leading, endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
+                )
+                .glassSurface(radius: BoothifyRadius.card)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Resumes this event and ends any other running event")
+        }
+    }
+
     var body: some View {
         ZStack {
             AtmosphericBackground()
@@ -86,6 +166,7 @@ struct Booth360EventHubView: View {
                         statsRow
                         shareEventSection
                         CloudStatusPanel(eventId: eventId)
+                        lifecycleSection
                     } else {
                         BoothifyEmptyState(
                             icon: "calendar.badge.exclamationmark",
@@ -150,14 +231,14 @@ struct Booth360EventHubView: View {
                         .frame(width: 6, height: 6)
                 }
                 .accessibilityHidden(true)
-                Text("360 event")
+                Text(isCurrent ? "LIVE · 360 event" : "360 event")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.violet)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(BoothifyTheme.violet.opacity(0.10), in: Capsule())
-            .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(0.30), lineWidth: 1))
+            .background(BoothifyTheme.violet.opacity(isCurrent ? 0.18 : 0.10), in: Capsule())
+            .overlay(Capsule().stroke(BoothifyTheme.violet.opacity(isCurrent ? 0.50 : 0.30), lineWidth: 1))
 
             Spacer()
 
