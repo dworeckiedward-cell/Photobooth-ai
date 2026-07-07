@@ -31,25 +31,36 @@ struct Booth360ProcessingView: View {
     var body: some View {
         ZStack {
             AtmosphericBackground()
-            ambientGlow
 
-            ScrollView {
-                VStack(spacing: 26) {
-                    titleBlock
-                    progressRing
-                    if job?.status != .completed && job?.status != .failed {
-                        tipBlock
-                    }
-                    stepsList
+            // Layout redesign: one calm hero of motion — the big ring — and
+            // nothing but whispers around it. No tip brick, no steps brick;
+            // the atmosphere carries the wait.
+            VStack(spacing: 0) {
+                Spacer(minLength: BoothifySpacing.xl)
 
-                    if job?.status == .failed {
-                        failedSection
-                    }
+                titleBlock
+
+                Spacer()
+
+                progressRing
+
+                stepDots
+                    .padding(.top, BoothifySpacing.lg)
+
+                Spacer()
+
+                if job?.status == .failed {
+                    failedSection
+                        .padding(.horizontal, BoothifySpacing.lg)
+                } else if job?.status != .completed {
+                    tipLine
+                        .padding(.horizontal, BoothifySpacing.xl)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 40)
+
+                Spacer(minLength: BoothifySpacing.xxl)
             }
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Creating your 360 video")
         .navigationBarTitleDisplayMode(.inline)
@@ -140,8 +151,8 @@ struct Booth360ProcessingView: View {
     private var progressRing: some View {
         ZStack {
             Circle()
-                .stroke(BoothifyTheme.surface2, lineWidth: 10)
-                .frame(width: 160, height: 160)
+                .stroke(BoothifyTheme.surface2, lineWidth: 12)
+                .frame(width: 220, height: 220)
             Circle()
                 .trim(from: 0, to: progressFraction)
                 .stroke(
@@ -149,10 +160,10 @@ struct Booth360ProcessingView: View {
                         colors: [BoothifyTheme.amber.opacity(0.35), BoothifyTheme.amber, BoothifyTheme.amber],
                         center: .center
                     ),
-                    style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 12, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .frame(width: 160, height: 160)
+                .frame(width: 220, height: 220)
                 .animation(reduceMotion ? nil : BoothifyMotion.gentle, value: progressFraction)
             VStack(spacing: 2) {
                 Text("\(Int(progressFraction * 100))%")
@@ -167,6 +178,30 @@ struct Booth360ProcessingView: View {
                     .foregroundStyle(BoothifyTheme.textTertiary)
             }
         }
+        // The screen's one glow — the ring IS the hero of motion.
+        .glowAccent(intensity: 0.28)
+    }
+
+    // MARK: - Step dots (quiet progression, replaces the steps brick)
+
+    private var stepDots: some View {
+        HStack(spacing: BoothifySpacing.sm) {
+            ForEach(Array(steps.enumerated()), id: \.element) { idx, step in
+                Circle()
+                    .fill(dotColor(idx: idx, step: step))
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(currentStepLabel)
+    }
+
+    private func dotColor(idx: Int, step: Booth360ProcessingStep) -> Color {
+        switch stepState(idx: idx, step: step) {
+        case .done:    BoothifyTheme.amber.opacity(0.9)
+        case .active:  BoothifyTheme.amber
+        case .pending: BoothifyTheme.surface2
+        }
     }
 
     private var progressFraction: Double {
@@ -175,43 +210,29 @@ struct Booth360ProcessingView: View {
         return job.progress
     }
 
-    // MARK: - Processing tips
+    // MARK: - Processing tips (a floating whisper, not a card)
 
-    private var tipBlock: some View {
-        HStack(spacing: 10) {
+    private var tipLine: some View {
+        HStack(spacing: 8) {
             Image(systemName: processingTips[tipIndex].symbol)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.amber)
-                .frame(width: 20)
             Text(processingTips[tipIndex].text)
-                .font(.caption.weight(.medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(BoothifyTheme.textSecondary)
-                .lineLimit(1)
-            Spacer()
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
         }
-        .padding(.horizontal, BoothifySpacing.md - 2)
-        .padding(.vertical, BoothifySpacing.sm + 2)
-        .glassSurface(radius: BoothifyRadius.input)
+        .frame(maxWidth: .infinity)
         .id(tipIndex)  // forces fade transition
         .transition(.opacity)
     }
 
-    // MARK: - Steps list
+    // MARK: - Step progression state
 
-    private var stepsList: some View {
-        VStack(spacing: 8) {
-            ForEach(Array(steps.enumerated()), id: \.element) { idx, step in
-                StepRow(
-                    step: step,
-                    state: stepState(idx: idx, step: step)
-                )
-            }
-        }
-        .padding(BoothifySpacing.md - 2)
-        .glassSurface(radius: BoothifyRadius.surface)
-    }
+    private enum StepState { case pending, active, done }
 
-    private func stepState(idx: Int, step: Booth360ProcessingStep) -> StepRow.StateKind {
+    private func stepState(idx: Int, step: Booth360ProcessingStep) -> StepState {
         guard let job else { return .pending }
         if job.status == .completed { return .done }
         if job.currentStep == step { return .active }
@@ -260,77 +281,6 @@ struct Booth360ProcessingView: View {
         .padding(.vertical, BoothifySpacing.md)
     }
 
-    // MARK: - Ambient glow
-
-    private var ambientGlow: some View {
-        ZStack {
-            RadialGradient(
-                colors: [BoothifyTheme.amber.opacity(0.18), .clear],
-                center: .init(x: 0.2, y: 0.15),
-                startRadius: 0, endRadius: 460
-            )
-            RadialGradient(
-                colors: [BoothifyTheme.violet.opacity(0.10), .clear],
-                center: .init(x: 0.85, y: 0.8),
-                startRadius: 0, endRadius: 460
-            )
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
-}
-
-// MARK: - Step row
-
-private struct StepRow: View {
-    enum StateKind: Equatable { case pending, active, done }
-    let step: Booth360ProcessingStep
-    let state: StateKind
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(tintBackground)
-                    .frame(width: 36, height: 36)
-                if state == .active {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(BoothifyTheme.amber)
-                } else if state == .done {
-                    Image(systemName: "checkmark")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(BoothifyTheme.emerald)
-                } else {
-                    Image(systemName: step.symbol)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                }
-            }
-            Text(step.label)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(textColor)
-            Spacer()
-        }
-        .padding(.vertical, 4)
-        .opacity(state == .pending ? 0.65 : 1)
-    }
-
-    private var tintBackground: Color {
-        switch state {
-        case .pending: BoothifyTheme.surface2
-        case .active:  BoothifyTheme.amber.opacity(0.18)
-        case .done:    BoothifyTheme.emerald.opacity(0.16)
-        }
-    }
-
-    private var textColor: Color {
-        switch state {
-        case .pending: BoothifyTheme.textSecondary
-        case .active:  .white
-        case .done:    .white
-        }
-    }
 }
 
 #Preview {
