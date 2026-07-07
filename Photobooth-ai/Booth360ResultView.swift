@@ -29,9 +29,13 @@ struct Booth360ResultView: View {
                 // vertical space, metadata chips stack tightly underneath, and
                 // the action / nav rows are pinned to the bottom so the operator
                 // can act without scrolling during an event.
-                VStack(spacing: 12) {
+                // Layout redesign: the hierarchy is video → QR hero → quiet
+                // action whispers. The QR card IS the delivery wow moment; the
+                // rest of the controls stay small and secondary — no wall of
+                // equal tiles.
+                VStack(spacing: BoothifySpacing.md) {
                     previewCard(job: job)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, BoothifySpacing.md)
                         .frame(maxHeight: .infinity)
                         // Reveal beat — the guest's "wow" moment gets an
                         // entrance instead of just being there.
@@ -41,23 +45,26 @@ struct Booth360ResultView: View {
                             withAnimation(reduceMotion ? nil : BoothifyMotion.bouncy) { revealed = true }
                         }
 
-                    metadataChips(job: job)
-                        .padding(.horizontal, 16)
+                    metadataLine(job: job)
+                        .padding(.horizontal, BoothifySpacing.md)
+
+                    qrHeroCard(job: job)
+                        .padding(.horizontal, BoothifySpacing.md)
 
                     // BM1: per-job upload-status row. Hidden when uploaded
                     // (the default success state) — only surfaces when the
                     // operator needs to act or wait.
                     uploadStatusBar(job: job)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, BoothifySpacing.md)
 
-                    actionGrid(job: job)
-                        .padding(.horizontal, 16)
+                    actionRow(job: job)
+                        .padding(.horizontal, BoothifySpacing.md)
 
                     bottomActions(job: job)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, BoothifySpacing.md)
                         .padding(.bottom, 6)
                 }
-                .padding(.top, 12)
+                .padding(.top, BoothifySpacing.sm + 4)
             } else {
                 BoothifyEmptyState(
                     icon: "video.slash",
@@ -161,57 +168,107 @@ struct Booth360ResultView: View {
         return "\(Int(perceived.rounded()))s slow-motion video"
     }
 
-    // MARK: - Metadata chips
+    // MARK: - Metadata (one quiet caption, not a chip row)
 
     @ViewBuilder
-    private func metadataChips(job: Booth360Job) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                chip(job.settingsSnapshot.videoQuality.label, symbol: "rectangle.compress.vertical", tint: BoothifyTheme.violet)
-                chip(job.settingsSnapshot.clipDirection.label, symbol: "arrow.left.arrow.right", tint: BoothifyTheme.violet)
-                if job.brandOverlay.rendersOnResults {
-                    chip("Brand overlay", symbol: "rosette", tint: BoothifyTheme.emerald)
-                }
-                if let track = job.soundtrackId {
-                    chip(track, symbol: "music.note", tint: BoothifyTheme.violet)
-                }
-            }
-        }
+    private func metadataLine(job: Booth360Job) -> some View {
+        let parts: [String] = [
+            job.settingsSnapshot.videoQuality.label,
+            job.settingsSnapshot.clipDirection.label,
+            job.brandOverlay.rendersOnResults ? "Brand overlay" : nil,
+            job.soundtrackId,
+        ].compactMap { $0 }
+
+        Text(parts.joined(separator: " · "))
+            .font(.caption2)
+            .foregroundStyle(BoothifyTheme.textTertiary)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity)
     }
 
-    @ViewBuilder
-    private func chip(_ label: String, symbol: String, tint: Color) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: symbol).font(.caption2.weight(.bold))
-            Text(label).font(.caption2.weight(.semibold))
-        }
-        .foregroundStyle(tint)
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(tint.opacity(0.16), in: Capsule())
-        .overlay(Capsule().stroke(tint.opacity(0.45), lineWidth: 0.5))
-    }
-
-    // MARK: - Action grid (share / QR / copy / save / new)
+    // MARK: - QR hero (the delivery wow moment)
     //
-    // IM1: Share is now a native `ShareLink` so AirDrop, Messages, WhatsApp,
-    // Mail, etc. all show up without us re-implementing each one.
-    // QR is a dedicated tile that brings up the on-device generated code.
-    // Save-to-Photos re-enabled because IM0 produces a real `finalVideoURL`.
+    // Phase 7 deferred-resolve: the public link exists from SIGN time — the
+    // code is scannable the moment there IS a link, even mid-upload. Tapping
+    // the card opens the full-size QR sheet for scanning from a distance.
 
-    private func actionGrid(job: Booth360Job) -> some View {
-        // Phase 7 deferred-resolve: the public link exists from SIGN time —
-        // QR/SMS/Copy/Share unlock the moment there IS a link. The status bar
-        // below communicates that the clip is still uploading behind it.
+    @ViewBuilder
+    private func qrHeroCard(job: Booth360Job) -> some View {
+        let linkReady = job.publicShareURL != nil
+
+        Button {
+            guard linkReady else { return }
+            Haptics.tap()
+            SentryClient.shared.breadcrumb("qr opened", category: "share",
+                data: ["job_id": String(job.id.uuidString.prefix(8))])
+            qrPresented = true
+        } label: {
+            HStack(spacing: BoothifySpacing.md) {
+                Group {
+                    if linkReady, let url = job.publicShareURL {
+                        QRCodeView(url: url)
+                    } else {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous)
+                                .fill(BoothifyTheme.surface2)
+                            ProgressView().tint(BoothifyTheme.amber)
+                        }
+                    }
+                }
+                .frame(width: 108, height: 108)
+                .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(Loc.t("Scan to get your video", pl: "Zeskanuj i odbierz wideo", de: "Scannen und Video erhalten"))
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(linkReady
+                         ? Loc.t("Point your camera at the code", pl: "Wyceluj aparat w kod", de: "Richte die Kamera auf den Code")
+                         : Loc.t("Getting your link ready…", pl: "Przygotowuję Twój link…", de: "Dein Link wird vorbereitet…"))
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if linkReady {
+                        HStack(spacing: 4) {
+                            Text(Loc.t("Show full screen", pl: "Pokaż na cały ekran", de: "Groß anzeigen"))
+                                .font(.caption.weight(.semibold))
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(BoothifyTheme.amber)
+                        .padding(.top, 4)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(BoothifySpacing.sm + 4)
+            .glassSurface(radius: BoothifyRadius.hero)
+            .glowAccent(intensity: linkReady ? 0.4 : 0.12)
+        }
+        .buttonStyle(.plain)
+        .disabled(!linkReady)
+        .accessibilityLabel(Loc.t("QR code — scan to get your video", pl: "Kod QR — zeskanuj i odbierz wideo", de: "QR-Code — scannen und Video erhalten"))
+        .accessibilityHint(Loc.t("Opens the code full screen", pl: "Otwiera kod na całym ekranie", de: "Zeigt den Code im Vollbild"))
+    }
+
+    // MARK: - Quiet action row (share / SMS / copy / save)
+    //
+    // IM1: Share is a native `ShareLink` so AirDrop, Messages, WhatsApp, Mail
+    // all show up without us re-implementing each one. Save-to-Photos works
+    // because IM0 produces a real `finalVideoURL`. All four are deliberately
+    // small — the QR card above is the hero.
+
+    private func actionRow(job: Booth360Job) -> some View {
         let linkReady = job.publicShareURL != nil
         let hasVideo = job.finalVideoURL != nil
 
-        return VStack(spacing: 10) {
-            // ── Primary: Share ──────────────────────────────────────────────
+        return HStack(spacing: BoothifySpacing.sm) {
             if linkReady, let url = job.publicShareURL {
                 ShareLink(item: url,
                           subject: Text(Loc.t("Your 360 video", pl: "Twoje wideo 360", de: "Dein 360-Video")),
                           message: Text(Loc.t("Check out my 360 spin →", pl: "Zobacz mój spin 360 →", de: "Schau dir meinen 360-Spin an →"))) {
-                    primaryShareLabel()
+                    quietActionLabel(symbol: "square.and.arrow.up", label: Loc.t("Share", pl: "Udostępnij", de: "Teilen"), enabled: true)
                 }
                 .buttonStyle(.plain)
                 .simultaneousGesture(TapGesture().onEnded {
@@ -223,105 +280,63 @@ struct Booth360ResultView: View {
                     )
                 })
             } else {
-                // Disabled primary share button while upload is in progress
-                Button {} label: { primaryShareLabel(enabled: false) }
-                    .buttonStyle(.plain)
-                    .disabled(true)
+                quietAction(symbol: "square.and.arrow.up", label: Loc.t("Share", pl: "Udostępnij", de: "Teilen"), enabled: false) {}
             }
 
-            // ── Secondary: QR / SMS / Copy / Save ───────────────────────────
-            HStack(spacing: 8) {
-                actionTile(symbol: "qrcode", label: Loc.t("QR", pl: "QR", de: "QR"), enabled: linkReady) {
-                    Haptics.tap()
-                    SentryClient.shared.breadcrumb("qr opened", category: "share",
-                        data: ["job_id": String(job.id.uuidString.prefix(8))])
-                    qrPresented = true
-                }
-                actionTile(symbol: "message.fill", label: Loc.t("SMS", pl: "SMS", de: "SMS"), enabled: linkReady) {
-                    Haptics.tap()
-                    SentryClient.shared.breadcrumb("sms sheet opened", category: "share",
-                        data: ["job_id": String(job.id.uuidString.prefix(8))])
-                    smsPresented = true
-                }
-                actionTile(
-                    symbol: copiedLink ? "checkmark" : "doc.on.doc",
-                    label: copiedLink
-                        ? Loc.t("Copied", pl: "Skopiowano", de: "Kopiert")
-                        : Loc.t("Copy", pl: "Kopiuj", de: "Kopieren"),
-                    enabled: linkReady
-                ) {
-                    Haptics.notify(.success)
-                    if let url = job.publicShareURL {
-                        UIPasteboard.general.string = url.absoluteString
-                        withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
-                        Task {
-                            try? await Task.sleep(for: .seconds(1.4))
-                            withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
-                        }
+            quietAction(symbol: "message.fill", label: Loc.t("SMS", pl: "SMS", de: "SMS"), enabled: linkReady) {
+                Haptics.tap()
+                SentryClient.shared.breadcrumb("sms sheet opened", category: "share",
+                    data: ["job_id": String(job.id.uuidString.prefix(8))])
+                smsPresented = true
+            }
+            quietAction(
+                symbol: copiedLink ? "checkmark" : "doc.on.doc",
+                label: copiedLink
+                    ? Loc.t("Copied", pl: "Skopiowano", de: "Kopiert")
+                    : Loc.t("Copy", pl: "Kopiuj", de: "Kopieren"),
+                enabled: linkReady
+            ) {
+                Haptics.notify(.success)
+                if let url = job.publicShareURL {
+                    UIPasteboard.general.string = url.absoluteString
+                    withAnimation(BoothifyMotion.bouncy) { copiedLink = true }
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.4))
+                        withAnimation(BoothifyMotion.quickTap) { copiedLink = false }
                     }
                 }
-                actionTile(symbol: "arrow.down.to.line", label: Loc.t("Save", pl: "Zapisz", de: "Sichern"), enabled: hasVideo) {
-                    Haptics.tap()
-                    if let url = job.finalVideoURL { saveVideoToLibrary(url) }
-                }
             }
-
-            // ── Tertiary: New take ───────────────────────────────────────────
-            Button {
+            quietAction(symbol: "arrow.down.to.line", label: Loc.t("Save", pl: "Zapisz", de: "Sichern"), enabled: hasVideo) {
                 Haptics.tap()
-                app.popUntil { route in
-                    if case .booth360EventHub = route { return true }
-                    return false
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "video.badge.plus")
-                        .font(.subheadline.weight(.semibold))
-                    Text(Loc.t("New take", pl: "Nowe ujęcie", de: "Neue Aufnahme"))
-                        .font(.subheadline.weight(.semibold))
-                }
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .glassSurface(radius: BoothifyRadius.tile)
+                if let url = job.finalVideoURL { saveVideoToLibrary(url) }
             }
-            .buttonStyle(.plain)
         }
     }
 
     @ViewBuilder
-    private func primaryShareLabel(enabled: Bool = true) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "square.and.arrow.up")
-                .font(.body.weight(.bold))
-            Text(Loc.t("Share", pl: "Udostępnij", de: "Teilen"))
-                .font(.body.weight(.bold))
-        }
-        .foregroundStyle(enabled ? .black : BoothifyTheme.textMuted)
-        .frame(maxWidth: .infinity)
-        .frame(height: 54)
-        .background(enabled ? .white : BoothifyTheme.surface1)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .opacity(enabled ? 1.0 : 0.55)
-    }
-
-    /// Pull the label out so the ShareLink branch can render it identically
-    /// to the rest of the row.
-    @ViewBuilder
-    private func actionTileLabel(symbol: String, label: String, enabled: Bool) -> some View {
-        VStack(spacing: 6) {
+    private func quietActionLabel(symbol: String, label: String, enabled: Bool) -> some View {
+        VStack(spacing: 5) {
             Image(systemName: symbol)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(enabled ? BoothifyTheme.amber : BoothifyTheme.textMuted)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(enabled ? .white : BoothifyTheme.textMuted)
             Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(enabled ? .white : BoothifyTheme.textTertiary)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(enabled ? BoothifyTheme.textSecondary : BoothifyTheme.textMuted)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 56)
-        .padding(.vertical, BoothifySpacing.sm)
+        .frame(maxWidth: .infinity, minHeight: 50)
+        .padding(.vertical, 6)
         .glassSurface(radius: BoothifyRadius.tile)
-        .opacity(enabled ? 1.0 : 0.55)
+        .opacity(enabled ? 1.0 : 0.45)
+    }
+
+    @ViewBuilder
+    private func quietAction(symbol: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            quietActionLabel(symbol: symbol, label: label, enabled: enabled)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 
     /// Save the rendered .mp4 (M0 raw / IM0 montage) to Photos. Uses
@@ -446,10 +461,10 @@ struct Booth360ResultView: View {
                     Label(Loc.t("Send again", pl: "Wyślij ponownie", de: "Erneut senden"), systemImage: "arrow.clockwise")
                         .font(.footnote.weight(.semibold))
                         .labelStyle(.titleAndIcon)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.black)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(BoothifyTheme.violet, in: Capsule())
+                        .background(BoothifyTheme.amber, in: Capsule())
                 }
                 .buttonStyle(.plain)
             }
