@@ -63,6 +63,8 @@ struct RootView: View {
         // Single NavigationStack — root swaps per selected tab,
         // deep nav (EventHub, Camera, etc.) uses app.path as always.
         NavigationStack(path: $app.path) {
+            ZStack {
+                AtmosphericBackground()
             Group {
                 if app.isKiosk, let kioskId = app.kioskEventId {
                     // Kiosk root — branded attract screen, no tabs. The guest
@@ -86,6 +88,7 @@ struct RootView: View {
             .animation(.easeOut(duration: 0.18), value: selectedTab)
             .navigationDestination(for: Route.self) { route in
                 destination(for: route)
+            }
             }
         }
         .onChange(of: selectedTab) { _, _ in
@@ -185,8 +188,8 @@ private struct BoothifyTabBar: View {
                 navTabButton(tab)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 16)
+        .padding(.horizontal, BoothifySpacing.sm)
+        .padding(.vertical, BoothifySpacing.sm)
         .background(barMaterial)
         .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
         .overlay(
@@ -243,24 +246,23 @@ private struct BoothifyTabBar: View {
 
     @ViewBuilder
     private func tabItem(icon: String, selectedIcon: String, title: String, isActive: Bool) -> some View {
-        let tint = isActive ? BoothifyTheme.violet : BoothifyTheme.textMuted
-        VStack(spacing: 3) {
-            Image(systemName: isActive ? selectedIcon : icon)
-                .font(.system(size: isActive ? activeIcon : inactiveIcon, weight: .regular))
-                .symbolRenderingMode(.hierarchical)
-                // Reserve the active height for both states → no vertical jump.
-                .frame(height: activeIcon + 2)
-                .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
-
-            Text(title)
-                .font(.system(size: tabLabelSize, weight: .medium))
-                .lineLimit(1)
-        }
-        .foregroundStyle(tint)
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 44) // 44pt tap target (HIG) without inflating visual height
-        .contentShape(Rectangle())
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isActive)
+        // Atmospheric Glass: compact icon-only pill (reference style). The
+        // title lives on as the accessibility label; the active tab sits in a
+        // soft glass "seat" instead of relying on a text label.
+        Image(systemName: isActive ? selectedIcon : icon)
+            .font(.system(size: inactiveIcon, weight: .regular))
+            .symbolRenderingMode(.hierarchical)
+            .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
+            .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
+            .frame(width: 52, height: 44) // 44pt+ tap target (HIG)
+            .background {
+                if isActive {
+                    Capsule()
+                        .fill(Color.white.opacity(0.12))
+                }
+            }
+            .contentShape(Rectangle())
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isActive)
     }
 }
 

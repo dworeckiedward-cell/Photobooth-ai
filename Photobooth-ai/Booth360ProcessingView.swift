@@ -30,7 +30,7 @@ struct Booth360ProcessingView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             ambientGlow
 
             ScrollView {
@@ -189,14 +189,9 @@ struct Booth360ProcessingView: View {
                 .lineLimit(1)
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(BoothifyTheme.surface1)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
+        .padding(.horizontal, BoothifySpacing.md - 2)
+        .padding(.vertical, BoothifySpacing.sm + 2)
+        .glassSurface(radius: BoothifyRadius.input)
         .id(tipIndex)  // forces fade transition
         .transition(.opacity)
     }
@@ -212,12 +207,8 @@ struct Booth360ProcessingView: View {
                 )
             }
         }
-        .padding(14)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
+        .padding(BoothifySpacing.md - 2)
+        .glassSurface(radius: BoothifyRadius.surface)
     }
 
     private func stepState(idx: Int, step: Booth360ProcessingStep) -> StepRow.StateKind {

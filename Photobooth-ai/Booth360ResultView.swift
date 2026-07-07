@@ -22,7 +22,7 @@ struct Booth360ResultView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
             if let job {
                 // M4: fixed layout — no ScrollView. Preview fills the available
@@ -283,12 +283,7 @@ struct Booth360ResultView: View {
                 .foregroundStyle(BoothifyTheme.textSecondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
-                .background(BoothifyTheme.surface1)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                )
+                .glassSurface(radius: BoothifyRadius.tile)
             }
             .buttonStyle(.plain)
         }
@@ -324,13 +319,8 @@ struct Booth360ResultView: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, minHeight: 56)
-        .padding(.vertical, 8)
-        .background(BoothifyTheme.surface1)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.vertical, BoothifySpacing.sm)
+        .glassSurface(radius: BoothifyRadius.tile)
         .opacity(enabled ? 1.0 : 0.55)
     }
 
@@ -364,13 +354,8 @@ struct Booth360ResultView: View {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, minHeight: 56)
-            .padding(.vertical, 8)
-            .background(BoothifyTheme.surface1)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.vertical, BoothifySpacing.sm)
+            .glassSurface(radius: BoothifyRadius.tile)
             .opacity(enabled ? 1.0 : 0.55)
         }
         .buttonStyle(.plain)
@@ -682,7 +667,10 @@ private struct Booth360QRSheet: View {
 
             QRCodeView(url: url)
                 .frame(maxWidth: 320, maxHeight: 320)
-                .padding(.horizontal, 24)
+                .padding(BoothifySpacing.md)
+                .glassSurface(radius: BoothifyRadius.hero)
+                .glowAccent(intensity: 0.45)
+                .padding(.horizontal, BoothifySpacing.lg)
 
             Text(url.absoluteString)
                 .font(.caption.monospaced())

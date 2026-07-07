@@ -16,7 +16,7 @@ struct Booth360LandingView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
             ScrollView {
                 VStack(spacing: BoothifySpacing.lg) {
@@ -86,7 +86,7 @@ struct Booth360LandingView: View {
             )
 
             Text("Start a new 360 session")
-                .font(BoothifyType.displayMedium)
+                .font(BoothifyType.hero)
                 .foregroundStyle(.white)
 
             Text("Capture rotating 360° clips and let AI turn them into cinematic shareable videos.")
@@ -185,12 +185,7 @@ struct Booth360LandingView: View {
             }
         }
         .padding(BoothifySpacing.md)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.surface, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.20), radius: 12, y: 6)
+        .glassSurface(radius: BoothifyRadius.surface)
     }
 
     // MARK: - Recent events
@@ -331,12 +326,7 @@ struct Booth360EventRow: View {
                     .foregroundStyle(BoothifyTheme.textMuted)
             }
             .padding(BoothifySpacing.sm + 4)
-            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+            .glassSurface(radius: BoothifyRadius.card)
         }
         .buttonStyle(.plain)
     }

@@ -54,7 +54,7 @@ struct Booth360EventHubView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
             ScrollView {
                 VStack(spacing: BoothifySpacing.md) {

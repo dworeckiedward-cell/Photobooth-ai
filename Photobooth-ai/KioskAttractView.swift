@@ -30,7 +30,7 @@ struct KioskAttractView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             RadialGradient(
                 colors: [BoothifyTheme.amber.opacity(0.22), .clear],
                 center: .top, startRadius: 0, endRadius: 520
@@ -47,7 +47,7 @@ struct KioskAttractView: View {
 
                 VStack(spacing: BoothifySpacing.sm) {
                     Text(title)
-                        .font(BoothifyType.display)
+                        .font(BoothifyType.hero)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                     Text(subtitle)
@@ -95,6 +95,7 @@ struct KioskAttractView: View {
                 .padding(.horizontal, BoothifySpacing.lg)
                 .padding(.vertical, BoothifySpacing.md)
                 .background(BoothifyTheme.amber, in: Capsule())
+                .glowAccent(intensity: 0.7)
                 .opacity(pulse ? 1 : 0.85)
                 .padding(.bottom, BoothifySpacing.xl)
 

@@ -74,6 +74,7 @@ struct Booth360RecordingView: View {
                             .font(.title2.weight(.heavy))
                             .kerning(1.5)
                             .foregroundStyle(countdown == 1 ? BoothifyTheme.amber : .white.opacity(0.85))
+                            .shadow(color: countdown == 1 ? BoothifyTheme.amber.opacity(0.8) : .clear, radius: 18)
                             .textCase(.uppercase)
                             .transition(.opacity)
                             .id("cue-\(countdown)")
@@ -351,6 +352,7 @@ struct Booth360RecordingView: View {
                 Circle()
                     .stroke(.white.opacity(0.25), lineWidth: 5)
                     .frame(width: 92, height: 92)
+                    .glowAccent(intensity: recording ? 0.25 : 0.55)
                 if recording {
                     Circle()
                         .trim(from: 0, to: min(1.0, recordingElapsed / duration))
