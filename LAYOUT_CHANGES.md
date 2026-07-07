@@ -17,7 +17,21 @@ pamięć hosta testów — stąd opt-in).
 
 ## Per ekran — choroba → lek
 
-### Landing (wzorzec-złoto, `474fd6d`)
+### Home — BENTO (nadpisuje landing poniżej; kierunek od operatora, mockup HTML)
+Kompozycja bento wg dostarczonego referensu: **powitanie + amber avatar**
+(nagłówek nav ukryty — designed header), **świecąca karta „Start a new
+session"** (fioletowo-tintowane szkło + amber ikona i glow; tap rozwija
+inline strefę tworzenia: input + chipy szablonów + amber CTA — funkcja
+createEvent nietknięta), **kafel „YOUR BOOTH"** (zdjęcie budki, status
+Ready·idle / Rendering z kropką), **dwa staty** (spins captured, %
+delivered — z lokalnych jobów; „—" zanim są dane), **wiersz „LATEST
+EVENT"** ze SPINS (routing do huba jak dotąd). Pozostałe eventy przez
+zakładkę Events (bento pokazuje tylko najnowszy — świadomie). Paleta
+przełożona na nasz język: amber = akcent (mockup był mono-fioletowy).
+Pułapka naprawiona w locie: `scaledToFill` zdjęcia budki rozpychał
+kolumnę statów — obraz jako overlay na `Color.clear`.
+
+### Landing (wzorzec-złoto, `474fd6d` — historyczny, zastąpiony przez BENTO)
 - **Było:** pełnoszerokościowy box badge'a; cegła „NEW 360 EVENT" (label +
   input + chipy + CTA w jednym szkle) zżerająca pół ekranu; „Start session"
   wyprane biało-szare; osierocony empty-state z ikoną.

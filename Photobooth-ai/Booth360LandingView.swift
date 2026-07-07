@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// 360 AI Booth event launcher. Mirrors `PhotoboothLandingView` for parity but
-/// routes into the dedicated 360 flow (recording → processing → result) on
-/// create. Recent events list is the shared `app.events` list — operators see
-/// all of their events regardless of which mode they were created in.
+/// 360 AI Booth home — bento composition. A designed greeting header replaces
+/// the nav title, then a 2-column bento grid: the glowing "Start a new
+/// session" hero (tap → inline create zone), a live booth-status tile,
+/// two stat tiles fed by local job data, and the latest event as a wide row
+/// (routes to its hub). All prior functions are preserved: create-event with
+/// 1-tap templates, recent-events loading, error surfacing.
 struct Booth360LandingView: View {
     @Environment(AppState.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -12,96 +14,184 @@ struct Booth360LandingView: View {
     @State private var creating: Bool = false
     @State private var createError: String? = nil
     @State private var selectedTemplate: EventTemplate? = nil
+    @State private var createExpanded: Bool = false
     @FocusState private var nameFocused: Bool
+
+    // MARK: - Data
+
+    private var operatorName: String {
+        app.currentUser?.fullName ?? "Operator"
+    }
+
+    private var allJobs: [Booth360Job] { Array(app.booth360Jobs.values) }
+
+    private var spinsCaptured: Int {
+        allJobs.filter { $0.status == .completed }.count
+    }
+
+    /// Share of finished spins that reached the cloud. Nil until there is
+    /// at least one finished spin — the tile shows a quiet placeholder.
+    private var deliveredPercent: Int? {
+        let done = allJobs.filter { $0.status == .completed }
+        guard !done.isEmpty else { return nil }
+        let uploaded = done.filter { $0.cloudUploadStatus == .uploaded }.count
+        return Int((Double(uploaded) / Double(done.count) * 100).rounded())
+    }
+
+    private var latestEvent: Event? { app.events.first }
 
     var body: some View {
         ZStack {
             AtmosphericBackground()
 
             ScrollView {
-                // Layout redesign: no mega-card. The screen is three breathing
-                // zones — headline, a light create zone floating directly on
-                // the atmosphere, and a quiet recents list. One dominant: the
-                // glowing amber CTA.
-                VStack(alignment: .leading, spacing: BoothifySpacing.xl) {
-                    headerBlock
+                VStack(spacing: BoothifySpacing.md) {
+                    greetingHeader
+                        .padding(.bottom, BoothifySpacing.xs)
 
-                    newSessionZone
+                    startCard
+
+                    if createExpanded {
+                        createZone
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
                     if let topErr = app.topLevelError {
                         Text(topErr)
                             .font(.footnote)
                             .foregroundStyle(BoothifyTheme.error)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    recentEventsSection
+                    bentoRow
+
+                    latestEventSection
                 }
                 .frame(maxWidth: 620)
-                .padding(.horizontal, BoothifySpacing.md + 4)
-                .padding(.top, BoothifySpacing.md)
+                .padding(.horizontal, BoothifySpacing.md + 2)
+                .padding(.top, BoothifySpacing.sm)
                 .padding(.bottom, BoothifySpacing.lg)
                 .frame(maxWidth: .infinity)
             }
+            .refreshable { await app.loadRecentEvents() }
         }
-        .navigationTitle("360 AI Booth")
-        .navigationBarTitleDisplayMode(.inline)
+        // The designed greeting header IS the screen's title.
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             CrashRestoreManager.clearActiveEvent()
             await app.loadRecentEvents()
         }
-        .refreshable { await app.loadRecentEvents() }
     }
 
-    // MARK: - Header
+    // MARK: - Greeting header
 
-    private var headerBlock: some View {
-        VStack(alignment: .leading, spacing: BoothifySpacing.sm + 4) {
-            // Mode chip — a small floating capsule, not a full-width box.
-            // The atmosphere stays visible around it.
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(BoothifyTheme.amber)
-                    .frame(width: 6, height: 6)
-                    .accessibilityHidden(true)
-                Text("360 mode")
-                    .font(.caption.weight(.semibold))
-                Text("BETA")
-                    .font(.caption2.weight(.bold))
-                    .kerning(0.6)
-                    .opacity(0.75)
+    private var greetingHeader: some View {
+        HStack(spacing: BoothifySpacing.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Welcome back")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                Text(operatorName)
+                    .font(.title.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .foregroundStyle(BoothifyTheme.amber)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(BoothifyTheme.amber.opacity(0.10), in: Capsule())
-            .overlay(Capsule().stroke(BoothifyTheme.amber.opacity(0.28), lineWidth: 1))
-
-            Text("Start a new\n360 session")
-                .font(BoothifyType.hero)
-                .foregroundStyle(.white)
-                .lineSpacing(1)
-
-            Text("Capture rotating 360° clips and let AI turn them into cinematic shareable videos.")
-                .font(.subheadline)
-                .foregroundStyle(BoothifyTheme.textSecondary)
-                .lineSpacing(3)
-                .frame(maxWidth: 460, alignment: .leading)
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [BoothifyTheme.amber, BoothifyTheme.amber.opacity(0.65)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+                    .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
+                    .shadow(color: BoothifyTheme.amber.opacity(0.35), radius: 12)
+                Text(String(operatorName.prefix(1)))
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.black)
+            }
+            .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, BoothifySpacing.sm)
     }
 
-    // MARK: - New session zone
-    //
-    // Layout redesign: no enclosing mega-card. The input is its own light
-    // glass field, chips float directly on the atmosphere, and the CTA is
-    // the screen's single glowing dominant.
+    // MARK: - Start card (bento hero)
+
+    private var startCard: some View {
+        Button {
+            Haptics.tap(.light)
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85)) {
+                createExpanded.toggle()
+            }
+            if createExpanded { nameFocused = true }
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [BoothifyTheme.amber, BoothifyTheme.amber.opacity(0.75)],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 50, height: 50)
+                            .shadow(color: BoothifyTheme.amber.opacity(0.55), radius: 14)
+                        Image(systemName: "rotate.3d.fill")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.black)
+                    }
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.14))
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(.white.opacity(0.20), lineWidth: 1))
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                            .rotationEffect(.degrees(createExpanded ? 90 : 0))
+                    }
+                }
+                Spacer(minLength: BoothifySpacing.md)
+                Text("Start a new session")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.white)
+                Text("Spin up the booth for your next event")
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.top, 3)
+            }
+            .padding(BoothifySpacing.md + 4)
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+            // Violet-tinted glass — the hero sits a shade warmer than the
+            // quiet tiles below (composition per the bento reference).
+            .background(
+                LinearGradient(
+                    colors: [BoothifyTheme.indigoGlow.opacity(0.42), BoothifyTheme.violet.opacity(0.14)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            )
+            .glassSurface(radius: 26)
+            .glowAccent(intensity: createExpanded ? 0.2 : 0.42)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Start a new session")
+        .accessibilityHint(createExpanded ? "Collapses the event form" : "Opens the event form")
+    }
+
+    // MARK: - Create zone (expands under the hero)
 
     private var canStart: Bool {
         eventName.trimmingCharacters(in: .whitespaces).count >= 2 && !creating
     }
 
-    private var newSessionZone: some View {
-        VStack(alignment: .leading, spacing: BoothifySpacing.md) {
+    private var createZone: some View {
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm + 4) {
             TextField(
                 "",
                 text: $eventName,
@@ -111,7 +201,7 @@ struct Booth360LandingView: View {
             .font(.body)
             .foregroundStyle(.white)
             .padding(.horizontal, BoothifySpacing.md)
-            .frame(minHeight: 56)
+            .frame(minHeight: 54)
             .glassSurface(radius: BoothifyRadius.card)
             .overlay(
                 RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
@@ -124,31 +214,29 @@ struct Booth360LandingView: View {
             .textInputAutocapitalization(.words)
             .disabled(creating)
 
-            // 1-tap templates (ported from the photo landing per blueprint 4.G):
-            // a chip names AND pre-configures the event on create.
-            VStack(alignment: .leading, spacing: BoothifySpacing.xs + 2) {
-                HStack(spacing: BoothifySpacing.xs + 2) {
-                    ForEach(EventTemplate.allCases) { template in
-                        Booth360TemplateChip(label: template.label, selected: selectedTemplate == template) {
-                            Haptics.tap(.light)
-                            selectedTemplate = template
-                            // Never overwrite a name the operator typed; only seed an
-                            // empty field or replace a prior chip's seed.
-                            let typed = eventName.trimmingCharacters(in: .whitespaces)
-                            if typed.isEmpty || EventTemplate.allCases.contains(where: { $0.nameSeed == typed }) {
-                                eventName = template.nameSeed
-                            }
-                            nameFocused = true
+            // 1-tap templates: a chip names AND pre-configures the event.
+            HStack(spacing: BoothifySpacing.xs + 2) {
+                ForEach(EventTemplate.allCases) { template in
+                    Booth360TemplateChip(label: template.label, selected: selectedTemplate == template) {
+                        Haptics.tap(.light)
+                        selectedTemplate = template
+                        // Never overwrite a name the operator typed; only seed an
+                        // empty field or replace a prior chip's seed.
+                        let typed = eventName.trimmingCharacters(in: .whitespaces)
+                        if typed.isEmpty || EventTemplate.allCases.contains(where: { $0.nameSeed == typed }) {
+                            eventName = template.nameSeed
                         }
-                        .disabled(creating)
+                        nameFocused = true
                     }
+                    .disabled(creating)
                 }
-                if let t = selectedTemplate {
-                    Text(templateHint(t))
-                        .font(.caption2)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
-                        .padding(.leading, 4)
-                }
+            }
+
+            if let t = selectedTemplate {
+                Text(templateHint(t))
+                    .font(.caption2)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                    .padding(.leading, 4)
             }
 
             Button {
@@ -165,11 +253,9 @@ struct Booth360LandingView: View {
                 }
             }
             .buttonStyle(AmberCTAButtonStyle())
-            .glowAccent(intensity: canStart ? 0.55 : 0.15)
             .disabled(!canStart)
             .opacity(canStart || creating ? 1 : 0.55)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: canStart)
-            .padding(.top, BoothifySpacing.xs)
 
             if let createError {
                 HStack(spacing: 6) {
@@ -181,42 +267,178 @@ struct Booth360LandingView: View {
                 .foregroundStyle(BoothifyTheme.error)
             }
         }
+        .padding(.top, 2)
     }
 
-    // MARK: - Recent events
+    // MARK: - Bento row: booth tile + stat tiles
+
+    private var bentoRow: some View {
+        HStack(alignment: .top, spacing: BoothifySpacing.md - 3) {
+            boothTile
+            VStack(spacing: BoothifySpacing.md - 3) {
+                statTile(
+                    value: "\(spinsCaptured)",
+                    unit: nil,
+                    label: "spins captured"
+                )
+                statTile(
+                    value: deliveredPercent.map { "\($0)" } ?? "—",
+                    unit: deliveredPercent != nil ? "%" : nil,
+                    label: "delivered"
+                )
+            }
+        }
+    }
+
+    private var boothTile: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Color.clear base — the photo fills via overlay so its intrinsic
+            // width never steals layout space from the stat column.
+            Color.clear
+                .overlay(
+                    Image("Mode_360")
+                        .resizable()
+                        .scaledToFill()
+                )
+
+            // Wash — keeps the label legible and ties the photo into the
+            // violet atmosphere (gradient on imagery is permitted).
+            LinearGradient(
+                colors: [BoothifyTheme.indigoGlow.opacity(0.15), .clear, .black.opacity(0.72)],
+                startPoint: .top, endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(app.hasActiveRenders ? BoothifyTheme.amber : BoothifyTheme.success)
+                        .frame(width: 7, height: 7)
+                        .shadow(color: (app.hasActiveRenders ? BoothifyTheme.amber : BoothifyTheme.success).opacity(0.9), radius: 5)
+                    Text("YOUR BOOTH")
+                        .font(.caption2.weight(.bold))
+                        .kerning(0.5)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.7), radius: 4)
+                }
+                Text(app.hasActiveRenders ? "Rendering in background" : "Ready · idle")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .shadow(color: .black.opacity(0.6), radius: 3)
+            }
+            .padding(BoothifySpacing.sm + 6)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 209)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(.white.opacity(0.13), lineWidth: 1)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(app.hasActiveRenders
+                            ? "Your booth: a video is rendering in the background"
+                            : "Your booth: ready")
+    }
+
+    private func statTile(value: String, unit: String?, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(value)
+                    .font(.system(.title, design: .rounded).weight(.heavy).monospacedDigit())
+                    .foregroundStyle(.white)
+                if let unit {
+                    Text(unit)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(BoothifyTheme.amber)
+                }
+            }
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(BoothifyTheme.textTertiary)
+        }
+        .padding(.horizontal, BoothifySpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 98)
+        .glassSurface(radius: 24)
+    }
+
+    // MARK: - Latest event
 
     @ViewBuilder
-    private var recentEventsSection: some View {
+    private var latestEventSection: some View {
         if app.isLoadingEvents && app.events.isEmpty {
             ProgressView().tint(BoothifyTheme.amber)
                 .frame(maxWidth: .infinity)
-                .padding(.top, BoothifySpacing.md)
-        } else if app.events.isEmpty {
-            // Quiet background whisper — never a competitor to the CTA.
-            Booth360EmptyState()
-        } else {
-            VStack(alignment: .leading, spacing: BoothifySpacing.sm + 2) {
-                HStack {
-                    Text("RECENT EVENTS")
-                        .font(.caption2.weight(.semibold))
-                        .kerning(1.4)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
-                    Spacer()
-                    Text("\(app.events.count) \(app.events.count == 1 ? "event" : "events")")
-                        .font(.caption2)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                }
-                .padding(.horizontal, 2)
+                .padding(.top, BoothifySpacing.sm)
+        } else if let event = latestEvent {
+            let spins = app.jobs(for: event.id).filter { $0.status == .completed }.count
+            Button {
+                Haptics.tap()
+                app.push(.booth360EventHub(eventId: event.id))
+            } label: {
+                HStack(spacing: BoothifySpacing.md - 2) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 17, style: .continuous)
+                            .fill(
+                                RadialGradient(
+                                    colors: [BoothifyTheme.amber.opacity(0.35), BoothifyTheme.amber.opacity(0.08)],
+                                    center: .topLeading, startRadius: 0, endRadius: 70
+                                )
+                            )
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                                    .stroke(.white.opacity(0.14), lineWidth: 1)
+                            )
+                        Image(systemName: "rotate.3d")
+                            .font(.title3.weight(.medium))
+                            .foregroundStyle(.white)
+                    }
+                    .accessibilityHidden(true)
 
-                VStack(spacing: BoothifySpacing.sm) {
-                    ForEach(app.events) { event in
-                        Booth360EventRow(event: event, jobs: app.jobs(for: event.id)) {
-                            Haptics.tap()
-                            app.push(.booth360EventHub(eventId: event.id))
-                        }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("LATEST EVENT")
+                            .font(.caption2.weight(.bold))
+                            .kerning(1.0)
+                            .foregroundStyle(BoothifyTheme.textMuted)
+                        Text(event.name)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text(event.createdAt.formatted(.dateTime.month(.abbreviated).day()))
+                            .font(.caption)
+                            .foregroundStyle(BoothifyTheme.textTertiary)
+                    }
+
+                    Spacer(minLength: BoothifySpacing.sm)
+
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(spins)")
+                            .font(.title3.weight(.heavy).monospacedDigit())
+                            .foregroundStyle(BoothifyTheme.amber)
+                        Text("SPINS")
+                            .font(.caption2.weight(.semibold))
+                            .kerning(0.5)
+                            .foregroundStyle(BoothifyTheme.textMuted)
                     }
                 }
+                .padding(BoothifySpacing.md)
+                .glassSurface(radius: 24)
             }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the event hub")
+        } else {
+            // Quiet whisper — the hero above carries the screen.
+            VStack(alignment: .leading, spacing: 3) {
+                Text("No events yet")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                Text("Your first event will appear here.")
+                    .font(.caption2)
+                    .foregroundStyle(BoothifyTheme.textMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, BoothifySpacing.xs)
         }
     }
 
@@ -250,6 +472,7 @@ struct Booth360LandingView: View {
                 creating = false
                 eventName = ""
                 selectedTemplate = nil
+                createExpanded = false
                 app.push(.booth360EventHub(eventId: event.id))
                 app.push(.booth360Recording(eventId: event.id))
             } catch {
@@ -261,7 +484,7 @@ struct Booth360LandingView: View {
     }
 }
 
-// MARK: - Template chip (ported from the photo landing, 360 accent)
+// MARK: - Template chip (1-tap event presets, 360 accent)
 
 private struct Booth360TemplateChip: View {
     let label: String
@@ -287,79 +510,6 @@ private struct Booth360TemplateChip: View {
         .accessibilityLabel("\(label) template")
         .accessibilityHint("Names and pre-configures the event")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
-    }
-}
-
-// MARK: - Row & empty state
-
-struct Booth360EventRow: View {
-    let event: Event
-    let jobs: [Booth360Job]
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            // Light, airy row — small thumb, slim padding, glass stays thin
-            // so the list reads as floating entries, not stacked bricks.
-            HStack(spacing: BoothifySpacing.sm + 2) {
-                thumbnail
-                    .frame(width: 40, height: 40)
-                    .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.micro + 2, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(event.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: BoothifySpacing.sm)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textMuted)
-            }
-            .padding(.horizontal, BoothifySpacing.sm + 4)
-            .padding(.vertical, BoothifySpacing.sm + 2)
-            .glassSurface(radius: BoothifyRadius.card)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var subtitle: String {
-        let completed = jobs.filter { $0.status == .completed }.count
-        let videos = "\(completed) \(completed == 1 ? "video" : "videos")"
-        let date = event.createdAt.formatted(.dateTime.month(.abbreviated).day())
-        return "\(videos) · \(date)"
-    }
-
-    @ViewBuilder
-    private var thumbnail: some View {
-        ZStack {
-            BoothifyTheme.surface2
-            Image(systemName: "video.fill")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.amber.opacity(0.80))
-        }
-    }
-}
-
-/// Layout redesign: the landing empty state is a whisper, not a competitor —
-/// the CTA above is the screen's story. Two quiet lines, no icon box.
-struct Booth360EmptyState: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("No 360 sessions yet")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.textTertiary)
-            Text("Your first event will appear here.")
-                .font(.caption2)
-                .foregroundStyle(BoothifyTheme.textMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, BoothifySpacing.sm)
     }
 }
 
