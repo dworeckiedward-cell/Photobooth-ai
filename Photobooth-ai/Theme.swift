@@ -23,9 +23,11 @@ enum BoothifyTheme {
     static let textMuted      = Color(red: 0.42, green: 0.43, blue: 0.47)  // ~zinc-500
 
     // Accent palette
-    // NOTE: token name kept as `violet` for compatibility, but the brand accent
-    // is now BLUE. Change this one value to retint the whole app.
-    static let violet  = Color(red: 0.231, green: 0.510, blue: 0.965)    // blue-500
+    // Atmospheric Glass palette-drift fix: this token spent an era as
+    // blue-500, bleeding a foreign blue across settings, panels and the tab
+    // bar. It is now a TRUE violet from the atmosphere family — quiet
+    // support only. Amber remains the one interaction accent.
+    static let violet  = Color(red: 0.545, green: 0.408, blue: 0.965)    // violet-500
     static let fuchsia = Color(red: 0.851, green: 0.275, blue: 0.937)    // kept for backward-compat; prefer violet in UI
     static let pink    = Color(red: 0.925, green: 0.282, blue: 0.6)      // legacy; do not use in new UI
     static let emerald = Color(red: 0.063, green: 0.725, blue: 0.506)

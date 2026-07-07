@@ -18,120 +18,104 @@ struct SettingsHubView: View {
     private var event: Event? { app.event(id: eventId) }
 
     var body: some View {
-        List {
-            // Identity block
-            if let event {
-                Section {
-                    HStack(spacing: BoothifySpacing.md) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                                .fill(BoothifyTheme.violet)
-                                .frame(width: 52, height: 52)
-                            Image(systemName: "camera.aperture")
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(.white)
-                        }
-                        .accessibilityHidden(true)
-                        .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
+        // Layout redesign: designed settings, not a generic iOS list. The
+        // atmosphere breathes under floating glass sections; icons carry the
+        // amber accent (the blue-drift era is over); rows stay light.
+        ZStack {
+            AtmosphericBackground()
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(event.name)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(BoothifyTheme.emerald)
-                                    .frame(width: 6, height: 6)
-                                Text("\(event.completedPhotos) of \(event.totalPhotos) photos")
-                                    .font(.subheadline)
-                                    .foregroundStyle(BoothifyTheme.textSecondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: BoothifySpacing.lg) {
+                    // Identity — light glass, amber aperture.
+                    if let event {
+                        HStack(spacing: BoothifySpacing.md) {
+                            AppIconBadge(symbol: "camera.aperture", color: BoothifyTheme.amber, size: 48)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(event.name)
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(BoothifyTheme.emerald)
+                                        .frame(width: 6, height: 6)
+                                    Text("\(event.completedPhotos) of \(event.totalPhotos) photos")
+                                        .font(.subheadline)
+                                        .foregroundStyle(BoothifyTheme.textSecondary)
+                                }
                             }
+                            Spacer()
                         }
-                        Spacer()
+                        .padding(BoothifySpacing.md)
+                        .glassSurface(radius: BoothifyRadius.section)
                     }
-                    .padding(.vertical, BoothifySpacing.sm)
-                    .listRowBackground(BoothifyTheme.surface1)
-                }
-            }
 
-            // Quick Setup — 3 most critical items surfaced for new operators
-            Section {
-                SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
-                    app.push(.settingsCamera(eventId: eventId))
-                }
-                SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off", badge: .available) {
-                    app.push(.settingsLockPin(eventId: eventId))
-                }
-            } header: {
-                HStack(spacing: 5) {
-                    Image(systemName: "bolt.fill")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(BoothifyTheme.violet)
-                    Text("Quick Setup")
-                        .font(.caption.weight(.bold))
-                        .kerning(0.5)
-                }
-                .foregroundStyle(BoothifyTheme.violet)
-            }
-            .listRowBackground(BoothifyTheme.surface1)
+                    // Quick Setup — the 2 most critical items for new operators.
+                    SettingsSectionCard(title: "Quick Setup") {
+                        SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle) {
+                            app.push(.settingsCamera(eventId: eventId))
+                        }
+                        SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off") {
+                            app.push(.settingsLockPin(eventId: eventId))
+                        }
+                    }
 
-            // Set Up — rows are filtered by the current event's BoothMode so each
-            // panel stays focused on what the operator actually configures here.
-            Section("Set Up") {
-                SettingsRow(icon: "video.fill", title: "360 Booth", subtitle: ai360Subtitle, badge: .available) {
-                    app.push(.settingsAI360(eventId: eventId))
-                }
-                SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle, badge: .available) {
-                    app.push(.settingsCamera(eventId: eventId))
-                }
-                SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle, badge: .available) {
-                    app.push(.settingsStickers(eventId: eventId))
-                }
-            }
-            .listRowBackground(BoothifyTheme.surface1)
+                    // Set Up — rows are filtered by the current event's BoothMode so
+                    // each panel stays focused on what the operator configures here.
+                    SettingsSectionCard(title: "Set Up") {
+                        SettingsRow(icon: "video.fill", title: "360 Booth", subtitle: ai360Subtitle) {
+                            app.push(.settingsAI360(eventId: eventId))
+                        }
+                        SettingsRow(icon: "camera.rotate", title: "Camera Settings", subtitle: cameraSubtitle) {
+                            app.push(.settingsCamera(eventId: eventId))
+                        }
+                        SettingsRow(icon: "rosette", title: "Brand Overlay", subtitle: brandOverlaySubtitle) {
+                            app.push(.settingsStickers(eventId: eventId))
+                        }
+                    }
 
-            // Sharing Add-ons
-            Section("Sharing Add-ons") {
-                SettingsRow(icon: "envelope.fill", title: "Email / SMS", subtitle: "Templates & sender", badge: .available) {
-                    app.push(.settingsEmailSMS(eventId: eventId))
-                }
-                SettingsRow(icon: "square.and.arrow.up", title: "Sharing channels", subtitle: "\(app.settings(for: eventId).sharing.enabledChannels.count) channels on", badge: .available) {
-                    app.push(.settingsSharing(eventId: eventId))
-                }
-                SettingsRow(icon: "person.fill.questionmark", title: "On-screen Assistant", subtitle: virtualAttendantSubtitle, badge: .available) {
-                    app.push(.settingsVirtualAttendant(eventId: eventId))
-                }
-                SettingsRow(icon: "doc.text", title: "Disclaimer", subtitle: disclaimerSubtitle, badge: .available) {
-                    app.push(.settingsDisclaimer(eventId: eventId))
-                }
-                SettingsRow(icon: "checklist", title: "Survey", subtitle: surveySubtitle, badge: .available) {
-                    app.push(.settingsSurvey(eventId: eventId))
-                }
-            }
-            .listRowBackground(BoothifyTheme.surface1)
+                    SettingsSectionCard(title: "Sharing Add-ons") {
+                        SettingsRow(icon: "envelope.fill", title: "Email / SMS", subtitle: "Templates & sender") {
+                            app.push(.settingsEmailSMS(eventId: eventId))
+                        }
+                        SettingsRow(icon: "square.and.arrow.up", title: "Sharing channels", subtitle: "\(app.settings(for: eventId).sharing.enabledChannels.count) channels on") {
+                            app.push(.settingsSharing(eventId: eventId))
+                        }
+                        SettingsRow(icon: "person.fill.questionmark", title: "On-screen Assistant", subtitle: virtualAttendantSubtitle) {
+                            app.push(.settingsVirtualAttendant(eventId: eventId))
+                        }
+                        SettingsRow(icon: "doc.text", title: "Disclaimer", subtitle: disclaimerSubtitle) {
+                            app.push(.settingsDisclaimer(eventId: eventId))
+                        }
+                        SettingsRow(icon: "checklist", title: "Survey", subtitle: surveySubtitle) {
+                            app.push(.settingsSurvey(eventId: eventId))
+                        }
+                    }
 
-            // Gallery & Slideshow settings now live inside Album/Gallery toolbar —
-            // intentionally NOT shown as a primary SettingsHub row.
+                    // Gallery & Slideshow settings now live inside Album/Gallery
+                    // toolbar — intentionally NOT shown as a primary row here.
 
-            // More
-            Section("More") {
-                SettingsRow(icon: "antenna.radiowaves.left.and.right", title: "Delivery Status", subtitle: "Delivery channels", badge: .available) {
-                    app.push(.settingsSharingStatus(eventId: eventId))
+                    SettingsSectionCard(title: "More") {
+                        SettingsRow(icon: "antenna.radiowaves.left.and.right", title: "Delivery Status", subtitle: "Delivery channels") {
+                            app.push(.settingsSharingStatus(eventId: eventId))
+                        }
+                        SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off") {
+                            app.push(.settingsLockPin(eventId: eventId))
+                        }
+                        SettingsRow(icon: "person.circle", title: "Account", subtitle: "Event info, reset") {
+                            app.push(.settingsAccount(eventId: eventId))
+                        }
+                        SettingsRow(icon: "info.circle", title: "About Boothify", subtitle: "Version & credits") {
+                            app.push(.aboutBoothify)
+                        }
+                    }
                 }
-                SettingsRow(icon: "lock.fill", title: "Lock PIN", subtitle: app.settings(for: eventId).lockPin.enabled ? "Enabled" : "Off", badge: .available) {
-                    app.push(.settingsLockPin(eventId: eventId))
-                }
-                SettingsRow(icon: "person.circle", title: "Account", subtitle: "Event info, reset", badge: .available) {
-                    app.push(.settingsAccount(eventId: eventId))
-                }
-                SettingsRow(icon: "info.circle", title: "About Boothify", subtitle: "Version & credits") {
-                    app.push(.aboutBoothify)
-                }
+                .frame(maxWidth: 620)
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.top, BoothifySpacing.sm)
+                .padding(.bottom, BoothifySpacing.xl)
+                .frame(maxWidth: .infinity)
             }
-            .listRowBackground(BoothifyTheme.surface1)
         }
-        .scrollContentBackground(.hidden)
-        .background(BoothifyTheme.bg.ignoresSafeArea())
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -196,7 +180,7 @@ enum SettingsBadge: Hashable {
         switch self {
         case .available: BoothifyTheme.emerald
         case .demo:      BoothifyTheme.amber
-        case .beta:      BoothifyTheme.violet
+        case .beta:      BoothifyTheme.amber
         }
     }
 }
@@ -218,7 +202,7 @@ struct SettingsRow: View {
                         .frame(width: 32, height: 32)
                     Image(systemName: icon)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(disabled ? BoothifyTheme.textMuted : BoothifyTheme.violet)
+                        .foregroundStyle(disabled ? BoothifyTheme.textMuted : BoothifyTheme.amber)
                 }
                 .accessibilityHidden(true)
 
@@ -227,7 +211,9 @@ struct SettingsRow: View {
                         Text(title)
                             .font(.body)
                             .foregroundStyle(disabled ? BoothifyTheme.textTertiary : .white)
-                        if let badge {
+                        // AVAILABLE is the norm, not news — only demo/beta
+                        // states earn a badge (anti-noise).
+                        if let badge, badge != .available {
                             Text(badge.label)
                                 .font(.caption2.weight(.bold))
                                 .kerning(0.5)
@@ -267,7 +253,7 @@ struct ComingSoonView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             VStack(spacing: BoothifySpacing.md) {
                 ZStack {
                     RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
@@ -279,7 +265,7 @@ struct ComingSoonView: View {
                         )
                     Image(systemName: "clock.badge.questionmark")
                         .font(.title2.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.violet)
+                        .foregroundStyle(BoothifyTheme.amber)
                         .accessibilityHidden(true)
                 }
                 VStack(spacing: BoothifySpacing.xs) {
@@ -310,7 +296,7 @@ struct AboutBoothifyView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             VStack(spacing: BoothifySpacing.lg) {
                 // Logo with surface card
                 ZStack {

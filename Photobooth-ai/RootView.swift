@@ -285,43 +285,46 @@ private struct AppSettingsView: View {
     private var email: String { app.currentUser?.email ?? "—" }
 
     var body: some View {
-        ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
-
-            List {
-                // ── Profile header (iOS-style, pushes the full profile) ──
-                Section {
-                    NavigationLink {
-                        ProfileCardView()
-                    } label: {
-                        HStack(spacing: BoothifySpacing.md) {
-                            ZStack {
-                                Circle()
-                                    .fill(BoothifyTheme.violet.opacity(0.20))
-                                    .frame(width: 60, height: 60)
-                                Text(String(displayName.prefix(1)))
-                                    .font(.title2.weight(.bold))
-                                    .foregroundStyle(BoothifyTheme.violet)
-                            }
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(displayName)
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                Text("View profile")
-                                    .font(.subheadline)
-                                    .foregroundStyle(BoothifyTheme.textTertiary)
-                            }
-                            Spacer()
+        // Layout redesign: designed settings on the shared atmosphere (which
+        // RootView already paints underneath) — floating glass sections and
+        // amber icons instead of a generic black inset-grouped list.
+        ScrollView {
+            VStack(alignment: .leading, spacing: BoothifySpacing.lg) {
+                // ── Profile header (pushes the full profile) ─────────────
+                NavigationLink {
+                    ProfileCardView()
+                } label: {
+                    HStack(spacing: BoothifySpacing.md) {
+                        ZStack {
+                            Circle()
+                                .fill(BoothifyTheme.amber.opacity(0.16))
+                                .frame(width: 56, height: 56)
+                            Text(String(displayName.prefix(1)))
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(BoothifyTheme.amber)
                         }
-                        .padding(.vertical, 6)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(displayName)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text("View profile")
+                                .font(.subheadline)
+                                .foregroundStyle(BoothifyTheme.textTertiary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(BoothifyTheme.textMuted)
                     }
-                    .accessibilityLabel("Profile, \(displayName)")
-                    .accessibilityHint("Opens your profile")
+                    .padding(BoothifySpacing.md)
+                    .glassSurface(radius: BoothifyRadius.section)
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Profile, \(displayName)")
+                .accessibilityHint("Opens your profile")
 
                 // ── Account & Plan ───────────────────────────────────────
-                Section("Account & Plan") {
+                SettingsSectionCard(title: "Account & Plan") {
                     // Subscription tier — reflects the real StoreKit entitlement,
                     // not a hardcoded badge. Tapping opens the paywall.
                     Button {
@@ -342,39 +345,38 @@ private struct AppSettingsView: View {
                                     .font(.caption.weight(.bold))
                                     .kerning(0.4)
                             }
-                            .foregroundStyle(isPaid ? BoothifyTheme.violet : BoothifyTheme.textSecondary)
+                            .foregroundStyle(isPaid ? BoothifyTheme.amber : BoothifyTheme.textSecondary)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background((isPaid ? BoothifyTheme.violet : BoothifyTheme.textMuted).opacity(0.15), in: Capsule())
-                            .overlay(Capsule().stroke((isPaid ? BoothifyTheme.violet : BoothifyTheme.textMuted).opacity(0.35), lineWidth: 0.8))
+                            .background((isPaid ? BoothifyTheme.amber : BoothifyTheme.textMuted).opacity(0.15), in: Capsule())
+                            .overlay(Capsule().stroke((isPaid ? BoothifyTheme.amber : BoothifyTheme.textMuted).opacity(0.35), lineWidth: 0.8))
                             Image(systemName: "chevron.right")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(BoothifyTheme.textMuted)
                         }
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
-                .listRowBackground(BoothifyTheme.surface1)
 
                 // ── Default Booth Settings ───────────────────────────────
-                Section("Default Booth Settings") {
+                SettingsSectionCard(title: "Default Booth Settings") {
                     globalSettingsRow(icon: "camera.rotate", title: "Default Camera", subtitle: "Back · Mirrored selfie off")
                     globalSettingsRow(icon: "rosette", title: "Default Branding", subtitle: "Logo watermark off")
                     globalSettingsRow(icon: "square.and.arrow.up", title: "Default Sharing", subtitle: "Email + SMS templates")
                 }
-                .listRowBackground(BoothifyTheme.surface1)
 
                 // ── App ──────────────────────────────────────────────────
-                Section("App") {
+                SettingsSectionCard(title: "App") {
                     globalSettingsRow(icon: "faceid", title: "Face ID / PIN Lock", subtitle: "Protect operator panel")
                     globalSettingsRow(icon: "bell", title: "Notifications", subtitle: "Event alerts, delivery status")
                     globalSettingsRow(icon: "internaldrive", title: "Storage", subtitle: "Manage local cache")
                     globalSettingsRow(icon: "globe", title: "Language & Region", subtitle: Locale.current.localizedString(forLanguageCode: Locale.current.language.languageCode?.identifier ?? "en") ?? "English")
                 }
-                .listRowBackground(BoothifyTheme.surface1)
 
                 // ── Support ──────────────────────────────────────────────
-                Section("Support") {
+                SettingsSectionCard(title: "Support") {
                     globalSettingsRow(icon: "questionmark.circle", title: "Help Center", subtitle: "Guides & tutorials") {
                         openURL(BoothifyAPI.shared.baseURL.appending(path: "support"))
                     }
@@ -387,14 +389,24 @@ private struct AppSettingsView: View {
                     }
                     globalSettingsRow(icon: "sparkles", title: "What's New", subtitle: "v\(appVersion)")
                 }
-                .listRowBackground(BoothifyTheme.surface1)
 
                 // ── About ────────────────────────────────────────────────
-                Section {
+                SettingsSectionCard {
                     NavigationLink(destination: AboutBoothifyView()) {
-                        Label("About Boothify", systemImage: "info.circle")
-                            .foregroundStyle(.white)
+                        HStack {
+                            globalRowIcon("info.circle")
+                            Text("About Boothify")
+                                .font(.body)
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BoothifyTheme.textMuted)
+                        }
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     globalSettingsRow(icon: "hand.raised", title: "Privacy Policy", subtitle: nil) {
                         openURL(BoothifyAPI.shared.baseURL.appending(path: "privacy"))
                     }
@@ -402,27 +414,33 @@ private struct AppSettingsView: View {
                         openURL(BoothifyAPI.shared.baseURL.appending(path: "terms"))
                     }
                 }
-                .listRowBackground(BoothifyTheme.surface1)
 
                 // ── Sign Out ─────────────────────────────────────────────
-                Section {
+                SettingsSectionCard {
                     Button(role: .destructive) {
                         Haptics.tap(.medium)
                         confirmSignOut = true
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                            .foregroundStyle(BoothifyTheme.error)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
-                } footer: {
-                    Text("Boothify \(appVersion) · Powered by Servify Labs")
-                        .font(.footnote)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, BoothifySpacing.sm)
+                    .buttonStyle(.plain)
                 }
-                .listRowBackground(BoothifyTheme.surface1)
+
+                Text("Boothify \(appVersion) · Powered by Servify Labs")
+                    .font(.footnote)
+                    .foregroundStyle(BoothifyTheme.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, BoothifySpacing.xs)
             }
-            .scrollContentBackground(.hidden)
-            .listStyle(.insetGrouped)
+            .frame(maxWidth: 620)
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.top, BoothifySpacing.sm)
+            .padding(.bottom, BoothifySpacing.xl)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
@@ -447,15 +465,7 @@ private struct AppSettingsView: View {
         action: (() -> Void)? = nil
     ) -> some View {
         let content = HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(BoothifyTheme.surface2)
-                    .frame(width: 32, height: 32)
-                Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
-            }
-            .accessibilityHidden(true)
+            globalRowIcon(icon)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body)
@@ -474,7 +484,7 @@ private struct AppSettingsView: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
         .contentShape(Rectangle())
 
         if let action {
@@ -486,6 +496,18 @@ private struct AppSettingsView: View {
         } else {
             content
         }
+    }
+
+    private func globalRowIcon(_ icon: String) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(BoothifyTheme.surface2)
+                .frame(width: 32, height: 32)
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(BoothifyTheme.amber)
+        }
+        .accessibilityHidden(true)
     }
 }
 

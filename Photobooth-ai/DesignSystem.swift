@@ -251,6 +251,32 @@ struct AppListRow: View {
     }
 }
 
+// MARK: - SettingsSectionCard
+/// Glass section for settings screens: a quiet uppercase eyebrow floating
+/// above a thin panel of rows. Layout-redesign primitive — settings screens
+/// compose these on the atmosphere instead of rendering a generic iOS list.
+struct SettingsSectionCard<Content: View>: View {
+    var title: String? = nil
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+            if let title {
+                Text(title.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .kerning(1.2)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                    .padding(.leading, 4)
+            }
+            VStack(alignment: .leading, spacing: 0) { content() }
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.vertical, BoothifySpacing.xs + 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassSurface(radius: BoothifyRadius.section)
+        }
+    }
+}
+
 // MARK: - AppDivider
 struct AppDivider: View {
     var body: some View {
