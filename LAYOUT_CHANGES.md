@@ -30,6 +30,11 @@ zakładkę Events (bento pokazuje tylko najnowszy — świadomie). Paleta
 przełożona na nasz język: amber = akcent (mockup był mono-fioletowy).
 Pułapka naprawiona w locie: `scaledToFill` zdjęcia budki rozpychał
 kolumnę statów — obraz jako overlay na `Color.clear`.
+Aktualizacja: kafel „YOUR BOOTH" gra **animowany klip budki**
+(`BoothAmbient.mp4`, 10 s, 2.4 MB, audio wycięte) przez nowy komponent
+`AmbientVideoView` (AVPlayerLooper, mute, aspect-fill, bez blokowania
+wygaszania ekranu, wznowienie po powrocie z tła). Reduce Motion lub brak
+asseta → statyczne zdjęcie `Mode_360`.
 
 ### Landing (wzorzec-złoto, `474fd6d` — historyczny, zastąpiony przez BENTO)
 - **Było:** pełnoszerokościowy box badge'a; cegła „NEW 360 EVENT" (label +

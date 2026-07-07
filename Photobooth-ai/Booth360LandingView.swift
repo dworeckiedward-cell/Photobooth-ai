@@ -292,14 +292,21 @@ struct Booth360LandingView: View {
 
     private var boothTile: some View {
         ZStack(alignment: .bottomLeading) {
-            // Color.clear base — the photo fills via overlay so its intrinsic
-            // width never steals layout space from the stat column.
+            // Color.clear base — the media fills via overlay so its intrinsic
+            // size never steals layout space from the stat column. Animated
+            // booth clip (muted loop); Reduce Motion or a missing asset falls
+            // back to the static photo.
             Color.clear
-                .overlay(
-                    Image("Mode_360")
-                        .resizable()
-                        .scaledToFill()
-                )
+                .overlay {
+                    if !reduceMotion,
+                       let clip = Bundle.main.url(forResource: "BoothAmbient", withExtension: "mp4") {
+                        AmbientVideoView(url: clip)
+                    } else {
+                        Image("Mode_360")
+                            .resizable()
+                            .scaledToFill()
+                    }
+                }
 
             // Wash — keeps the label legible and ties the photo into the
             // violet atmosphere (gradient on imagery is permitted).
