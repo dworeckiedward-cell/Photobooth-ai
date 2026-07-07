@@ -22,7 +22,7 @@ struct CloudStatusPanel: View {
             HStack(spacing: BoothifySpacing.xs) {
                 Image(systemName: "icloud.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.violet)
+                    .foregroundStyle(BoothifyTheme.amber)
                 Text("Cloud status")
                     .font(BoothifyType.captionEmphasis)
                     .foregroundStyle(BoothifyTheme.textSecondary)
@@ -38,7 +38,7 @@ struct CloudStatusPanel: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(refreshing ? BoothifyTheme.violet : BoothifyTheme.textTertiary)
+                        .foregroundStyle(refreshing ? BoothifyTheme.amber : BoothifyTheme.textTertiary)
                         .rotationEffect(refreshing ? .degrees(360) : .zero)
                         .animation(
                             reduceMotion ? nil : (refreshing
@@ -80,7 +80,7 @@ struct CloudStatusPanel: View {
                 // Counter grid
                 HStack(spacing: BoothifySpacing.xs) {
                     counter("Queued", count: status.queued, tint: BoothifyTheme.textTertiary, symbol: "clock.fill")
-                    counter("Uploading", count: status.uploading, tint: BoothifyTheme.violet, symbol: "icloud.and.arrow.up.fill")
+                    counter("Uploading", count: status.uploading, tint: BoothifyTheme.amber, symbol: "icloud.and.arrow.up.fill")
                     counter("Done", count: status.done, tint: BoothifyTheme.emerald, symbol: "checkmark.seal.fill")
                     counter("Sent", count: status.sent, tint: BoothifyTheme.emerald, symbol: "paperplane.fill")
                 }
@@ -107,7 +107,7 @@ struct CloudStatusPanel: View {
                                     .fill(BoothifyTheme.surface2)
                                     .frame(height: 6)
                                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(BoothifyTheme.violet)
+                                    .fill(BoothifyTheme.amber)
                                     .frame(width: geo.size.width * progress, height: 6)
                                     .animation(.spring(response: 0.5), value: progress)
                             }
@@ -153,13 +153,9 @@ struct CloudStatusPanel: View {
                 }
             }
         }
-        .padding(BoothifySpacing.md)
-        .background(BoothifyTheme.surface1)
-        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
+        .padding(.horizontal, BoothifySpacing.md)
+        .padding(.vertical, BoothifySpacing.sm + 4)
+        .glassSurface(radius: BoothifyRadius.card)
         .task(id: eventId) {
             defer { initialLoading = false }
             await app.refreshCloudStatus(for: eventId)
@@ -188,13 +184,7 @@ struct CloudStatusPanel: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, BoothifySpacing.sm)
-        .background(count > 0 ? tint.opacity(0.08) : BoothifyTheme.surface2)
-        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                .stroke(count > 0 ? tint.opacity(0.20) : BoothifyTheme.surfaceLine, lineWidth: 0.5)
-        )
+        .padding(.vertical, BoothifySpacing.xs)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: count)
     }
 }

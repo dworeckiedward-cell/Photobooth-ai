@@ -19,14 +19,16 @@ struct Booth360EventHubView: View {
     // MARK: - Kiosk Mode (ported from the photo hub — blueprint 4.D/5)
 
     private var kioskButton: some View {
+        // Light floating row — one thin glass line, not a boxed card.
         Button {
             guard let event else { return }
             Haptics.tap(.medium)
             app.enterKiosk(eventId: event.id)
         } label: {
-            HStack(spacing: BoothifySpacing.sm) {
+            HStack(spacing: BoothifySpacing.sm + 2) {
                 Image(systemName: "lock.display")
                     .font(.body.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.amber)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Start Kiosk Mode")
                         .font(.subheadline.weight(.semibold))
@@ -40,13 +42,9 @@ struct Booth360EventHubView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.textMuted)
             }
-            .foregroundStyle(BoothifyTheme.amber)
-            .padding(BoothifySpacing.md)
-            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                    .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-            )
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.vertical, BoothifySpacing.sm + 4)
+            .glassSurface(radius: BoothifyRadius.card)
         }
         .buttonStyle(.plain)
         .accessibilityHint("Locks the app into the guest 360 booth for this event")
@@ -57,7 +55,11 @@ struct Booth360EventHubView: View {
             AtmosphericBackground()
 
             ScrollView {
-                VStack(spacing: BoothifySpacing.md) {
+                // Layout redesign: the hero card is the one dominant; kiosk is
+                // a light row, recordings float without a wrapper brick, stats
+                // read as one airy line and the cloud panel sinks to the
+                // bottom as quiet operational detail.
+                VStack(spacing: BoothifySpacing.lg) {
                     if event != nil {
                         compactHeader
                         if let warning = PerfBudget.evaluate(settings: app.settings(for: eventId)).operatorMessage {
@@ -80,10 +82,10 @@ struct Booth360EventHubView: View {
                         }
                         primaryCard
                         kioskButton
-                        CloudStatusPanel(eventId: eventId)
                         recentRecordingsSection
                         statsRow
                         shareEventSection
+                        CloudStatusPanel(eventId: eventId)
                     } else {
                         BoothifyEmptyState(
                             icon: "calendar.badge.exclamationmark",
@@ -261,50 +263,29 @@ struct Booth360EventHubView: View {
 
     @ViewBuilder
     private var recentRecordingsSection: some View {
+        // No wrapper brick — an eyebrow floats over thumbnails that sit
+        // directly on the atmosphere. Filler "open slot" tiles removed.
         VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
             HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "video.bubble.left")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.amber)
-                    Text("Recent recordings")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                }
+                Text("RECENT RECORDINGS")
+                    .font(.caption2.weight(.semibold))
+                    .kerning(1.4)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
                 Spacer()
                 if !jobs.isEmpty {
                     Text("\(jobs.count)")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(BoothifyTheme.textTertiary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(BoothifyTheme.surface2, in: Capsule())
                 }
             }
+            .padding(.horizontal, 2)
 
             if jobs.isEmpty {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                            .fill(BoothifyTheme.surface2)
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "tray")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(BoothifyTheme.textMuted)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("No recordings yet")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                        Text("Start a session to create the first 360 clip.")
-                            .font(.caption)
-                            .foregroundStyle(BoothifyTheme.textTertiary)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, 4)
+                Text("No recordings yet — start a session to create the first 360 clip.")
+                    .font(.caption)
+                    .foregroundStyle(BoothifyTheme.textMuted)
             } else {
-                HStack(spacing: BoothifySpacing.sm) {
+                HStack(alignment: .top, spacing: BoothifySpacing.sm) {
                     ForEach(jobs.prefix(3)) { job in
                         Button {
                             Haptics.tap()
@@ -324,22 +305,14 @@ struct Booth360EventHubView: View {
                                            : "Opens the processing screen")
                     }
                     if jobs.count < 3 {
+                        // Keep the 3-column rhythm without fake "open slot" tiles.
                         ForEach(0..<(3 - jobs.count), id: \.self) { _ in
-                            EmptyThumb()
-                                .frame(maxWidth: .infinity)
+                            Color.clear.frame(maxWidth: .infinity)
                         }
                     }
                 }
             }
         }
-        .padding(BoothifySpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 
     @ViewBuilder
@@ -392,13 +365,36 @@ struct Booth360EventHubView: View {
     // MARK: - Stats
 
     private var statsRow: some View {
+        // One airy line of numbers separated by hairlines — not three boxes.
         let zero = jobs.isEmpty
-        return HStack(spacing: BoothifySpacing.sm) {
-            StatTile(label: "Recordings", value: "\(jobs.count)", tint: BoothifyTheme.amber, muted: zero)
-            StatTile(label: "Ready", value: "\(completed.count)", tint: BoothifyTheme.emerald, muted: zero)
-            StatTile(label: "Processing", value: "\(processing.count)", tint: BoothifyTheme.violet, muted: zero)
+        return HStack(spacing: 0) {
+            inlineStat(label: "Recordings", value: "\(jobs.count)")
+            statDivider
+            inlineStat(label: "Ready", value: "\(completed.count)", tint: completed.isEmpty ? nil : BoothifyTheme.emerald)
+            statDivider
+            inlineStat(label: "Processing", value: "\(processing.count)", tint: processing.isEmpty ? nil : BoothifyTheme.amber)
         }
-        .opacity(zero ? 0.60 : 1.0)
+        .padding(.vertical, BoothifySpacing.xs)
+        .opacity(zero ? 0.55 : 1.0)
+    }
+
+    private var statDivider: some View {
+        Rectangle()
+            .fill(BoothifyTheme.surfaceLine)
+            .frame(width: 0.5, height: 30)
+    }
+
+    private func inlineStat(label: String, value: String, tint: Color? = nil) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.title2.bold().monospacedDigit())
+                .foregroundStyle(tint ?? .white)
+            Text(label.uppercased())
+                .font(.caption2.weight(.semibold))
+                .kerning(0.5)
+                .foregroundStyle(BoothifyTheme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Share
@@ -469,71 +465,16 @@ struct Booth360EventHubView: View {
                 .disabled(!hasUrl)
             }
         }
-        .padding(BoothifySpacing.md)
+        .padding(.horizontal, BoothifySpacing.md)
+        .padding(.vertical, BoothifySpacing.sm + 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
-                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        .glassSurface(radius: BoothifyRadius.card)
     }
 
     private func guestShareURL() -> URL? {
         completed
             .first(where: { $0.cloudUploadStatus == .uploaded })?
             .publicShareURL
-    }
-}
-
-// MARK: - Tiny components
-
-private struct EmptyThumb: View {
-    var body: some View {
-        VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                .fill(BoothifyTheme.surface2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                        .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                )
-                .overlay(
-                    Image(systemName: "plus.viewfinder")
-                        .font(.title3)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                )
-                .aspectRatio(1, contentMode: .fit)
-            Text("Open slot")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(BoothifyTheme.textMuted)
-        }
-    }
-}
-
-private struct StatTile: View {
-    let label: String
-    let value: String
-    let tint: Color
-    var muted: Bool = false
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Text(value)
-                .font(.title2.bold())
-                .foregroundStyle(muted ? BoothifyTheme.textSecondary : .white)
-            Text(label.uppercased())
-                .font(.caption2.weight(.semibold))
-                .kerning(0.5)
-                .foregroundStyle(muted ? BoothifyTheme.textMuted : BoothifyTheme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                .stroke(muted ? BoothifyTheme.surfaceLine : tint.opacity(0.25), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
     }
 }
 
