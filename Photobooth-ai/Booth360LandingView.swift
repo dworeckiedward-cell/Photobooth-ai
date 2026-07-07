@@ -48,35 +48,45 @@ struct Booth360LandingView: View {
         ZStack {
             homeBackground
 
-            ScrollView {
-                VStack(spacing: BoothifySpacing.md) {
-                    greetingHeader
-                        .padding(.bottom, BoothifySpacing.xs)
+            // Bottom-anchored bento: the greeting holds the top edge, the tile
+            // cluster sinks to the bottom (one nav-height of air above the
+            // floating pill), and the ambient clip breathes in between.
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(spacing: BoothifySpacing.md) {
+                        greetingHeader
+                            .padding(.bottom, BoothifySpacing.xs)
 
-                    startCard
+                        Spacer(minLength: BoothifySpacing.xl)
 
-                    if let topErr = app.topLevelError {
-                        Text(topErr)
-                            .font(.footnote)
-                            .foregroundStyle(BoothifyTheme.error)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        startCard
+
+                        if let topErr = app.topLevelError {
+                            Text(topErr)
+                                .font(.footnote)
+                                .foregroundStyle(BoothifyTheme.error)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        if let current = currentEvent {
+                            currentEventBanner(current)
+                        }
+
+                        bentoRow
+
+                        latestEventSection
                     }
-
-                    if let current = currentEvent {
-                        currentEventBanner(current)
-                    }
-
-                    bentoRow
-
-                    latestEventSection
+                    .frame(maxWidth: 620)
+                    .padding(.horizontal, BoothifySpacing.md + 2)
+                    .padding(.top, BoothifySpacing.sm)
+                    // RootView already reserves the nav clearance; this adds
+                    // the extra ~nav-height of deliberate air above the pill.
+                    .padding(.bottom, BoothifySpacing.md)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geo.size.height)
                 }
-                .frame(maxWidth: 620)
-                .padding(.horizontal, BoothifySpacing.md + 2)
-                .padding(.top, BoothifySpacing.sm)
-                .padding(.bottom, BoothifySpacing.lg)
-                .frame(maxWidth: .infinity)
+                .refreshable { await app.loadRecentEvents() }
             }
-            .refreshable { await app.loadRecentEvents() }
         }
         // The designed greeting header IS the screen's title.
         .toolbar(.hidden, for: .navigationBar)
@@ -315,7 +325,11 @@ struct Booth360LandingView: View {
                     .padding(.top, 3)
             }
             .padding(BoothifySpacing.md + 4)
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+            // Fixed height — the card must stay rigid inside the
+            // bottom-anchored layout (a minHeight + inner Spacer would soak
+            // up the flexible space meant for the atmosphere gap).
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 132)
             // Violet-tinted glass — the hero sits a shade warmer than the
             // quiet tiles below (composition per the bento reference).
             .background(
