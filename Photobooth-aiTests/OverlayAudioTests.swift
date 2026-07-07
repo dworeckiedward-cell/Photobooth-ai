@@ -61,8 +61,9 @@ final class OverlayAudioTests: XCTestCase {
 
     // MARK: - Licensing copy (present + all languages)
 
-    func testLicensingCopyPresentInThreeLanguages() {
-        XCTAssertEqual(SoundtrackLicensing.allVariants.count, 3)
+    func testLicensingCopyPresentInShippedLanguages() {
+        // EN + DE — Polish resolution disabled (market decision 2026-07-07).
+        XCTAssertEqual(SoundtrackLicensing.allVariants.count, 2)
         for variant in SoundtrackLicensing.allVariants {
             XCTAssertGreaterThan(variant.count, 40)
         }

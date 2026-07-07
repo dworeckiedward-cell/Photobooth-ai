@@ -91,11 +91,11 @@ enum SoundtrackLicensing {
         )
     }
 
-    /// Raw variants exposed for tests (all three languages must exist).
+    /// Raw variants exposed for tests (every SHIPPED language must exist —
+    /// EN + DE; Polish was dropped with the market decision).
     static var allVariants: [String] {
         [
             "Use royalty-cleared or client-supplied music. Syncing commercial tracks to video requires sync rights — a venue's public-performance license does not cover it.",
-            "Używaj muzyki z licencją royalty-free lub dostarczonej przez klienta. Synchronizacja utworów komercyjnych z wideo wymaga praw synchronizacyjnych — licencja na publiczne odtwarzanie ich nie obejmuje.",
             "Nutze lizenzfreie oder vom Kunden bereitgestellte Musik. Das Synchronisieren kommerzieller Titel mit Video erfordert Sync-Rechte — eine Aufführungslizenz deckt das nicht ab.",
         ]
     }

@@ -664,7 +664,7 @@ private struct ProfileCardView: View {
     private var statsRow: some View {
         HStack(spacing: BoothifySpacing.sm) {
             profileStat(value: "\(app.events.count)", label: "Events", tint: BoothifyTheme.violet)
-            profileStat(value: "\(totalPhotos)", label: "Photos", tint: BoothifyTheme.emerald)
+            profileStat(value: "\(totalPhotos)", label: "Videos", tint: BoothifyTheme.emerald)
         }
     }
 

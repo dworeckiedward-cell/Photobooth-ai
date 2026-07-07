@@ -150,6 +150,11 @@ final class LayoutSnapshotTests: XCTestCase {
         try snapshot("settings") {
             NavigationStack { SettingsHubView(eventId: wedding.id, mode: .ai360) }.environment(app)
         }
+
+        // Events calendar (glass pane + agenda).
+        try snapshot("calendar") {
+            NavigationStack { EventsCalendarView() }.environment(app)
+        }
     }
 }
 

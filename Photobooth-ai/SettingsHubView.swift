@@ -13,7 +13,7 @@ enum BoothMode: Hashable, Sendable {
 struct SettingsHubView: View {
     @Environment(AppState.self) private var app
     let eventId: UUID
-    var mode: BoothMode = .photobooth
+    var mode: BoothMode = .ai360
 
     private var event: Event? { app.event(id: eventId) }
 
@@ -26,10 +26,12 @@ struct SettingsHubView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: BoothifySpacing.lg) {
-                    // Identity — light glass, amber aperture.
+                    // Identity — light glass, 360-era copy (no photo counters).
                     if let event {
+                        let recordings = app.jobs(for: eventId)
+                        let ready = recordings.filter { $0.status == .completed }.count
                         HStack(spacing: BoothifySpacing.md) {
-                            AppIconBadge(symbol: "camera.aperture", color: BoothifyTheme.violet, size: 48)
+                            AppIconBadge(symbol: "rotate.3d", color: BoothifyTheme.violet, size: 48)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(event.name)
                                     .font(.headline)
@@ -38,7 +40,7 @@ struct SettingsHubView: View {
                                     Circle()
                                         .fill(BoothifyTheme.emerald)
                                         .frame(width: 6, height: 6)
-                                    Text("\(event.completedPhotos) of \(event.totalPhotos) photos")
+                                    Text("\(recordings.count) recording\(recordings.count == 1 ? "" : "s") · \(ready) ready")
                                         .font(.subheadline)
                                         .foregroundStyle(BoothifyTheme.textSecondary)
                                 }

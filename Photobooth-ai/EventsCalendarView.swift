@@ -1,6 +1,11 @@
 import SwiftUI
 
 // MARK: - Events Calendar tab
+//
+// Glass redesign: the month grid floats as one glass pane on the black
+// atmosphere; the selected day's events list under it, followed by an
+// agenda of ALL past events grouped under their dates — tap any row to
+// open that event's hub. Copy is 360-era (spins/videos, not photos).
 
 struct EventsCalendarView: View {
     @Environment(AppState.self) private var app
@@ -14,34 +19,23 @@ struct EventsCalendarView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
-            VStack(spacing: 0) {
-                connectBanner
-                    .padding(.horizontal, BoothifySpacing.md)
-                    .padding(.top, BoothifySpacing.xs)
-                    .padding(.bottom, BoothifySpacing.sm)
+            ScrollView {
+                VStack(alignment: .leading, spacing: BoothifySpacing.lg) {
+                    calendarCard
 
-                monthHeader
-                    .padding(.horizontal, BoothifySpacing.md)
-                    .padding(.bottom, BoothifySpacing.sm)
+                    selectedDaySection
 
-                weekdayRow
-                    .padding(.horizontal, BoothifySpacing.sm)
+                    allEventsSection
 
-                Divider()
-                    .background(BoothifyTheme.surfaceLine)
-                    .padding(.top, BoothifySpacing.xs)
-
-                calendarGrid
-                    .padding(.horizontal, BoothifySpacing.sm)
-                    .padding(.vertical, BoothifySpacing.sm)
-
-                Divider()
-                    .background(BoothifyTheme.surfaceLine)
-
-                dayEventsList
-                    .frame(maxHeight: .infinity)
+                    connectBanner
+                }
+                .frame(maxWidth: 620)
+                .padding(.horizontal, BoothifySpacing.md)
+                .padding(.top, BoothifySpacing.sm)
+                .padding(.bottom, BoothifySpacing.xl)
+                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Events")
@@ -66,35 +60,17 @@ struct EventsCalendarView: View {
         }
     }
 
-    // MARK: - Connect banner
+    // MARK: - Calendar pane (month header + weekdays + grid on one glass)
 
-    private var connectBanner: some View {
-        Button {
-            Haptics.tap(.light)
-            connectSheetPresented = true
-        } label: {
-            AppCard(padding: BoothifySpacing.sm + 2) {
-                HStack(spacing: BoothifySpacing.md) {
-                    AppIconBadge(symbol: "link.circle.fill", color: BoothifyTheme.violet, size: 36)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Connect your calendar")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                        Text("Sync with Google Calendar or iPhone")
-                            .font(.caption)
-                            .foregroundStyle(BoothifyTheme.textSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                }
-            }
+    private var calendarCard: some View {
+        VStack(spacing: BoothifySpacing.sm) {
+            monthHeader
+            weekdayRow
+            calendarGrid
         }
-        .buttonStyle(.plain)
+        .padding(BoothifySpacing.sm + 4)
+        .glassSurface(radius: BoothifyRadius.hero)
     }
-
-    // MARK: - Month header
 
     private var monthHeader: some View {
         HStack {
@@ -107,10 +83,11 @@ struct EventsCalendarView: View {
                 Image(systemName: "chevron.left")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.textSecondary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Previous month")
 
             Spacer()
 
@@ -131,14 +108,13 @@ struct EventsCalendarView: View {
                 Image(systemName: "chevron.right")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(BoothifyTheme.textSecondary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Next month")
         }
     }
-
-    // MARK: - Weekday row
 
     private var weekdayRow: some View {
         HStack(spacing: 0) {
@@ -149,10 +125,7 @@ struct EventsCalendarView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.bottom, 4)
     }
-
-    // MARK: - Calendar grid
 
     private var calendarGrid: some View {
         let cells = monthCells(for: displayMonth)
@@ -172,8 +145,7 @@ struct EventsCalendarView: View {
                         }
                     }
                 } else {
-                    Color.clear
-                        .frame(height: dayCellHeight)
+                    Color.clear.frame(height: 48)
                 }
             }
         }
@@ -185,57 +157,151 @@ struct EventsCalendarView: View {
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.80), value: displayMonth)
     }
 
-    private var dayCellHeight: CGFloat { 44 }
-
-    // MARK: - Day events list
+    // MARK: - Selected day
 
     @ViewBuilder
-    private var dayEventsList: some View {
+    private var selectedDaySection: some View {
         let events = eventsOn(selectedDate)
-        let dateStr = selectedDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
-                HStack {
-                    Text(dateStr)
-                        .font(.caption.weight(.semibold))
+        VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+            HStack {
+                Text(selectedDate.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textMuted)
+                    .textCase(.uppercase)
+                    .kerning(0.8)
+                Spacer()
+                if !events.isEmpty {
+                    Text("\(events.count) event\(events.count == 1 ? "" : "s")")
+                        .font(.caption2)
                         .foregroundStyle(BoothifyTheme.textMuted)
-                        .textCase(.uppercase)
-                        .kerning(0.8)
-                    Spacer()
-                    if !events.isEmpty {
-                        Text("\(events.count) event\(events.count == 1 ? "" : "s")")
-                            .font(.caption2)
-                            .foregroundStyle(BoothifyTheme.textMuted)
-                    }
-                }
-                .padding(.top, BoothifySpacing.md)
-
-                if events.isEmpty {
-                    emptyDayView
-                } else {
-                    ForEach(events) { event in
-                        CalendarEventRow(event: event) {
-                            Haptics.tap()
-                            app.push(.booth360EventHub(eventId: event.id))
-                        }
-                    }
                 }
             }
-            .padding(.horizontal, BoothifySpacing.md)
-            .padding(.bottom, BoothifySpacing.xl)
+            .padding(.horizontal, 2)
+
+            if events.isEmpty {
+                // Quiet whisper — the calendar above is the hero.
+                Text("No events on this day.")
+                    .font(.caption)
+                    .foregroundStyle(BoothifyTheme.textMuted)
+                    .padding(.leading, 2)
+            } else {
+                ForEach(events) { event in
+                    eventRow(event)
+                }
+            }
         }
     }
 
-    private var emptyDayView: some View {
-        AppEmptyState(
-            symbol: "calendar",
-            title: "No events",
-            subtitle: "No photobooth events on this day.",
-            actionLabel: "New Event",
-            action: { app.push(.booth360Landing) }
-        )
-        .padding(.top, BoothifySpacing.sm)
+    // MARK: - All past events (agenda, newest first)
+
+    @ViewBuilder
+    private var allEventsSection: some View {
+        if !app.events.isEmpty {
+            VStack(alignment: .leading, spacing: BoothifySpacing.sm) {
+                Text("ALL EVENTS")
+                    .font(.caption2.weight(.semibold))
+                    .kerning(1.4)
+                    .foregroundStyle(BoothifyTheme.textTertiary)
+                    .padding(.horizontal, 2)
+
+                ForEach(app.events.sorted(by: { $0.createdAt > $1.createdAt })) { event in
+                    eventRow(event, showDate: true)
+                }
+            }
+        }
+    }
+
+    // MARK: - Event row (glass, 360-era copy)
+
+    private func eventRow(_ event: Event, showDate: Bool = false) -> some View {
+        let spins = app.jobs(for: event.id).filter { $0.status == .completed }.count
+        let isLive = app.currentEventId == event.id
+
+        return Button {
+            Haptics.tap()
+            app.push(.booth360EventHub(eventId: event.id))
+        } label: {
+            HStack(spacing: BoothifySpacing.sm + 4) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
+                        .fill(BoothifyTheme.violet.opacity(isLive ? 0.30 : 0.14))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "rotate.3d")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(isLive ? .white : BoothifyTheme.violet)
+                }
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(event.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        if isLive {
+                            Text("LIVE")
+                                .font(.caption2.weight(.bold))
+                                .kerning(0.5)
+                                .foregroundStyle(BoothifyTheme.violet)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(BoothifyTheme.violet.opacity(0.16), in: Capsule())
+                        }
+                    }
+                    Text(rowSubtitle(event: event, spins: spins, showDate: showDate))
+                        .font(.caption)
+                        .foregroundStyle(BoothifyTheme.textTertiary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: BoothifySpacing.sm)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textMuted)
+            }
+            .padding(.horizontal, BoothifySpacing.sm + 4)
+            .padding(.vertical, BoothifySpacing.sm + 2)
+            .glassSurface(radius: BoothifyRadius.card)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens this event")
+    }
+
+    private func rowSubtitle(event: Event, spins: Int, showDate: Bool) -> String {
+        var parts: [String] = []
+        if showDate {
+            parts.append(event.createdAt.formatted(.dateTime.month(.abbreviated).day()))
+        }
+        parts.append(spins == 1 ? "1 video" : "\(spins) videos")
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Connect banner (quiet, at the bottom)
+
+    private var connectBanner: some View {
+        Button {
+            Haptics.tap(.light)
+            connectSheetPresented = true
+        } label: {
+            HStack(spacing: BoothifySpacing.sm + 2) {
+                Image(systemName: "link")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.violet)
+                Text("Connect Google or iPhone calendar")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(BoothifyTheme.textSecondary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(BoothifyTheme.textMuted)
+            }
+            .padding(.horizontal, BoothifySpacing.md)
+            .padding(.vertical, BoothifySpacing.sm + 2)
+            .glassSurface(radius: BoothifyRadius.card)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Calendar helpers
@@ -325,51 +391,6 @@ private struct DayCell: View {
     }
 }
 
-// MARK: - Event row in day list
-
-private struct CalendarEventRow: View {
-    let event: Event
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: BoothifySpacing.md) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(BoothifyTheme.violet)
-                    .frame(width: 3)
-                    .frame(minHeight: 52)
-
-                AppIconBadge(symbol: "camera.aperture", color: BoothifyTheme.violet, size: 40)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(event.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    Text("\(event.completedPhotos) photo\(event.completedPhotos == 1 ? "" : "s") completed")
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textSecondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BoothifyTheme.textMuted)
-            }
-            .padding(.vertical, BoothifySpacing.sm)
-            .padding(.horizontal, BoothifySpacing.md)
-            .background(BoothifyTheme.surface1)
-            .overlay(
-                RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                    .stroke(BoothifyTheme.violet.opacity(0.22), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // MARK: - Connect Calendar sheet
 
 struct ConnectCalendarSheet: View {
@@ -378,7 +399,7 @@ struct ConnectCalendarSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                BoothifyTheme.bg.ignoresSafeArea()
+                AtmosphericBackground()
 
                 VStack(spacing: BoothifySpacing.xl) {
                     // Icon
@@ -417,11 +438,7 @@ struct ConnectCalendarSheet: View {
                         Spacer()
                     }
                     .padding(BoothifySpacing.md)
-                    .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
-                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                    )
+                    .glassSurface(radius: BoothifyRadius.tile)
                     .padding(.horizontal, BoothifySpacing.lg)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Calendar sync coming soon")
