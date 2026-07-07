@@ -381,11 +381,11 @@ struct SettingsSectionCard<Content: View>: View {
                 .padding(.horizontal, BoothifySpacing.md)
                 .padding(.vertical, BoothifySpacing.xs + 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // Faint violet under-tint so the pane reads as glass on the
-                // black stage, not as a flat gray block.
+                // Violet under-tint so the pane reads as lit glass on the
+                // black stage (same richness as the calendar pane).
                 .background(
                     LinearGradient(
-                        colors: [BoothifyTheme.indigoGlow.opacity(0.16), BoothifyTheme.violet.opacity(0.04)],
+                        colors: [BoothifyTheme.indigoGlow.opacity(0.26), BoothifyTheme.violet.opacity(0.07)],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ),
                     in: RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)

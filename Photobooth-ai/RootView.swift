@@ -317,6 +317,14 @@ private struct AppSettingsView: View {
                             .foregroundStyle(BoothifyTheme.textMuted)
                     }
                     .padding(BoothifySpacing.md)
+                    // Rich glass — violet-lit pane, language-consistent.
+                    .background(
+                        LinearGradient(
+                            colors: [BoothifyTheme.indigoGlow.opacity(0.26), BoothifyTheme.violet.opacity(0.07)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
+                    )
                     .glassSurface(radius: BoothifyRadius.section)
                 }
                 .buttonStyle(.plain)

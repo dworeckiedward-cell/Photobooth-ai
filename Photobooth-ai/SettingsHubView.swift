@@ -48,6 +48,13 @@ struct SettingsHubView: View {
                             Spacer()
                         }
                         .padding(BoothifySpacing.md)
+                        .background(
+                            LinearGradient(
+                                colors: [BoothifyTheme.indigoGlow.opacity(0.26), BoothifyTheme.violet.opacity(0.07)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
+                        )
                         .glassSurface(radius: BoothifyRadius.section)
                         .entrance(0)
                     }
