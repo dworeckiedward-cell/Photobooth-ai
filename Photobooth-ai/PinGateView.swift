@@ -36,7 +36,7 @@ struct PinGateView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
             VStack(spacing: BoothifySpacing.xl) {
                 Spacer()
@@ -153,7 +153,7 @@ struct PinGateView: View {
                 }
             }
             .frame(width: 64, height: 64)
-            .background(BoothifyTheme.surface1)
+            .background { GlassRowBackground() }
             .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous))
         }
         .buttonStyle(.plain)

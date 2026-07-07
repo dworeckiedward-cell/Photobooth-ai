@@ -560,7 +560,7 @@ private struct ProfileCardView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -714,7 +714,7 @@ private struct ProfileCardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, BoothifySpacing.lg)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous))
+        .glassSurface(radius: BoothifyRadius.tile)
         .overlay(
             RoundedRectangle(cornerRadius: BoothifyRadius.tile, style: .continuous)
                 .stroke(tint.opacity(0.16), lineWidth: 1)
@@ -728,7 +728,7 @@ private struct ProfileCardView: View {
 private struct AuthSplashView: View {
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
             ProgressView()
                 .tint(BoothifyTheme.violet)
         }

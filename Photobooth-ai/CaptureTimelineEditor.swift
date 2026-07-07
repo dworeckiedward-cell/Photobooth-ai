@@ -77,7 +77,7 @@ struct CaptureTimelineEditor: View {
         .navigationTitle("Capture Timeline")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(BoothifyTheme.bg.ignoresSafeArea())
+        .background(AtmosphericBackground())
         .toolbar {
             EditButton()
         }

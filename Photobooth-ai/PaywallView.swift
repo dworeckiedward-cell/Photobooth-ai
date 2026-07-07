@@ -16,7 +16,7 @@ struct PaywallView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                BoothifyTheme.bg.ignoresSafeArea()
+                AtmosphericBackground()
 
                 ScrollView {
                     VStack(spacing: BoothifySpacing.lg) {
@@ -117,7 +117,7 @@ struct PaywallView: View {
                 }
             }
             .padding(BoothifySpacing.lg)
-            .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .glassSurface(radius: 20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(isCurrent ? BoothifyTheme.violet.opacity(0.6) : BoothifyTheme.surfaceLine, lineWidth: isCurrent ? 1.5 : 1)
@@ -158,6 +158,6 @@ struct PaywallView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(BoothifySpacing.xl)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassSurface(radius: 20)
     }
 }

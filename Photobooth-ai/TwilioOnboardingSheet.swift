@@ -34,7 +34,7 @@ struct TwilioOnboardingSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                BoothifyTheme.bg.ignoresSafeArea()
+                AtmosphericBackground()
 
                 ScrollView {
                     VStack(spacing: BoothifySpacing.md) {

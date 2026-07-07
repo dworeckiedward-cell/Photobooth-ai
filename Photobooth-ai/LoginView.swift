@@ -17,7 +17,7 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            BoothifyTheme.bg.ignoresSafeArea()
+            AtmosphericBackground()
 
             // Ambient violet bloom at top-center
             RadialGradient(
@@ -43,7 +43,8 @@ struct LoginView: View {
 
                         // Card
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .fill(BoothifyTheme.surface1)
+                            .fill(.ultraThinMaterial)
+                            .environment(\.colorScheme, .dark)
                             .frame(width: 92, height: 92)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 28, style: .continuous)

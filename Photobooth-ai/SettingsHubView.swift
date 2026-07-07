@@ -267,7 +267,8 @@ struct ComingSoonView: View {
             VStack(spacing: BoothifySpacing.md) {
                 ZStack {
                     RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
-                        .fill(BoothifyTheme.surface1)
+                        .fill(.ultraThinMaterial)
+                        .environment(\.colorScheme, .dark)
                         .frame(width: 72, height: 72)
                         .overlay(
                             RoundedRectangle(cornerRadius: BoothifyRadius.card, style: .continuous)
@@ -311,7 +312,8 @@ struct AboutBoothifyView: View {
                 // Logo with surface card
                 ZStack {
                     RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)
-                        .fill(BoothifyTheme.surface1)
+                        .fill(.ultraThinMaterial)
+                        .environment(\.colorScheme, .dark)
                         .frame(width: 100, height: 100)
                         .overlay(
                             RoundedRectangle(cornerRadius: BoothifyRadius.section, style: .continuous)

@@ -772,12 +772,7 @@ private struct Booth360SMSSheet: View {
                     .textContentType(.telephoneNumber)
                     .padding(.horizontal, 14)
                     .frame(minHeight: 48)
-                    .background(BoothifyTheme.surface1)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .glassSurface(radius: 12)
                     .padding(.horizontal, 24)
                     .foregroundStyle(.white)
 

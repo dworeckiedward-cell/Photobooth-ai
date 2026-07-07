@@ -453,7 +453,7 @@ struct VirtualAttendantPreview: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(BoothifyTheme.surface2, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassSurface(radius: 16)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
@@ -813,7 +813,7 @@ private struct StatChip: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(BoothifyTheme.surface1, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .glassSurface(radius: 14)
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(BoothifyTheme.surfaceLine, lineWidth: 1))
     }
 }
@@ -910,12 +910,7 @@ struct PostResultSurveySheet: View {
                         .lineLimit(3...6)
                         .foregroundStyle(.white)
                         .padding(BoothifySpacing.md)
-                        .background(BoothifyTheme.surface1)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous)
-                                .stroke(BoothifyTheme.surfaceLine, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: BoothifyRadius.input, style: .continuous))
+                        .glassSurface(radius: BoothifyRadius.input)
                         .padding(.horizontal, BoothifySpacing.lg)
                 case .yesNo:
                     HStack(spacing: 12) {
