@@ -131,6 +131,7 @@ final class AppState {
         // is sent; no email, no PII.
         SentryClient.shared.setUser(id: new.user.id)
         SentryClient.shared.breadcrumb("signed in", category: "auth")
+        didSignOut = false
         session = new
         try? KeychainStore.saveSession(new)
     }
@@ -161,10 +162,16 @@ final class AppState {
 
     /// Wipe in-memory + Keychain session and reset cached event data. Also
     /// clears Apple's cached profile attributes so a re-login starts clean.
+    /// True after an EXPLICIT sign-out. Debug builds skip the auth gate for
+    /// dev convenience, which used to make Sign Out look like a dead button —
+    /// this flag forces the login screen even there. Cleared on sign-in.
+    var didSignOut = false
+
     func signOut() {
         // RA3 — wipe user tag so post-sign-out crashes aren't mis-attributed.
         SentryClient.shared.setUser(id: nil)
         SentryClient.shared.breadcrumb("signed out", category: "auth")
+        didSignOut = true
         session = nil
         KeychainStore.clearSession()
         AppleProfileCache.clear()

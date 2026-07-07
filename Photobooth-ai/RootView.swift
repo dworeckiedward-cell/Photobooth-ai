@@ -45,7 +45,9 @@ struct RootView: View {
         Group {
             if app.isAuthLoading {
                 AuthSplashView()
-            } else if AppConfig.authGateEnabled && !app.isAuthenticated {
+            } else if (AppConfig.authGateEnabled || app.didSignOut) && !app.isAuthenticated {
+                // didSignOut: debug builds skip the gate, but an EXPLICIT
+                // sign-out must still visibly land on the login screen.
                 LoginView()
             } else {
                 mainApp(app: app)
