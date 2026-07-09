@@ -344,19 +344,39 @@ final class AppState {
     func settings(for eventId: UUID) -> EventSettings {
         if let cached = settingsCache[eventId] { return cached }
         let key = Self.settingsKeyPrefix + eventId.uuidString
-        let loaded: EventSettings
+        var loaded: EventSettings
         if let data = UserDefaults.standard.data(forKey: key),
            let decoded = try? JSONDecoder().decode(EventSettings.self, from: data) {
             loaded = decoded
         } else {
             loaded = .default
         }
+
+        // SECURITY: the lock PIN lives in the Keychain, never in the blob.
+        if let keychainPin = KeychainStore.loadEventPin(eventId: eventId) {
+            loaded.lockPin.pin = keychainPin
+        } else if !loaded.lockPin.pin.isEmpty {
+            // One-time migration: a legacy blob persisted the PIN in
+            // plaintext. Move it to the Keychain and rewrite the blob
+            // (the encoder omits `pin`, so the plaintext gets scrubbed).
+            KeychainStore.saveEventPin(loaded.lockPin.pin, eventId: eventId)
+            if let data = try? JSONEncoder().encode(loaded) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
+        }
+
         settingsCache[eventId] = loaded
         return loaded
     }
 
     func updateSettings(_ settings: EventSettings, for eventId: UUID) {
         settingsCache[eventId] = settings
+        // Keychain is the single store for the PIN (encoder omits it).
+        if settings.lockPin.pin.isEmpty {
+            KeychainStore.deleteEventPin(eventId: eventId)
+        } else {
+            KeychainStore.saveEventPin(settings.lockPin.pin, eventId: eventId)
+        }
         let key = Self.settingsKeyPrefix + eventId.uuidString
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: key)
@@ -368,6 +388,7 @@ final class AppState {
         settingsCache.removeValue(forKey: eventId)
         let key = Self.settingsKeyPrefix + eventId.uuidString
         UserDefaults.standard.removeObject(forKey: key)
+        KeychainStore.deleteEventPin(eventId: eventId)
     }
 
     // MARK: - Survey responses (MVP local store)

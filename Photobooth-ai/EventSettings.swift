@@ -305,12 +305,40 @@ struct EmailSMSSettings: Codable, Hashable, Sendable {
 
 // MARK: - Lock PIN
 
+/// SECURITY: the PIN value itself is a secret — it is held in memory here
+/// for the UI/bindings, but it is NEVER encoded into the UserDefaults
+/// settings blob. Persistence lives in the Keychain
+/// (`KeychainStore.saveEventPin`), synced by `AppState.updateSettings` /
+/// hydrated by `AppState.settings(for:)`. The decoder still READS a `pin`
+/// key so legacy blobs that persisted it in plaintext can be migrated
+/// (and scrubbed) on first load.
 struct LockPinSettings: Codable, Hashable, Sendable {
     var enabled: Bool = false
-    var pin: String = ""        // 4–6 digit numeric. Empty when disabled.
+    var pin: String = ""        // 4–6 digit numeric. Empty when disabled. In-memory only.
     var idleTimeoutMinutes: Int = 0   // 0 = never auto-lock
 
     static let `default` = LockPinSettings()
+
+    init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case enabled, pin, idleTimeoutMinutes
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = (try? c.decode(Bool.self, forKey: .enabled)) ?? false
+        // Legacy migration source only — new blobs never contain this key.
+        self.pin = (try? c.decode(String.self, forKey: .pin)) ?? ""
+        self.idleTimeoutMinutes = (try? c.decode(Int.self, forKey: .idleTimeoutMinutes)) ?? 0
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(enabled, forKey: .enabled)
+        try c.encode(idleTimeoutMinutes, forKey: .idleTimeoutMinutes)
+        // `pin` intentionally NOT encoded — Keychain is the only store.
+    }
 }
 
 // MARK: - Virtual Attendant

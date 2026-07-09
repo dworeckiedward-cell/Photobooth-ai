@@ -36,6 +36,31 @@ final class EventSettingsDecodeTests: XCTestCase {
         XCTAssertEqual(decoded, EventSettings.default)
     }
 
+    /// SECURITY characterization: the lock PIN must NEVER be encoded into
+    /// the persisted settings blob (Keychain is the only store), but the
+    /// decoder must still READ a legacy `pin` key so old plaintext blobs
+    /// can be migrated. If this test breaks, PINs leak back to UserDefaults.
+    func testLockPinIsNeverEncodedButLegacyPinStillDecodes() throws {
+        var s = EventSettings.default
+        s.lockPin.enabled = true
+        s.lockPin.pin = "1234"
+
+        let data = try JSONEncoder().encode(s)
+        let json = String(decoding: data, as: UTF8.self)
+        XCTAssertFalse(json.contains("1234"), "PIN leaked into the encoded settings blob")
+
+        // Round-trip: pin is gone (in-memory only), the rest survives.
+        let decoded = try JSONDecoder().decode(EventSettings.self, from: data)
+        XCTAssertTrue(decoded.lockPin.enabled)
+        XCTAssertEqual(decoded.lockPin.pin, "")
+
+        // Legacy blob WITH a plaintext pin still decodes (migration source).
+        let legacy = Data(#"{"lockPin":{"enabled":true,"pin":"9876","idleTimeoutMinutes":5}}"#.utf8)
+        let migrated = try JSONDecoder().decode(EventSettings.self, from: legacy)
+        XCTAssertEqual(migrated.lockPin.pin, "9876")
+        XCTAssertEqual(migrated.lockPin.idleTimeoutMinutes, 5)
+    }
+
     func testRoundTripPreservesValues() throws {
         var s = EventSettings.default
         s.survey.enabled = true

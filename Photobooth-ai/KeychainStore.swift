@@ -44,6 +44,30 @@ enum KeychainStore {
         delete(account: twilioAccount)
     }
 
+    // MARK: - Event lock PIN
+    //
+    // The operator's per-event lock PIN is a secret — it gates kiosk exit.
+    // It must NEVER sit in the UserDefaults settings blob (mobile-audit
+    // finding); it lives here, keyed per event, and `LockPinSettings`
+    // deliberately does not encode it.
+
+    private static func pinAccount(_ eventId: UUID) -> String {
+        "boothify.lockpin.\(eventId.uuidString)"
+    }
+
+    static func saveEventPin(_ pin: String, eventId: UUID) {
+        try? set(Data(pin.utf8), account: pinAccount(eventId))
+    }
+
+    static func loadEventPin(eventId: UUID) -> String? {
+        guard let data = get(account: pinAccount(eventId)) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func deleteEventPin(eventId: UUID) {
+        delete(account: pinAccount(eventId))
+    }
+
     // MARK: - Low-level
 
     private static func set(_ data: Data, account: String) throws {
