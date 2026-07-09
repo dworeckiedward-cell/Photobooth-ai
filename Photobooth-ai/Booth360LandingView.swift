@@ -64,6 +64,24 @@ struct Booth360LandingView: View {
 
                         Spacer(minLength: BoothifySpacing.xl)
 
+                        // Visibility of system status: the booth may be
+                        // rendering in the background — the operator must see
+                        // that from Home, not only inside the event hub.
+                        if app.hasActiveRenders {
+                            HStack(spacing: BoothifySpacing.xs + 2) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(BoothifyTheme.violet)
+                                Text("Rendering a video in the background")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(BoothifyTheme.textSecondary)
+                            }
+                            .padding(.horizontal, BoothifySpacing.md)
+                            .padding(.vertical, BoothifySpacing.sm)
+                            .glassSurface(radius: BoothifyRadius.card)
+                            .transition(.opacity)
+                        }
+
                         startCard
                             .entrance(1)
 

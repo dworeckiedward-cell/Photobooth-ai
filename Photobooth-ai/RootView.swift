@@ -248,23 +248,28 @@ private struct BoothifyTabBar: View {
 
     @ViewBuilder
     private func tabItem(icon: String, selectedIcon: String, title: String, isActive: Bool) -> some View {
-        // Atmospheric Glass: compact icon-only pill (reference style). The
-        // title lives on as the accessibility label; the active tab sits in a
-        // soft glass "seat" instead of relying on a text label.
-        Image(systemName: isActive ? selectedIcon : icon)
-            .font(.system(size: inactiveIcon, weight: .regular))
-            .symbolRenderingMode(.hierarchical)
-            .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
-            .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
-            .frame(width: 52, height: 44) // 44pt+ tap target (HIG)
-            .background {
-                if isActive {
-                    Capsule()
-                        .fill(Color.white.opacity(0.12))
-                }
+        // Mobile-design + UX audits (consensus): icon-only nav is mystery
+        // meat for a new operator. A small always-visible label joins the
+        // icon — HIG tab-bar convention — while the active glass seat stays.
+        VStack(spacing: 3) {
+            Image(systemName: isActive ? selectedIcon : icon)
+                .font(.system(size: inactiveIcon, weight: .regular))
+                .symbolRenderingMode(.hierarchical)
+                .symbolEffect(.bounce, value: reduceMotion ? false : isActive)
+            Text(title)
+                .font(.system(size: tabLabelSize, weight: isActive ? .semibold : .medium))
+                .lineLimit(1)
+        }
+        .foregroundStyle(isActive ? .white : BoothifyTheme.textMuted)
+        .frame(width: 64, height: 50) // 44pt+ tap target (HIG)
+        .background {
+            if isActive {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white.opacity(0.12))
             }
-            .contentShape(Rectangle())
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isActive)
+        }
+        .contentShape(Rectangle())
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isActive)
     }
 }
 
