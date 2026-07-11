@@ -6,7 +6,7 @@ import UIKit
 /// reason operators pay for booth software.
 enum CSVExporter {
     static func surveyCSV(_ responses: [SurveyResponse], question: String) -> String {
-        let header = ["submitted_at", "question", "answer_type", "rating", "yes_no", "text", "photo_id"]
+        let header = ["submitted_at", "question", "answer_type", "rating", "yes_no", "text", "job_id"]
         let iso = ISO8601DateFormatter()
         var rows = [header.joined(separator: ",")]
         for r in responses {
@@ -23,7 +23,7 @@ enum CSVExporter {
                 r.answerType == .rating ? answer : "",
                 r.answerType == .yesNo ? answer : "",
                 r.text ?? "",
-                r.photoId?.uuidString ?? "",
+                r.jobId?.uuidString ?? "",
             ]
             rows.append(cols.map(escape).joined(separator: ","))
         }

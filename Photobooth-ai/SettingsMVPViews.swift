@@ -483,8 +483,8 @@ struct VirtualAttendantHelpSheet: View {
 
                     helpRow(
                         symbol: "1.circle.fill",
-                        title: "Step into the frame",
-                        body: "Stand 3–6 feet from the camera so your face fits comfortably."
+                        title: "Step onto the platform",
+                        body: "Stand in the middle — the camera arm will orbit around you."
                     )
                     helpRow(
                         symbol: "2.circle.fill",
@@ -493,8 +493,8 @@ struct VirtualAttendantHelpSheet: View {
                     )
                     helpRow(
                         symbol: "3.circle.fill",
-                        title: "Pick a style",
-                        body: "Choose any of the cinematic motion templates — the rest is automatic."
+                        title: "Enjoy the spin",
+                        body: "Hold your pose while the platform rotates — slow motion is automatic."
                     )
                     helpRow(
                         symbol: "4.circle.fill",
@@ -858,9 +858,11 @@ private struct SurveyResponseRow: View {
     }
 }
 
-/// Post-result survey sheet. Pushed by ResultView when the photo finishes.
+/// Post-result survey sheet, presented by `Booth360ResultView` after the
+/// spin finishes (when the event has surveys enabled).
 struct PostResultSurveySheet: View {
     let settings: SurveySettings
+    var jobId: UUID? = nil
     let onSubmit: (SurveyResponse) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var rating: Int = 0
@@ -963,7 +965,7 @@ struct PostResultSurveySheet: View {
 
     private func submit() {
         let r = SurveyResponse(
-            photoId: nil,
+            jobId: jobId,
             answerType: settings.answerType,
             rating: settings.answerType == .rating ? rating : nil,
             text: settings.answerType == .text ? text : nil,

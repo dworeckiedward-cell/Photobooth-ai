@@ -89,21 +89,11 @@ enum CameraRotation: Int, Codable, CaseIterable, Hashable, Sendable {
     var label: String { "\(rawValue)°" }
 }
 
-enum FlashBehavior: String, Codable, CaseIterable, Hashable, Sendable {
-    case auto, on, off
-
-    var label: String {
-        switch self { case .auto: "Auto"; case .on: "On"; case .off: "Off" }
-    }
-}
-
 struct CameraSettings: Codable, Hashable, Sendable {
     var preferredCamera: CameraSide = .front
     var zoom: Double = 1.0
     var rotation: CameraRotation = .zero
     var mirrorSelfie: Bool = true
-    var pal25FpsRecording: Bool = false
-    var flash: FlashBehavior = .off
     /// Video stabilization for 360 / slow-mo recording (smooths platform vibration).
     /// Optional so older stored settings decode cleanly; nil is treated as ON.
     /// Adds a little capture latency, so operators on a static rig can turn it off.
@@ -274,7 +264,6 @@ struct CaptureTemplate: Codable, Hashable, Sendable, Identifiable {
 struct SharingSettings: Codable, Hashable, Sendable {
     var enabledChannels: Set<SharingChannel>
     var requireGuestOptIn: Bool = false
-    var publicResultUrlPattern: String = "/p/{photoId}"
     var maxSendsPerGuest: Int = 5
     /// Pre-populated test recipients used by Sharing Status. Operator can edit
     /// before running a "Send test" — replaces the previous hardcoded values.
@@ -345,7 +334,7 @@ struct LockPinSettings: Codable, Hashable, Sendable {
 
 struct VirtualAttendantSettings: Codable, Hashable, Sendable {
     var enabled: Bool = false
-    var greetingMessage: String = "Hi! Ready for your AI photo?"
+    var greetingMessage: String = "Hi! Ready for your 360 spin?"
     var voicePromptText: String = "Smile! We're taking the shot in a moment."
     var helpButtonEnabled: Bool = true
     var idleReminderEnabled: Bool = false
@@ -394,7 +383,8 @@ struct SurveySettings: Codable, Hashable, Sendable {
 /// without a backend table yet.
 struct SurveyResponse: Codable, Hashable, Sendable, Identifiable {
     var id: UUID = UUID()
-    var photoId: UUID?
+    /// The 360 job this answer belongs to (nil for legacy/photo-era rows).
+    var jobId: UUID?
     var answerType: SurveyAnswerType
     var rating: Int?
     var text: String?

@@ -396,7 +396,7 @@ private struct AppSettingsView: View {
                             subtitle: "Create an event first"
                         )
                     }
-                    globalSettingsRow(icon: "camera.rotate", title: "Default Camera", subtitle: "Back · Mirrored selfie off")
+                    globalSettingsRow(icon: "camera.rotate", title: "Default Camera", subtitle: "Back camera · mirror off")
                     globalSettingsRow(icon: "rosette", title: "Default Branding", subtitle: "Logo watermark off")
                     globalSettingsRow(icon: "square.and.arrow.up", title: "Default Sharing", subtitle: "Email + SMS templates")
                 }

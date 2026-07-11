@@ -433,6 +433,10 @@ final class AppState {
 
     private static let surveyKeyPrefix = "boothify.event.surveys."
 
+    /// Jobs whose post-result survey was already offered this session —
+    /// guests get asked once per clip, not on every Result revisit.
+    var surveyedJobIds: Set<UUID> = []
+
     var surveyResponsesCache: [UUID: [SurveyResponse]] = [:]
 
     func surveyResponses(for eventId: UUID) -> [SurveyResponse] {
@@ -504,7 +508,49 @@ final class AppState {
     // local cache. View code already reads via `job(id:)` / `jobs(for:)`, so
     // swapping the implementation is a single-layer change.
 
-    var booth360Jobs: [UUID: Booth360Job] = [:]
+    var booth360Jobs: [UUID: Booth360Job] = AppState.loadPersistedJobs()
+
+    // MARK: Job persistence (audit GAP: history used to be in-memory only)
+    //
+    // Clip history now survives app restarts: the dict is serialized to
+    // UserDefaults on every MEANINGFUL job change (status/step/urls — not
+    // per-percent progress ticks, which would hammer the store during a
+    // render). On load, non-terminal jobs are marked failed (a cold start
+    // means their render died with the app) and local file links that no
+    // longer resolve (container moved on update/reinstall) are dropped —
+    // the Result screen has placeholder fallbacks for both.
+
+    private static let jobsKey = "boothify.booth360Jobs.v1"
+
+    private func persistJobs() {
+        if let data = try? JSONEncoder().encode(Array(booth360Jobs.values)) {
+            UserDefaults.standard.set(data, forKey: Self.jobsKey)
+        }
+    }
+
+    private static func loadPersistedJobs() -> [UUID: Booth360Job] {
+        guard let data = UserDefaults.standard.data(forKey: jobsKey),
+              let jobs = try? JSONDecoder().decode([Booth360Job].self, from: data)
+        else { return [:] }
+
+        var dict: [UUID: Booth360Job] = [:]
+        for var job in jobs {
+            if !job.status.isTerminal {
+                job.status = .failed
+                job.errorMessage = job.errorMessage
+                    ?? "Rendering was interrupted when the app closed. Try again."
+            }
+            if let url = job.rawVideoLocalURL, !FileManager.default.fileExists(atPath: url.path) {
+                job.rawVideoLocalURL = nil
+            }
+            if let url = job.finalVideoURL, url.isFileURL,
+               !FileManager.default.fileExists(atPath: url.path) {
+                job.finalVideoURL = nil
+            }
+            dict[job.id] = job
+        }
+        return dict
+    }
 
     // MARK: - Current event (the one running at the booth)
     //
@@ -527,7 +573,19 @@ final class AppState {
 
     func job(id: UUID) -> Booth360Job? { booth360Jobs[id] }
 
-    func upsertJob(_ job: Booth360Job) { booth360Jobs[job.id] = job }
+    func upsertJob(_ job: Booth360Job) {
+        let old = booth360Jobs[job.id]
+        booth360Jobs[job.id] = job
+        // Persist on meaningful transitions only — never per progress tick.
+        if old == nil
+            || old?.status != job.status
+            || old?.currentStep != job.currentStep
+            || old?.publicShareURL != job.publicShareURL
+            || old?.cloudUploadStatus != job.cloudUploadStatus
+            || old?.finalVideoURL != job.finalVideoURL {
+            persistJobs()
+        }
+    }
 
     // MARK: - Render coordination (Phase 3 — non-blocking kiosk)
     //
@@ -586,6 +644,7 @@ final class AppState {
                     )
                 }
             }
+            persistJobs()
         } catch {
             // Offline / backend absent — the local in-memory view stays. Queues
             // and retry handle uploads; nothing to surface to the operator here.

@@ -38,7 +38,7 @@ struct CameraSettingsView: View {
                         ForEach(CameraSide.allCases, id: \.self) { Text($0.label).tag($0) }
                     }
                     SettingsDivider()
-                    SettingsToggle("Mirror selfie", isOn: app.binding(eventId: eventId, keyPath: \.camera.mirrorSelfie))
+                    SettingsToggle("Mirror front camera", isOn: app.binding(eventId: eventId, keyPath: \.camera.mirrorSelfie))
                     SettingsDivider()
                     // Phase 6 — preset picker with honest crop preview and
                     // device-gated availability (unsupported = disabled + why).
@@ -101,15 +101,6 @@ struct CameraSettingsView: View {
                     }
                 }
 
-                SettingsCard(title: "Flash") {
-                    SettingsPicker("Behavior", selection: app.binding(eventId: eventId, keyPath: \.camera.flash)) {
-                        ForEach(FlashBehavior.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                }
-
-                SettingsCard(title: "Advanced") {
-                    SettingsToggle("Record in PAL 25 FPS", isOn: app.binding(eventId: eventId, keyPath: \.camera.pal25FpsRecording))
-                }
             }
             .padding(.horizontal, BoothifySpacing.md)
             .padding(.vertical, BoothifySpacing.md)
@@ -291,7 +282,7 @@ struct AI360SettingsView: View {
                 }
 
                 SettingsCard(title: "Preview") {
-                    Text("Preview / test recording will appear here once the AI 360 capture pipeline ships.")
+                    Text("A test-recording preview lands in a future update — use the recording screen to check framing today.")
                         .font(.footnote)
                         .foregroundStyle(BoothifyTheme.textTertiary)
                 }
@@ -350,18 +341,6 @@ struct SharingSettingsView: View {
                         range: 1...20,
                         valueLabel: "\(app.settings(for: eventId).sharing.maxSendsPerGuest)"
                     )
-                }
-
-                SettingsCard(title: "Public URL pattern") {
-                    TextField("/p/{photoId}", text: app.binding(eventId: eventId, keyPath: \.sharing.publicResultUrlPattern))
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .foregroundStyle(.white)
-                        .font(.system(.body, design: .monospaced))
-                    Text("Tokens: {photoId}, {eventSlug}. Path is appended to PUBLIC_RESULT_BASE_URL.")
-                        .font(.caption)
-                        .foregroundStyle(BoothifyTheme.textMuted)
-                        .padding(.top, BoothifySpacing.xs)
                 }
             }
             .padding(.horizontal, BoothifySpacing.md)

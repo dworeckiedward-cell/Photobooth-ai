@@ -102,8 +102,13 @@ final class LayoutSnapshotTests: XCTestCase {
             "snapshot harness is opt-in — set TEST_RUNNER_SNAPSHOT_DIR"
         )
 
+        // Jobs are persisted now — wipe the store so this harness is
+        // deterministic across runs (emptyApp must be truly empty).
+        UserDefaults.standard.removeObject(forKey: "boothify.booth360Jobs.v1")
+
         // Landing — empty and populated.
         let emptyApp = AppState()
+        emptyApp.booth360Jobs = [:]
         emptyApp.currentEventId = nil
         try snapshot("landing_empty") {
             NavigationStack { Booth360LandingView() }.environment(emptyApp)
