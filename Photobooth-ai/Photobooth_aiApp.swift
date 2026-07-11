@@ -28,6 +28,10 @@ struct Photobooth_aiApp: App {
                         Booth360UploadQueue.shared.replayPending(app: appState)
                     }
                 }
+                // Universal links: /e/{slug} → event hub, /v/{short} → result.
+                .onOpenURL { url in
+                    Task { await appState.handleDeepLink(url) }
+                }
         }
     }
 }

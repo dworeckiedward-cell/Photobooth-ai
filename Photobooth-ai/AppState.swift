@@ -243,6 +243,44 @@ final class AppState {
         }
     }
 
+    // MARK: - Deep links (universal links)
+    //
+    // Backend link shapes (BACKEND_CONTRACT): `/e/{slug}` = public event
+    // gallery, `/v/{short}` = a clip's public share page. When the OPERATOR
+    // opens one of these on this device (SMS to self, Slack from a client…)
+    // the app routes straight to the matching screen instead of Safari.
+    // Requires the Associated Domains entitlement + an AASA file on the
+    // backend host (HANDOFF §F — human, needs the Apple Team ID).
+
+    func handleDeepLink(_ url: URL) async {
+        // Never hijack a guest-facing kiosk with operator navigation.
+        guard !isKiosk else { return }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count >= 2 else { return }
+
+        switch parts[0] {
+        case "e":
+            let slug = parts[1]
+            if event(slug: slug) == nil {
+                await refreshEvent(slug: slug)   // fetches + inserts unknown events
+            }
+            guard let event = event(slug: slug) else { return }
+            popToRoot()
+            push(.booth360EventHub(eventId: event.id))
+
+        case "v":
+            let short = parts[1]
+            guard let job = booth360Jobs.values.first(where: {
+                $0.publicShareURL?.lastPathComponent == short
+            }) else { return }
+            popToRoot()
+            push(.booth360Result(jobId: job.id))
+
+        default:
+            break
+        }
+    }
+
     // MARK: - Cloud status (IM2)
     //
     // Cache keyed by event id so the EventHub panel reads a stable snapshot

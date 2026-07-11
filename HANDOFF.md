@@ -125,3 +125,31 @@ perf-budget thresholds are heuristics; gate destination is an iOS 26 sim.
 
 `BACKEND_CONTRACT.md` — existing endpoints (verified both sides), job schema,
 degradation contract, remaining gaps.
+
+### F+ — Deep links (added post-audit, needs the Apple Team ID)
+The app now handles universal links (`/e/{slug}` → event hub,
+`/v/{short}` → result; ignored in kiosk mode) and declares
+`applinks:ai-photobooth-rust.vercel.app`. For links to actually open the
+app, the backend must serve
+`https://ai-photobooth-rust.vercel.app/.well-known/apple-app-site-association`
+(Content-Type application/json, no redirect):
+
+```json
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["<TEAMID>.com.servify.Photobooth-ai"],
+        "components": [
+          { "/": "/e/*" },
+          { "/": "/v/*" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Replace `<TEAMID>` with the real Apple Team ID (human-owned). When the
+domain moves off vercel.app to boothify.app, update BOTH the entitlement
+and the AASA host.
