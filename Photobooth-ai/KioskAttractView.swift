@@ -21,10 +21,10 @@ struct KioskAttractView: View {
 
     private var title: String {
         app.events.first(where: { $0.id == eventId })?.name
-            ?? Loc.t("360 Booth", pl: "Budka 360", de: "360-Booth")
+            ?? Loc.t("360 Booth", de: "360-Booth")
     }
     private var subtitle: String {
-        Loc.t("Your 360 video is seconds away", pl: "Twoje wideo 360 za kilka chwil", de: "Dein 360-Video in Sekunden")
+        Loc.t("Your 360 video is seconds away", de: "Dein 360-Video in Sekunden")
     }
     private var brand: BrandOverlaySettings { app.settings(for: eventId).brandOverlay }
 
@@ -58,7 +58,7 @@ struct KioskAttractView: View {
                 // The dominant. 3-meter type is a deliberate single-callsite
                 // holdout from the Dynamic-Type scale (like the countdown).
                 VStack(spacing: BoothifySpacing.md) {
-                    Text(Loc.t("Tap to start", pl: "Dotknij, by zacząć", de: "Tippen zum Starten"))
+                    Text(Loc.t("Tap to start", de: "Tippen zum Starten"))
                         .font(.system(size: 58, weight: .heavy))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
@@ -84,7 +84,6 @@ struct KioskAttractView: View {
                                 .tint(BoothifyTheme.violet)
                             Text(Loc.t(
                                 "Previous video is finishing — you can start",
-                                pl: "Poprzednie wideo się kończy — możesz zaczynać",
                                 de: "Das letzte Video wird fertig — du kannst starten"
                             ))
                             .font(.footnote.weight(.medium))
@@ -97,7 +96,6 @@ struct KioskAttractView: View {
                         .transition(.opacity)
                         .accessibilityLabel(Loc.t(
                             "Previous video is finishing in the background. You can start.",
-                            pl: "Poprzednie wideo kończy się w tle. Możesz zaczynać.",
                             de: "Das letzte Video wird im Hintergrund fertig. Du kannst starten."
                         ))
                     }
@@ -139,7 +137,7 @@ struct KioskAttractView: View {
             if showExitHint {
                 HStack(spacing: BoothifySpacing.xs + 2) {
                     Image(systemName: "hand.point.up.left.fill").font(.caption2)
-                    Text(Loc.t("Hold here to exit", pl: "Przytrzymaj, aby wyjść", de: "Halten zum Beenden"))
+                    Text(Loc.t("Hold here to exit", de: "Halten zum Beenden"))
                         .font(.caption.weight(.medium))
                 }
                 .foregroundStyle(.white)

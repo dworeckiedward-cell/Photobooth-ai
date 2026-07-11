@@ -38,12 +38,12 @@ enum Booth360ProcessingStep: String, Codable, CaseIterable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        case .uploading:          Loc.t("Preparing your take", pl: "Przygotowuję nagranie", de: "Aufnahme wird vorbereitet")
-        case .stabilizing:        Loc.t("Smoothing the spin", pl: "Wygładzam obrót", de: "Drehung wird geglättet")
-        case .slowMotion:         Loc.t("Crafting the slow-motion", pl: "Tworzę slow motion", de: "Zeitlupe wird erstellt")
-        case .cinematicEffects:   Loc.t("Polishing the look", pl: "Szlifuję wygląd", de: "Look wird verfeinert")
-        case .soundtrackOverlays: Loc.t("Adding music & branding", pl: "Dodaję muzykę i branding", de: "Musik & Branding werden ergänzt")
-        case .sharePage:          Loc.t("Getting it ready to share", pl: "Szykuję do udostępnienia", de: "Zum Teilen vorbereitet")
+        case .uploading:          Loc.t("Preparing your take", de: "Aufnahme wird vorbereitet")
+        case .stabilizing:        Loc.t("Smoothing the spin", de: "Drehung wird geglättet")
+        case .slowMotion:         Loc.t("Crafting the slow-motion", de: "Zeitlupe wird erstellt")
+        case .cinematicEffects:   Loc.t("Polishing the look", de: "Look wird verfeinert")
+        case .soundtrackOverlays: Loc.t("Adding music & branding", de: "Musik & Branding werden ergänzt")
+        case .sharePage:          Loc.t("Getting it ready to share", de: "Zum Teilen vorbereitet")
         }
     }
 

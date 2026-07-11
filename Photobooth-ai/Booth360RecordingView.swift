@@ -71,8 +71,8 @@ struct Booth360RecordingView: View {
                             .id(countdown)
                         // Prepare -> NOW choreography for the guest on the platform.
                         Text(countdown == 1
-                             ? Loc.t("GO!", pl: "START!", de: "LOS!")
-                             : Loc.t("Get ready", pl: "Przygotuj się", de: "Mach dich bereit"))
+                             ? Loc.t("GO!", de: "LOS!")
+                             : Loc.t("Get ready", de: "Mach dich bereit"))
                             .font(.title2.weight(.heavy))
                             .kerning(1.5)
                             .foregroundStyle(countdown == 1 ? BoothifyTheme.violet : .white.opacity(0.85))
@@ -190,7 +190,7 @@ struct Booth360RecordingView: View {
             Image(systemName: "rotate.3d")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(BoothifyTheme.violet)
-            Text(Loc.t("Keep the pose — you're spinning!", pl: "Trzymaj pozę — kręcisz się!", de: "Pose halten — du drehst dich!"))
+            Text(Loc.t("Keep the pose — you're spinning!", de: "Pose halten — du drehst dich!"))
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.white)
         }
@@ -207,7 +207,7 @@ struct Booth360RecordingView: View {
             if recording {
                 recordingStatus
             } else if countdown == nil {
-                Text(Loc.t("Tap to start a \(Int(duration))s spin", pl: "Dotknij — start \(Int(duration))-sekundowego nagrania", de: "Tippen — \(Int(duration))-Sekunden-Aufnahme starten"))
+                Text(Loc.t("Tap to start a \(Int(duration))s spin", de: "Tippen — \(Int(duration))-Sekunden-Aufnahme starten"))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 12)

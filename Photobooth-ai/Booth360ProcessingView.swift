@@ -20,11 +20,11 @@ struct Booth360ProcessingView: View {
 
     private var processingTips: [(symbol: String, text: String)] {
         [
-            ("sparkles", Loc.t("Your spin is being rendered", pl: "Twój spin właśnie się renderuje", de: "Dein Spin wird gerendert")),
-            ("film.stack", Loc.t("Every frame gets the slow-mo treatment", pl: "Każda klatka dostaje slow motion", de: "Jedes Bild bekommt die Zeitlupe")),
-            ("music.note", Loc.t("Music is being woven in", pl: "Muzyka właśnie się wplata", de: "Die Musik wird eingewoben")),
-            ("iphone.gen3", Loc.t("Sized perfectly for your phone", pl: "Idealny rozmiar na telefon", de: "Perfekt fürs Handy dimensioniert")),
-            ("qrcode", Loc.t("Your QR code is seconds away", pl: "Twój kod QR za kilka sekund", de: "Dein QR-Code kommt gleich")),
+            ("sparkles", Loc.t("Your spin is being rendered", de: "Dein Spin wird gerendert")),
+            ("film.stack", Loc.t("Every frame gets the slow-mo treatment", de: "Jedes Bild bekommt die Zeitlupe")),
+            ("music.note", Loc.t("Music is being woven in", de: "Die Musik wird eingewoben")),
+            ("iphone.gen3", Loc.t("Sized perfectly for your phone", de: "Perfekt fürs Handy dimensioniert")),
+            ("qrcode", Loc.t("Your QR code is seconds away", de: "Dein QR-Code kommt gleich")),
         ]
     }
 
@@ -102,7 +102,6 @@ struct Booth360ProcessingView: View {
                 VStack(spacing: BoothifySpacing.xs + 2) {
                     Text(Loc.t(
                         "The video will finish in the background",
-                        pl: "Wideo dokończy się w tle",
                         de: "Das Video wird im Hintergrund fertig"
                     ))
                     .font(.caption)
@@ -112,7 +111,7 @@ struct Booth360ProcessingView: View {
                     app.popToRoot()   // attract; export continues in background
                 } label: {
                     Label(
-                        Loc.t("Next guest", pl: "Następny gość", de: "Nächster Gast"),
+                        Loc.t("Next guest", de: "Nächster Gast"),
                         systemImage: "person.badge.plus"
                     )
                     .frame(maxWidth: .infinity)
@@ -139,7 +138,7 @@ struct Booth360ProcessingView: View {
 
     private var titleBlock: some View {
         VStack(spacing: 8) {
-            Text(Loc.t("Creating your 360 video", pl: "Tworzę Twoje wideo 360", de: "Dein 360-Video entsteht"))
+            Text(Loc.t("Creating your 360 video", de: "Dein 360-Video entsteht"))
                 .font(.title2.bold())
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
@@ -152,9 +151,9 @@ struct Booth360ProcessingView: View {
     }
 
     private var currentStepLabel: String {
-        if job?.status == .completed { return Loc.t("Done — preparing preview…", pl: "Gotowe — przygotowuję podgląd…", de: "Fertig — Vorschau wird geladen…") }
-        if job?.status == .failed { return Loc.t("Something went wrong", pl: "Coś poszło nie tak", de: "Etwas ist schiefgelaufen") }
-        return job?.currentStep?.label ?? Loc.t("Queued", pl: "W kolejce", de: "In der Warteschlange")
+        if job?.status == .completed { return Loc.t("Done — preparing preview…", de: "Fertig — Vorschau wird geladen…") }
+        if job?.status == .failed { return Loc.t("Something went wrong", de: "Etwas ist schiefgelaufen") }
+        return job?.currentStep?.label ?? Loc.t("Queued", de: "In der Warteschlange")
     }
 
     // MARK: - Big progress ring
@@ -265,7 +264,6 @@ struct Booth360ProcessingView: View {
                 .accessibilityHidden(true)
             Text(job?.errorMessage ?? Loc.t(
                 "Something went wrong rendering the video.",
-                pl: "Coś poszło nie tak przy renderowaniu wideo.",
                 de: "Beim Rendern des Videos ist etwas schiefgelaufen."
             ))
                 .font(.subheadline)
@@ -277,13 +275,13 @@ struct Booth360ProcessingView: View {
                 app.cancelRender(jobId: jobId)
                 app.startRender(jobId: jobId)
             } label: {
-                Label(Loc.t("Try again", pl: "Spróbuj ponownie", de: "Erneut versuchen"),
+                Label(Loc.t("Try again", de: "Erneut versuchen"),
                       systemImage: "arrow.clockwise")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(AccentButtonStyle())
             .frame(maxWidth: 220)
-            Button(Loc.t("Back", pl: "Wróć", de: "Zurück")) {
+            Button(Loc.t("Back", de: "Zurück")) {
                 Haptics.tap()
                 app.cancelRender(jobId: jobId)
                 app.pop()

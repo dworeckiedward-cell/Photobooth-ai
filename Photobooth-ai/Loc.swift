@@ -7,9 +7,8 @@ import Foundation
 /// events. Operator/admin UI stays English.
 ///
 /// Product decision (2026-07-07): the Polish market is NOT targeted — Polish
-/// resolution is disabled; pl-locale devices get English. The `pl:` parameter
-/// stays in the signature so hundreds of call sites keep compiling; it is
-/// intentionally ignored.
+/// resolution is disabled; pl-locale devices get English (post-audit cleanup
+/// removed the dead `pl:` translations from every call site).
 enum Loc {
     /// Two-letter code of the device's top preferred language ("en"/"de"/…).
     static var lang: String {
@@ -18,7 +17,7 @@ enum Loc {
     }
 
     /// Return the string for the current language, falling back to English.
-    static func t(_ en: String, pl _: String, de: String) -> String {
+    static func t(_ en: String, de: String) -> String {
         switch lang {
         case "de": return de
         default:   return en
