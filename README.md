@@ -27,6 +27,8 @@ xcodebuild -scheme Photobooth-ai -sdk iphonesimulator \
 ## Status — blueprint v4 execution
 
 All phases 0–8 executed, every Gate A green (54 tests). See:
+- `PLAYBOOK.md` — working playbook: launch order, App Store 3.1.2 guardrails,
+  what transfers from other projects and what doesn't (read at session start)
 - `PROGRESS.md` — per-phase log (what changed, gate status, risks)
 - `HANDOFF.md` — device test script, repair map, NEEDS-DEVICE list
 - `DECISIONS_LOG.md` / `ASSUMPTIONS.md` — every non-trivial choice

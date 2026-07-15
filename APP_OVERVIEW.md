@@ -191,6 +191,7 @@ wskrzeszona ankieta).
 | Plik | Co zawiera |
 |------|-----------|
 | `README.md` | skrót + build & run |
+| `PLAYBOOK.md` | playbook roboczy: kolejność do launchu, guardraile App Store 3.1.2, czego nie przenosić z innych projektów, prompt library |
 | `HANDOFF.md` | przewodnik przekazania: architektura, sekrety, kroki human-only |
 | `BACKEND_CONTRACT.md` | kontrakt API iOS ↔ backend |
 | `PROGRESS.md` / `DECISIONS.md` / `DECISIONS_LOG.md` | log faz i decyzji produktowych |
